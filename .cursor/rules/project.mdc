@@ -1,0 +1,22 @@
+---
+description: Src-layout, imports, typing, configuration, and notebook boundaries
+alwaysApply: true
+---
+
+# Project conventions
+
+- Use **src-layout**. Application code lives in `src/dota_predictor/`. Scripts go in `scripts/`. Tests go in `tests/`.
+- Import with **absolute package paths** from `dota_predictor`, not from `src` and not via path hacks.
+
+```python
+# ❌ BAD
+from src.dota_predictor.features import something
+import sys; sys.path.append("src")
+
+# ✅ GOOD
+from dota_predictor.features import something
+```
+
+- Keep functions **small, typed, and documented**. Prefer explicit argument and return types over large untyped helpers.
+- Resolve paths and settings from **configuration** (env vars, config files, or a config module). Do not hard-code filesystem paths in application code.
+- **Notebooks are for exploration only.** Do not put application logic in `notebooks/`. Promote reusable code into `src/dota_predictor/` before it is used by scripts or the rest of the app.

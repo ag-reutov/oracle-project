@@ -1,0 +1,23 @@
+---
+description: Temporal integrity, prediction boundary, validation, and leakage rules
+alwaysApply: true
+---
+
+# ML integrity
+
+- Enforce **strict temporal integrity**. Features for a match may only use information known before that match.
+- Never use information that would have been **unavailable at prediction time**.
+- The **prediction boundary is immediately after the draft is complete**. In-game events, duration, gold/xp, and the match result are labels or leakage, not features.
+- Validate with **chronological / walk-forward** splits. Do not randomly shuffle matches across time.
+- Organize features by **entity** (hero, player, team, match), not as one undifferentiated feature dump.
+- **Log hyperparameters and validation metrics** for every training run.
+- **Prefer less data over potentially leaked data.** If a feature might not have been knowable at draft time, drop it.
+
+```python
+# ❌ BAD — uses the match result and in-game stats as features
+features["radiant_won"] = match["radiant_win"]
+features["duration"] = match["duration"]
+
+# ✅ GOOD — only pre-draft / draft-complete information
+features["radiant_hero_ids"] = match["picks"]["radiant"]
+```

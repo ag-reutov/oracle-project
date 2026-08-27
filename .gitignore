@@ -1,0 +1,26 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+*.pyc
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+
+# Environment
+.env
+
+# Data (keep directory structure, ignore contents)
+data/raw/*
+!data/raw/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Trained models (keep directory structure, ignore contents)
+models/*
+!models/.gitkeep
