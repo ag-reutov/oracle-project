@@ -11,6 +11,8 @@ introspection.
 from __future__ import annotations
 
 import copy
+import json
+from pathlib import Path
 
 import pytest
 
@@ -19,6 +21,8 @@ from dota_predictor.data.stratz_mapping import (
     canonical_match_from_stratz,
     draft_event_from_stratz_pick_ban,
 )
+
+ANOMALY_FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "stratz_anomalies"
 
 
 def _pick_ban_row(
@@ -125,9 +129,13 @@ def build_raw_match() -> dict:
 
 
 def test_draft_event_from_stratz_pick_ban_maps_pick() -> None:
-    row = _pick_ban_row(order=7, is_pick=True, is_radiant=False, hero_id=89)
-    event = draft_event_from_stratz_pick_ban(row)
-    assert event.sequence == 7
+    # Raw `order` (99) deliberately differs from the caller-supplied
+    # canonical `sequence` (3) to prove the two are independent: the
+    # mapped event's sequence reflects the caller's positional assignment,
+    # not the row's own `order` value.
+    row = _pick_ban_row(order=99, is_pick=True, is_radiant=False, hero_id=89)
+    event = draft_event_from_stratz_pick_ban(row, sequence=3)
+    assert event.sequence == 3
     assert event.action is DraftAction.PICK
     assert event.side is Side.DIRE
     assert event.hero_id == 89
@@ -142,7 +150,7 @@ def test_draft_event_from_stratz_pick_ban_maps_ban() -> None:
         hero_id=3,
         was_banned_successfully=True,
     )
-    event = draft_event_from_stratz_pick_ban(row)
+    event = draft_event_from_stratz_pick_ban(row, sequence=0)
     assert event.action is DraftAction.BAN
     assert event.side is Side.DIRE
     assert event.hero_id == 3
@@ -152,7 +160,7 @@ def test_draft_event_from_stratz_pick_ban_maps_ban() -> None:
 def test_draft_event_falls_back_to_banned_hero_id() -> None:
     row = _pick_ban_row(order=0, is_pick=False, is_radiant=True, hero_id=42)
     row["heroId"] = None  # only bannedHeroId populated
-    event = draft_event_from_stratz_pick_ban(row)
+    event = draft_event_from_stratz_pick_ban(row, sequence=0)
     assert event.hero_id == 42
 
 
@@ -166,7 +174,7 @@ def test_canonical_match_from_stratz_maps_realistic_payload() -> None:
     assert match.series_id == 1010717
     assert match.series_type == "BEST_OF_FIVE"
     assert match.game_number_in_series is None
-    assert match.patch == 176
+    assert match.game_version_id == 176
     assert match.radiant_team_id == 8261500
     assert match.radiant_team_name == "Xtreme Gaming"
     assert list(match.radiant_player_ids) == RADIANT_IDS
@@ -199,3 +207,68 @@ def test_canonical_match_from_stratz_is_deterministic() -> None:
     match_a = canonical_match_from_stratz(copy.deepcopy(raw))
     match_b = canonical_match_from_stratz(copy.deepcopy(raw))
     assert match_a == match_b
+
+
+def test_canonical_match_from_stratz_normalizes_nonzero_gapped_order_to_sequence() -> (
+    None
+):
+    """Raw STRATZ orders like 10, 20, 30, ... must normalize to 0, 1, 2, ...
+
+    Canonical `sequence` is a normalized position derived by sorting and
+    enumerating, not a copy of the raw `order` value. This uses a
+    strictly-increasing but non-zero-based, non-gap-free raw ordering to
+    prove the mapper does not depend on `order` already being zero-based
+    or gap-free.
+    """
+    raw = build_raw_match()
+    original_hero_sequence = [row["heroId"] for row in raw["pickBans"]]
+    for row in raw["pickBans"]:
+        row["order"] = row["order"] * 10 + 10  # 0,1,2,... -> 10,20,30,...
+
+    match = canonical_match_from_stratz(raw)
+
+    sequences = [event.sequence for event in match.draft_events]
+    assert sequences == list(range(len(match.draft_events)))
+    # Relative order is preserved: normalizing must not reshuffle events.
+    assert [event.hero_id for event in match.draft_events] == original_hero_sequence
+
+
+def test_canonical_match_from_stratz_rejects_duplicate_source_order() -> None:
+    raw = build_raw_match()
+    # Force two rows to share the same raw STRATZ `order`, which makes the
+    # source ordering ambiguous and must be rejected rather than silently
+    # broken-tie-sorted.
+    raw["pickBans"][1]["order"] = raw["pickBans"][0]["order"]
+    with pytest.raises(CanonicalMatchError, match="duplicate"):
+        canonical_match_from_stratz(raw)
+
+
+def test_canonical_match_from_stratz_rejects_missing_order() -> None:
+    raw = build_raw_match()
+    del raw["pickBans"][0]["order"]
+    with pytest.raises(CanonicalMatchError, match="order"):
+        canonical_match_from_stratz(raw)
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    sorted(ANOMALY_FIXTURES_DIR.glob("*.json"))
+    if ANOMALY_FIXTURES_DIR.is_dir()
+    else [],
+    ids=lambda path: path.name,
+)
+def test_real_anomaly_fixtures_still_map_successfully(fixture_path: Path) -> None:
+    """Real STRATZ evidence fixtures from the verification probe must keep
+    mapping successfully across schema/mapper changes.
+
+    These are genuine professional-match payloads preserved because they
+    exercise real edge-case behavior (non-chronological `series.matches`,
+    a `heroId`-null/`bannedHeroId`-fallback ban row, null
+    `tournamentId`/`tournamentRound`, a shorter pre-7.30 draft) -- not
+    because they are invalid. They must continue to map without error.
+    """
+    raw = json.loads(fixture_path.read_text(encoding="utf-8"))
+    match = canonical_match_from_stratz(raw)
+    assert match.match_id == raw["id"]
+    assert len(match.radiant_final_hero_ids) == 5
+    assert len(match.dire_final_hero_ids) == 5

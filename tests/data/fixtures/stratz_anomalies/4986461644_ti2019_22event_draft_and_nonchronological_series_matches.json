@@ -1,0 +1,414 @@
+{
+  "id": 4986461644,
+  "didRadiantWin": true,
+  "durationSeconds": 1474,
+  "startDateTime": 1566733817,
+  "endDateTime": 1566735291,
+  "tournamentId": null,
+  "tournamentRound": null,
+  "leagueId": 10749,
+  "league": {
+    "id": 10749,
+    "name": null,
+    "displayName": "The International 2019",
+    "tier": "INTERNATIONAL",
+    "region": "CHINA",
+    "startDateTime": 1563494400,
+    "endDateTime": 1566604800,
+    "lastMatchDate": 1566735291,
+    "prizePool": 34351362
+  },
+  "seriesId": 360940,
+  "series": {
+    "id": 360940,
+    "type": "BEST_OF_FIVE",
+    "teamOneId": 2586976,
+    "teamTwoId": 2163,
+    "leagueId": 10749,
+    "teamOneWinCount": 3,
+    "teamTwoWinCount": 1,
+    "winningTeamId": 2586976,
+    "lastMatchDateTime": 1566735291,
+    "matches": [
+      {
+        "id": 4986461644,
+        "startDateTime": 1566733817
+      },
+      {
+        "id": 4986362254,
+        "startDateTime": 1566730459
+      },
+      {
+        "id": 4986260666,
+        "startDateTime": 1566726706
+      },
+      {
+        "id": 4986133311,
+        "startDateTime": 1566721992
+      }
+    ]
+  },
+  "gameVersionId": 115,
+  "radiantTeamId": 2586976,
+  "direTeamId": 2163,
+  "radiantTeam": {
+    "id": 2586976,
+    "name": "OG",
+    "tag": "OG"
+  },
+  "direTeam": {
+    "id": 2163,
+    "name": "Team Liquid",
+    "tag": "LIQ"
+  },
+  "players": [
+    {
+      "steamAccountId": 19672354,
+      "isRadiant": true,
+      "playerSlot": 0,
+      "heroId": 102
+    },
+    {
+      "steamAccountId": 311360822,
+      "isRadiant": true,
+      "playerSlot": 1,
+      "heroId": 91
+    },
+    {
+      "steamAccountId": 26771994,
+      "isRadiant": true,
+      "playerSlot": 2,
+      "heroId": 19
+    },
+    {
+      "steamAccountId": 88271237,
+      "isRadiant": true,
+      "playerSlot": 3,
+      "heroId": 98
+    },
+    {
+      "steamAccountId": 94054712,
+      "isRadiant": true,
+      "playerSlot": 4,
+      "heroId": 72
+    },
+    {
+      "steamAccountId": 105248644,
+      "isRadiant": false,
+      "playerSlot": 128,
+      "heroId": 99
+    },
+    {
+      "steamAccountId": 34505203,
+      "isRadiant": false,
+      "playerSlot": 129,
+      "heroId": 57
+    },
+    {
+      "steamAccountId": 82262664,
+      "isRadiant": false,
+      "playerSlot": 130,
+      "heroId": 66
+    },
+    {
+      "steamAccountId": 101356886,
+      "isRadiant": false,
+      "playerSlot": 131,
+      "heroId": 107
+    },
+    {
+      "steamAccountId": 86700461,
+      "isRadiant": false,
+      "playerSlot": 132,
+      "heroId": 21
+    }
+  ],
+  "pickBans": [
+    {
+      "isPick": false,
+      "heroId": 52,
+      "order": 0,
+      "bannedHeroId": 52,
+      "isRadiant": true,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": false,
+      "heroId": 97,
+      "order": 1,
+      "bannedHeroId": 97,
+      "isRadiant": false,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": false,
+      "heroId": 55,
+      "order": 2,
+      "bannedHeroId": 55,
+      "isRadiant": true,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": false,
+      "heroId": 73,
+      "order": 3,
+      "bannedHeroId": 73,
+      "isRadiant": false,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": false,
+      "heroId": 58,
+      "order": 4,
+      "bannedHeroId": 58,
+      "isRadiant": true,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": false,
+      "heroId": 103,
+      "order": 5,
+      "bannedHeroId": 103,
+      "isRadiant": false,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": true,
+      "heroId": 91,
+      "order": 6,
+      "bannedHeroId": null,
+      "isRadiant": true,
+      "playerIndex": 1,
+      "wasBannedSuccessfully": null,
+      "isCaptain": false,
+      "letter": 2,
+      "baseWinRate": 49,
+      "adjustedWinRate": 49
+    },
+    {
+      "isPick": true,
+      "heroId": 66,
+      "order": 7,
+      "bannedHeroId": null,
+      "isRadiant": false,
+      "playerIndex": 7,
+      "wasBannedSuccessfully": null,
+      "isCaptain": true,
+      "letter": 2,
+      "baseWinRate": 49,
+      "adjustedWinRate": 49
+    },
+    {
+      "isPick": true,
+      "heroId": 57,
+      "order": 8,
+      "bannedHeroId": null,
+      "isRadiant": false,
+      "playerIndex": 6,
+      "wasBannedSuccessfully": null,
+      "isCaptain": false,
+      "letter": 2,
+      "baseWinRate": 49,
+      "adjustedWinRate": 49
+    },
+    {
+      "isPick": true,
+      "heroId": 19,
+      "order": 9,
+      "bannedHeroId": null,
+      "isRadiant": true,
+      "playerIndex": 2,
+      "wasBannedSuccessfully": null,
+      "isCaptain": false,
+      "letter": 2,
+      "baseWinRate": 52,
+      "adjustedWinRate": 49
+    },
+    {
+      "isPick": false,
+      "heroId": 82,
+      "order": 10,
+      "bannedHeroId": 82,
+      "isRadiant": true,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": false,
+      "heroId": 95,
+      "order": 11,
+      "bannedHeroId": 95,
+      "isRadiant": false,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": false,
+      "heroId": 106,
+      "order": 12,
+      "bannedHeroId": 106,
+      "isRadiant": true,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": false,
+      "heroId": 74,
+      "order": 13,
+      "bannedHeroId": 74,
+      "isRadiant": false,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": true,
+      "heroId": 99,
+      "order": 14,
+      "bannedHeroId": null,
+      "isRadiant": false,
+      "playerIndex": 5,
+      "wasBannedSuccessfully": null,
+      "isCaptain": false,
+      "letter": 2,
+      "baseWinRate": 49,
+      "adjustedWinRate": 51
+    },
+    {
+      "isPick": true,
+      "heroId": 102,
+      "order": 15,
+      "bannedHeroId": null,
+      "isRadiant": true,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": null,
+      "isCaptain": true,
+      "letter": 2,
+      "baseWinRate": 49,
+      "adjustedWinRate": 49
+    },
+    {
+      "isPick": true,
+      "heroId": 107,
+      "order": 16,
+      "bannedHeroId": null,
+      "isRadiant": false,
+      "playerIndex": 8,
+      "wasBannedSuccessfully": null,
+      "isCaptain": false,
+      "letter": 2,
+      "baseWinRate": 49,
+      "adjustedWinRate": 49
+    },
+    {
+      "isPick": true,
+      "heroId": 98,
+      "order": 17,
+      "bannedHeroId": null,
+      "isRadiant": true,
+      "playerIndex": 3,
+      "wasBannedSuccessfully": null,
+      "isCaptain": false,
+      "letter": 2,
+      "baseWinRate": 49,
+      "adjustedWinRate": 49
+    },
+    {
+      "isPick": false,
+      "heroId": 53,
+      "order": 18,
+      "bannedHeroId": 53,
+      "isRadiant": false,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": false,
+      "heroId": 11,
+      "order": 19,
+      "bannedHeroId": 11,
+      "isRadiant": true,
+      "playerIndex": 0,
+      "wasBannedSuccessfully": true,
+      "isCaptain": null,
+      "letter": null,
+      "baseWinRate": null,
+      "adjustedWinRate": null
+    },
+    {
+      "isPick": true,
+      "heroId": 72,
+      "order": 20,
+      "bannedHeroId": null,
+      "isRadiant": true,
+      "playerIndex": 4,
+      "wasBannedSuccessfully": null,
+      "isCaptain": false,
+      "letter": 3,
+      "baseWinRate": 49,
+      "adjustedWinRate": 52
+    },
+    {
+      "isPick": true,
+      "heroId": 21,
+      "order": 21,
+      "bannedHeroId": null,
+      "isRadiant": false,
+      "playerIndex": 9,
+      "wasBannedSuccessfully": null,
+      "isCaptain": false,
+      "letter": 3,
+      "baseWinRate": 51,
+      "adjustedWinRate": 50
+    }
+  ]
+}

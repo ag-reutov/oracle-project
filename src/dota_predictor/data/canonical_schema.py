@@ -121,7 +121,7 @@ FIELD_INFORMATION_AVAILABILITY: dict[str, InformationAvailability] = {
     "series_id": InformationAvailability.PRE_DRAFT,
     "series_type": InformationAvailability.PRE_DRAFT,
     "game_number_in_series": InformationAvailability.PRE_DRAFT,
-    "patch": InformationAvailability.PRE_DRAFT,
+    "game_version_id": InformationAvailability.PRE_DRAFT,
     "radiant_team_id": InformationAvailability.PRE_DRAFT,
     "radiant_team_name": InformationAvailability.PRE_DRAFT,
     "radiant_player_ids": InformationAvailability.PRE_DRAFT,
@@ -139,7 +139,13 @@ class DraftEvent:
     """One action (pick or ban) within a game's draft, in occurrence order.
 
     Attributes:
-        sequence: Zero-based position of this event within the full draft.
+        sequence: Zero-based position of this event within the normalized
+            canonical draft. This is a canonical position assigned by
+            enumerating events after sorting and de-duplicating by
+            whatever ordering field a source provides -- it is NOT
+            required to equal any raw source ordering value verbatim.
+            See `stratz_mapping.canonical_match_from_stratz` for how this
+            is derived from STRATZ's `order` field.
         action: Whether this event was a pick or a ban.
         side: The side that performed the action.
         hero_id: The hero targeted by the action.
@@ -214,7 +220,14 @@ class CanonicalMatch:
     game_number_in_series: int | None = None
 
     # --- Game environment (PRE_DRAFT) ---
-    patch: int | None = None
+    # This is the raw source game-version identifier (STRATZ
+    # `gameVersionId`), preserved verbatim. It is an opaque, source-native
+    # foreign key at hotfix granularity (e.g. 7.22c and 7.22f are
+    # different ids), NOT a human-readable patch string. A separate
+    # id -> human-readable-version lookup (STRATZ `constants.gameVersions`)
+    # exists but is intentionally not joined in here; that belongs to a
+    # future ingestion-layer lookup table, not this single-record mapping.
+    game_version_id: int | None = None
 
     # --- Radiant (PRE_DRAFT) ---
     radiant_team_id: TeamId
@@ -242,8 +255,8 @@ class CanonicalMatch:
             raise CanonicalMatchError(
                 f"game_number_in_series must be >= 1, got {self.game_number_in_series}"
             )
-        if self.patch is not None:
-            _require_positive("patch", self.patch)
+        if self.game_version_id is not None:
+            _require_positive("game_version_id", self.game_version_id)
 
         if self.start_time.tzinfo is None or self.start_time.utcoffset() != timedelta(
             0
@@ -311,7 +324,13 @@ class CanonicalMatch:
         # Exactly five heroes picked per side is a fixed rule of the game
         # (5v5), not an assumption about draft-format phase structure, so
         # it is safe to validate regardless of historical ban-count
-        # variation.
+        # variation. This held for every completed Tier 1/Tier 2 match in
+        # a 265-match verification sample spanning 2019-2025. It currently
+        # represents the schema for completed, training-eligible
+        # professional games; a future ingestion layer may need a
+        # separate way to represent legitimate-but-incomplete historical
+        # records (abandons, remakes, etc.) that fail this invariant --
+        # that distinction is not implemented here.
         radiant_picks = len(self.radiant_final_hero_ids)
         if radiant_picks != 5:
             raise CanonicalMatchError(

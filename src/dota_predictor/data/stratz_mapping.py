@@ -6,31 +6,49 @@ produced by `scripts/probe_stratz_graphql.py`, see
 call the STRATZ API itself and performs no bulk ingestion or backfill --
 wiring this into an actual ingestion pipeline is future work.
 
-Known STRATZ source-mapping caveats (see task report for full detail):
+Known STRATZ source-mapping caveats (see task reports for full detail;
+verified against a 265-match Tier 1/Tier 2 sample, not just the small
+committed probe file):
 
-* `durationSeconds` and `gameVersionId` exist on STRATZ's `MatchType` per
-  schema introspection, but were not part of the field selection used by
-  the existing probe script, so their real-world population has not been
-  verified against a live response. `durationSeconds` is required here
-  (POST_MATCH information is always knowable once a match has a result);
-  `gameVersionId` (mapped to `patch`) is optional and simply passed through
-  if present.
+* `durationSeconds` is reliably populated on completed professional
+  matches and is required here (POST_MATCH information is always
+  knowable once a match has a result). `gameVersionId` is optional,
+  preserved verbatim as `game_version_id`, and passed through if present.
+  It is a STRATZ-internal, hotfix-granularity opaque id, NOT a
+  human-readable patch string (e.g. "7.31c") -- resolving it to a
+  human-readable version via STRATZ's `constants.gameVersions` lookup is
+  intentionally left to a future ingestion-layer lookup table, not this
+  single-record mapping.
 * For pick/ban rows, STRATZ populates `heroId` for both picks and bans in
-  observed samples (duplicating `bannedHeroId` for bans). `bannedHeroId` is
-  used only as a fallback if `heroId` is absent.
+  most samples (duplicating `bannedHeroId` for bans), but `heroId` is
+  `null` on a meaningful minority of real ban rows (~15% in the
+  verification sample) with `bannedHeroId` populated instead. `heroId`
+  and `bannedHeroId` were never observed both non-null and disagreeing.
+  `bannedHeroId` is used only as a fallback if `heroId` is absent.
 * `playerIndex`, `isCaptain`, and `letter` on pick/ban rows are not mapped
-  here: their semantics are not confirmed from documentation or samples
-  alone, and they are not needed to reconstruct draft order or side. See
-  the task report for details.
+  here: their real-world population is patchy and inconsistent across
+  tournaments/eras, their semantics are not confirmed from documentation
+  or samples alone, and they are not needed to reconstruct draft order or
+  side. See the task reports for details.
 * STRATZ does not expose a distinct "side selection" / "first pick"
-  field separate from the draft sequence itself. The acting side of
-  `draft_events[0]` is the only available proxy for this and is preserved
-  implicitly by preserving the full ordered draft; no separate field is
-  invented here.
+  field separate from the draft sequence itself on the match/league query
+  surface used here (a `isRadiantFirstPick` field exists only on an
+  unrelated replay-upload type). The acting side of `draft_events[0]` is
+  the only available proxy for this and is preserved implicitly by
+  preserving the full ordered draft; no separate field is invented here.
+* Canonical `DraftEvent.sequence` is a normalized canonical position, not
+  a copy of STRATZ's raw `order` value: rows are sorted by `order` (after
+  requiring `order` to be present and pairwise distinct, since duplicate
+  `order` values make source ordering ambiguous), then `sequence` is
+  assigned by enumerating the sorted rows from 0. In every real sample
+  observed so far STRATZ's `order` already happens to be zero-based and
+  gap-free, but the mapper does not depend on that; it only depends on
+  `order` producing an unambiguous sort.
 """
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any
@@ -59,26 +77,36 @@ def _side_from_is_radiant(is_radiant: bool) -> Side:
     return Side.RADIANT if is_radiant else Side.DIRE
 
 
-def draft_event_from_stratz_pick_ban(raw: Mapping[str, Any]) -> DraftEvent:
-    """Map one STRATZ `MatchStatsPickBanType` row to a `DraftEvent`."""
-    order = raw.get("order")
-    if order is None:
-        raise CanonicalMatchError("pick/ban row: missing required field 'order'")
+def draft_event_from_stratz_pick_ban(
+    raw: Mapping[str, Any], *, sequence: int
+) -> DraftEvent:
+    """Map one STRATZ `MatchStatsPickBanType` row to a `DraftEvent`.
 
+    `sequence` is the row's position in the *canonical* draft sequence, as
+    assigned by `canonical_match_from_stratz` after sorting and validating
+    raw rows by STRATZ's `order` field (see `_sorted_pick_ban_rows`). It is
+    a caller-supplied canonical position, not derived from the raw row
+    itself: canonical `sequence` means "position in the normalized draft",
+    not "the literal STRATZ `order` value".
+    """
     is_pick = raw.get("isPick")
     if is_pick is None:
-        raise CanonicalMatchError(f"pick/ban row at order={order}: missing 'isPick'")
+        raise CanonicalMatchError(
+            f"pick/ban row at sequence={sequence}: missing 'isPick'"
+        )
 
     is_radiant = raw.get("isRadiant")
     if is_radiant is None:
-        raise CanonicalMatchError(f"pick/ban row at order={order}: missing 'isRadiant'")
+        raise CanonicalMatchError(
+            f"pick/ban row at sequence={sequence}: missing 'isRadiant'"
+        )
 
     hero_id: HeroId | None = raw.get("heroId")
     if hero_id is None:
         hero_id = raw.get("bannedHeroId")
     if hero_id is None:
         raise CanonicalMatchError(
-            f"pick/ban row at order={order}: missing both 'heroId' and 'bannedHeroId'"
+            f"pick/ban row at sequence={sequence}: missing both 'heroId' and 'bannedHeroId'"
         )
 
     action = DraftAction.PICK if is_pick else DraftAction.BAN
@@ -87,12 +115,43 @@ def draft_event_from_stratz_pick_ban(raw: Mapping[str, Any]) -> DraftEvent:
     )
 
     return DraftEvent(
-        sequence=order,
+        sequence=sequence,
         action=action,
         side=_side_from_is_radiant(is_radiant),
         hero_id=hero_id,
         was_successful=was_successful,
     )
+
+
+def _sorted_pick_ban_rows(
+    pick_bans: Sequence[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    """Sort raw STRATZ pick/ban rows by their source `order` field.
+
+    This only establishes an unambiguous source ordering; it does NOT
+    assign canonical `sequence` (that is done by the caller via
+    `enumerate` over this function's result -- see
+    `canonical_match_from_stratz`). Raw `order` is required to be present
+    and pairwise distinct, but is intentionally NOT required to be
+    zero-based or gap-free: STRATZ's `order` and canonical `sequence` are
+    different things that happen to coincide numerically in every sample
+    observed so far, and the mapper should not depend on that coincidence.
+    """
+    orders: list[int] = []
+    for row in pick_bans:
+        order = row.get("order")
+        if order is None:
+            raise CanonicalMatchError("pick/ban row: missing required field 'order'")
+        orders.append(order)
+
+    duplicates = sorted(order for order, count in Counter(orders).items() if count > 1)
+    if duplicates:
+        raise CanonicalMatchError(
+            f"pick/ban rows: duplicate STRATZ 'order' value(s) {duplicates}; "
+            "source draft ordering is ambiguous"
+        )
+
+    return sorted(pick_bans, key=lambda row: row["order"])
 
 
 def _side_player_ids(
@@ -148,8 +207,8 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
 
     pick_bans = raw.get("pickBans") or []
     draft_events = tuple(
-        draft_event_from_stratz_pick_ban(row)
-        for row in sorted(pick_bans, key=lambda row: row.get("order") or 0)
+        draft_event_from_stratz_pick_ban(row, sequence=sequence)
+        for sequence, row in enumerate(_sorted_pick_ban_rows(pick_bans))
     )
 
     duration_seconds = _require(raw, "durationSeconds", context="match")
@@ -166,7 +225,7 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
         series_id=series_id,
         series_type=series_type,
         game_number_in_series=game_number_in_series,
-        patch=raw.get("gameVersionId"),
+        game_version_id=raw.get("gameVersionId"),
         radiant_team_id=radiant_team_id,
         radiant_team_name=radiant_team.get("name"),
         radiant_player_ids=radiant_player_ids,

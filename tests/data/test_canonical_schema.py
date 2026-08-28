@@ -58,7 +58,7 @@ def make_match(*, num_bans: int = 14, **overrides: object) -> CanonicalMatch:
         "series_id": 1010717,
         "series_type": "BEST_OF_FIVE",
         "game_number_in_series": None,
-        "patch": None,
+        "game_version_id": None,
         "radiant_team_id": 8261500,
         "radiant_team_name": "Xtreme Gaming",
         "radiant_player_ids": (898754153, 137129583, 129958758, 157475523, 94296097),
