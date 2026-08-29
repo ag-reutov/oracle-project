@@ -17,6 +17,7 @@ from dota_predictor.ingestion.errors import LeagueNotAllowlistedError, StratzCli
 from dota_predictor.ingestion.pipeline import ingest_league
 from dota_predictor.storage.ingestion_writer import load_cursor_state
 from dota_predictor.storage.schema import (
+    LEAGUE_INGESTION_STATE,
     MATCH_INGESTION_ERRORS,
     MATCHES,
     STRATZ_RAW_MATCHES,
@@ -113,10 +114,37 @@ def test_checkpoint_not_advanced_on_fetch_failure(engine) -> None:
     result = ingest_league(engine, fetcher, LEAGUE_ID, page_size=100)
 
     assert result.status == "ERROR"
+    # The checkpoint for the successfully persisted first page (100 matches,
+    # next_skip 0 -> 100) must survive the second page's fetch failure --
+    # not be rolled back to the pre-acquisition state (next_skip=0).
+    assert result.matches_seen_count == 100
     with engine.connect() as conn:
         cursor = load_cursor_state(conn, LEAGUE_ID)
         assert cursor.next_skip == 100
         assert cursor.fetch_complete is False
+        row = conn.execute(
+            select(LEAGUE_INGESTION_STATE.c.matches_seen_count).where(
+                LEAGUE_INGESTION_STATE.c.league_id == LEAGUE_ID
+            )
+        ).one()
+        assert int(row.matches_seen_count) == 100
+        raw_ids = conn.execute(
+            select(STRATZ_RAW_MATCHES.c.match_id).where(
+                STRATZ_RAW_MATCHES.c.league_id == LEAGUE_ID
+            )
+        ).all()
+        assert len(raw_ids) == 100
+
+    # A resume attempt should therefore start from the committed checkpoint
+    # (skip=100), not re-fetch the already-persisted first page. The resume
+    # anchor check (skip=99, take=1) must see the same last match persisted
+    # by the successful first page.
+    resume_fetcher = MockFetcher({(99, 1): [first_page[-1]], (100, 100): []})
+    resumed = ingest_league(engine, resume_fetcher, LEAGUE_ID, page_size=100)
+    assert resumed.status == "COMPLETE"
+    assert resumed.matches_seen_count == 100
+    assert (100, 100) in {(c[1], c[2]) for c in resume_fetcher.calls}
+    assert (0, 100) not in {(c[1], c[2]) for c in resume_fetcher.calls}
 
 
 @requires_test_database

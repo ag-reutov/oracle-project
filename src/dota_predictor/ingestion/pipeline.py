@@ -104,6 +104,9 @@ def ingest_league(
                 page_size=page_size,
             )
         except PaginationDriftError as exc:
+            cursor, matches_seen_count = _reload_persisted_pagination_state(
+                engine, league_id
+            )
             _mark_league_error(engine, league_id, cursor, matches_seen_count, str(exc))
             return IngestionResult(
                 league_id=league_id,
@@ -114,6 +117,9 @@ def ingest_league(
                 message=str(exc),
             )
         except (PageValidationError, StratzClientError, SQLAlchemyError) as exc:
+            cursor, matches_seen_count = _reload_persisted_pagination_state(
+                engine, league_id
+            )
             _mark_league_error(engine, league_id, cursor, matches_seen_count, str(exc))
             return IngestionResult(
                 league_id=league_id,
@@ -155,6 +161,26 @@ def _load_cursor(engine: Engine, league_id: int) -> CursorState:
 def _load_matches_seen_count(engine: Engine, league_id: int) -> int:
     with engine.connect() as conn:
         return get_matches_seen_count(conn, league_id)
+
+
+def _reload_persisted_pagination_state(
+    engine: Engine, league_id: int
+) -> tuple[CursorState, int]:
+    """Re-read the cursor/count checkpoint most recently committed to
+    `league_ingestion_state`.
+
+    `_acquire_raw_pages` commits its cursor/count checkpoint together with
+    each page's raw rows (see its per-page `engine.begin()` blocks), so
+    that persisted state is authoritative the moment it lands -- including
+    when a later page's fetch/validation fails. The pre-call `cursor`/
+    `matches_seen_count` values still held by `ingest_league` at that point
+    are stale (the `_acquire_raw_pages(...)` call raised before its
+    `cursor, matches_seen_count = ...` assignment could complete), so the
+    error path must not pass those stale values into `_mark_league_error`
+    -- doing so would roll back a checkpoint that was already durably
+    committed for one or more successfully processed pages.
+    """
+    return _load_cursor(engine, league_id), _load_matches_seen_count(engine, league_id)
 
 
 def _mark_league_error(
