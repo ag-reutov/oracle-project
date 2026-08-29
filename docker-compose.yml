@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dota_predictor_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dota_predictor
+      POSTGRES_PASSWORD: dota_predictor
+      POSTGRES_DB: dota_predictor
+    ports:
+      - "5432:5432"
+    volumes:
+      - dota_predictor_pgdata:/var/lib/postgresql/data
+      # Creates the separate dota_predictor_test database on first init.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dota_predictor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dota_predictor_pgdata:

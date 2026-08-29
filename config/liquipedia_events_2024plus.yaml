@@ -1,0 +1,201 @@
+# Liquipedia-sourced professional event list (2024+ modern circuit).
+#
+# AUTHORITATIVE tier and event names come from:
+#   - https://liquipedia.net/dota2/Tier_1_Tournaments
+#   - https://liquipedia.net/dota2/Tier_2_Tournaments
+#
+# Do not use STRATZ LeagueTier or prize pool to decide T1/T2 scope.
+# STRATZ league_id values are resolved separately (Dotabuff, Spectral, match
+# leagueId probes) and synced into config/leagues.yaml via
+# scripts/build_leagues_yaml_from_liquipedia.py.
+#
+# Only main events from those tier pages — not qualifiers, showmatches, or
+# Liquipedia Tier 3/4 events.
+
+events:
+  # --- 2024 Tier 1 (Liquipedia Tier_1_Tournaments) ---
+  - liquipedia_name: BetBoom Dacha Dubai 2024
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: DreamLeague Season 22
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: Elite League Season 1
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: ESL One Birmingham 2024
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: DreamLeague Season 23
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: PGL Wallachia Season 1
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: Clavision Snow Ruyi
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: Riyadh Masters 2024
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: The International 2024
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: BetBoom Dacha Belgrade 2024
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: DreamLeague Season 24
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: BLAST Slam I
+    liquipedia_tier: T1
+    year: 2024
+  - liquipedia_name: ESL One Bangkok 2024
+    liquipedia_tier: T1
+    year: 2024
+
+  # --- 2024 Tier 2 (Liquipedia Tier_2_Tournaments) ---
+  - liquipedia_name: 1win Series Dota 2 Spring
+    liquipedia_tier: T2
+    year: 2024
+    notes: Liquipedia also lists Summer (16446) and Fall 2024; Fall shares STRATZ league_id 16427.
+  - liquipedia_name: FISSURE Universe Episode 2
+    liquipedia_tier: T2
+    year: 2024
+  - liquipedia_name: 1win Series Dota 2 Summer
+    liquipedia_tier: T2
+    year: 2024
+  - liquipedia_name: Elite League Season 2
+    liquipedia_tier: T2
+    year: 2024
+  - liquipedia_name: FISSURE Universe Episode 3
+    liquipedia_tier: T2
+    year: 2024
+  - liquipedia_name: PGL Wallachia Season 2
+    liquipedia_tier: T2
+    year: 2024
+  - liquipedia_name: Games of the Future 2024
+    liquipedia_tier: T2
+    year: 2024
+  - liquipedia_name: 1win Series Dota 2 Fall
+    liquipedia_tier: T2
+    year: 2024
+
+  # --- 2025 Tier 1 ---
+  - liquipedia_name: FISSURE PLAYGROUND 1
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: BLAST Slam II
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: DreamLeague Season 25
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: PGL Wallachia Season 3
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: FISSURE Universe Episode 4
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: PGL Wallachia Season 4
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: ESL One Raleigh 2025
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: BLAST Slam III
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: PGL Wallachia Season 5
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: DreamLeague Season 26
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: Clavision Masters 2025 Snow-Ruyi
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: Esports World Cup 2025
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: The International 2025
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: FISSURE Universe Episode 6
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: BLAST Slam IV
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: FISSURE PLAYGROUND 2
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: PGL Wallachia Season 6
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: BLAST Slam V
+    liquipedia_tier: T1
+    year: 2025
+  - liquipedia_name: DreamLeague Season 27
+    liquipedia_tier: T1
+    year: 2025
+
+  # --- 2025 Tier 2 ---
+  - liquipedia_name: FISSURE Special
+    liquipedia_tier: T2
+    year: 2025
+  - liquipedia_name: FISSURE Universe Episode 5
+    liquipedia_tier: T2
+    year: 2025
+  - liquipedia_name: Asian Champions League 2025
+    liquipedia_tier: T2
+    year: 2025
+    notes: No dedicated STRATZ league_id found; ACL×ESL Challenger China (17875) is a related but distinct event.
+  - liquipedia_name: FISSURE Universe Episode 7
+    liquipedia_tier: T2
+    year: 2025
+  - liquipedia_name: AsiaPro League Season 2
+    liquipedia_tier: T2
+    year: 2025
+  - liquipedia_name: Games of the Future 2025 Abu Dhabi
+    liquipedia_tier: T2
+    year: 2025
+
+  # --- 2026 Tier 1 (through Aug 2026 on Liquipedia) ---
+  - liquipedia_name: FISSURE Universe Episode 8
+    liquipedia_tier: T2
+    year: 2026
+    notes: Listed on Liquipedia FISSURE Universe series; tier per Tier_2 pattern until promoted on tier page.
+  - liquipedia_name: BLAST SLAM VI
+    liquipedia_tier: T1
+    year: 2026
+  - liquipedia_name: DreamLeague Season 28
+    liquipedia_tier: T1
+    year: 2026
+  - liquipedia_name: PGL Wallachia Season 7
+    liquipedia_tier: T1
+    year: 2026
+  - liquipedia_name: ESL One Birmingham 2026
+    liquipedia_tier: T1
+    year: 2026
+  - liquipedia_name: PGL Wallachia Season 8
+    liquipedia_tier: T1
+    year: 2026
+  - liquipedia_name: DreamLeague Season 29
+    liquipedia_tier: T1
+    year: 2026
+  - liquipedia_name: BLAST SLAM VII
+    liquipedia_tier: T1
+    year: 2026
+  - liquipedia_name: Esports World Cup 2026
+    liquipedia_tier: T1
+    year: 2026
+  - liquipedia_name: PGL Wallachia Season 9
+    liquipedia_tier: T1
+    year: 2026
+  - liquipedia_name: BLAST SLAM IX
+    liquipedia_tier: T1
+    year: 2026
+  - liquipedia_name: The International 2026
+    liquipedia_tier: T1
+    year: 2026

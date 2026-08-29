@@ -1,0 +1,506 @@
+# Curated Tier 1 / Tier 2 professional Dota 2 league registry.
+#
+# EVENT LIST (which tournaments, which tier): Liquipedia
+#   - https://liquipedia.net/dota2/Tier_1_Tournaments
+#   - https://liquipedia.net/dota2/Tier_2_Tournaments
+#   - Canonical manifest: config/liquipedia_events_2024plus.yaml
+#
+# STRATZ league_id: resolved via Dotabuff / Spectral / match leagueId probes
+#   (see scripts/build_leagues_yaml_from_liquipedia.py STRATZ_ID_MAP).
+#   Do NOT use STRATZ LeagueTier to decide T1/T2 scope.
+#
+# Scope: Liquipedia T1/T2 main events from 2024-01-01 through present.
+# Pre-2024 DPC-era rows kept for audit only (in_scope: false).
+# Qualifiers listed but excluded (in_scope: false).
+#
+# Sync: scripts/load_league_registry.py → leagues / ingestion_leagues tables.
+
+leagues:
+
+  # --- Liquipedia Tier 1 / Tier 2 main events (2024+) ---
+
+  - league_id: 16169
+    name: "BetBoom Dacha Dubai 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: BetBoom Dacha Dubai 2024 (2024)."
+
+  - league_id: 16201
+    name: "DreamLeague Season 22 powered by Intel"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: DreamLeague Season 22 (2024)."
+
+  - league_id: 16483
+    name: "Elite League by FISSURE and ESB"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: Elite League Season 1 (2024)."
+
+  - league_id: 16518
+    name: "ESL One Birmingham 2024 Powered by Intel"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: ESL One Birmingham 2024 (2024)."
+
+  - league_id: 16632
+    name: "DreamLeague Season 23 powered by Intel"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: DreamLeague Season 23 (2024)."
+
+  - league_id: 16669
+    name: "PGL Wallachia 2024 Season 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: PGL Wallachia Season 1 (2024)."
+
+  - league_id: 16901
+    name: "Clavision DOTA League S1 : Snow-Ruyi"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: Clavision Snow Ruyi (2024)."
+
+  - league_id: 16881
+    name: "Riyadh Masters 2024 at Esports World Cup"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: Riyadh Masters 2024 (2024)."
+
+  - league_id: 16935
+    name: "The International 2024"
+    stratz_tier: "INTERNATIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: The International 2024 (2024)."
+
+  - league_id: 17126
+    name: "BetBoom Dacha Belgrade 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: BetBoom Dacha Belgrade 2024 (2024)."
+
+  - league_id: 17272
+    name: "DreamLeague Season 24 powered by Intel"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: DreamLeague Season 24 (2024)."
+
+  - league_id: 17414
+    name: "BLAST SLAM I"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: BLAST Slam I (2024)."
+
+  - league_id: 17509
+    name: "ESL One Bangkok 2024 powered by Intel"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: ESL One Bangkok 2024 (2024)."
+
+  - league_id: 16427
+    name: "1WIN SERIES DOTA 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    notes: "Liquipedia: 1win Series Dota 2 Spring (2024). Liquipedia also lists Summer (16446) and Fall 2024; Fall shares STRATZ league_id 16427. Liquipedia 1win Spring 2024; STRATZ umbrella also contains Fall 2024 matches."
+
+  - league_id: 16730
+    name: "FISSURE Tournament"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    notes: "Liquipedia: FISSURE Universe Episode 2 (2024)."
+
+  - league_id: 16446
+    name: "1win Series Dota 2 Summer"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    notes: "Liquipedia: 1win Series Dota 2 Summer (2024)."
+
+  - league_id: 16905
+    name: "Elite League Season 2 Main Event – presented by ESB"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    notes: "Liquipedia: Elite League Season 2 (2024)."
+
+  - league_id: 16846
+    name: "FISSURE Universe: Episode 3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    notes: "Liquipedia: FISSURE Universe Episode 3 (2024)."
+
+  - league_id: 17119
+    name: "PGL Wallachia 2024 Season 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    notes: "Liquipedia: PGL Wallachia Season 2 (2024)."
+
+  - league_id: 15981
+    name: "Games of Future 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    notes: "Liquipedia: Games of the Future 2024 (2024)."
+
+  - league_id: 17588
+    name: "FISSURE PLAYGROUND 1 - Dota"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: FISSURE PLAYGROUND 1 (2025)."
+
+  - league_id: 17417
+    name: "SLAM II"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: BLAST Slam II (2025)."
+
+  - league_id: 17765
+    name: "DreamLeague Season 25 powered by Intel"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: DreamLeague Season 25 (2025)."
+
+  - league_id: 17891
+    name: "PGL Wallachia 2025 Season 3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: PGL Wallachia Season 3 (2025)."
+
+  - league_id: 17907
+    name: "FISSURE Universe Episode 4"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: FISSURE Universe Episode 4 (2025)."
+
+  - league_id: 18058
+    name: "PGL Wallachia 2025 Season 4"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: PGL Wallachia Season 4 (2025)."
+
+  - league_id: 17795
+    name: "ESL One Raleigh 2025"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: ESL One Raleigh 2025 (2025)."
+
+  - league_id: 17418
+    name: "SLAM III"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: BLAST Slam III (2025)."
+
+  - league_id: 18358
+    name: "PGL Wallachia 2025 Season 5"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: PGL Wallachia Season 5 (2025)."
+
+  - league_id: 18111
+    name: "DreamLeague Season 26"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: DreamLeague Season 26 (2025)."
+
+  - league_id: 18359
+    name: "Clavision DOTA2 Masters 2025: Snow-Ruyi"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: Clavision Masters 2025 Snow-Ruyi (2025)."
+
+  - league_id: 18375
+    name: "Esports World Cup 2025"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: Esports World Cup 2025 (2025)."
+
+  - league_id: 18324
+    name: "The International 2025"
+    stratz_tier: "INTERNATIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: The International 2025 (2025)."
+
+  - league_id: 18433
+    name: "FISSURE Universe Episode 6"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    notes: "Liquipedia: FISSURE Universe Episode 6 (2025)."
+
+  - league_id: 17419
+    name: "SLAM IV"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: BLAST Slam IV (2025). STRATZ league(id) null but match leagueId 17419 confirmed; ingest blocked until API exposes league."
+
+  - league_id: 18863
+    name: "FISSURE PLAYGROUND 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: FISSURE PLAYGROUND 2 (2025). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 18920
+    name: "PGL Wallachia 2025 Season 6"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: PGL Wallachia Season 6 (2025). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 17420
+    name: "SLAM V"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: BLAST Slam V (2025). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 18988
+    name: "DreamLeague Season 27"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: DreamLeague Season 27 (2025). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 18046
+    name: "FISSURE Special"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    notes: "Liquipedia: FISSURE Special (2025)."
+
+  - league_id: 18107
+    name: "FISSURE Universe Episode 5"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    notes: "Liquipedia: FISSURE Universe Episode 5 (2025)."
+
+  - league_id: 18633
+    name: "FISSURE Universe Episode 7"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: false
+    notes: "Liquipedia: FISSURE Universe Episode 7 (2025). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 17622
+    name: "AsiaPro League S2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    notes: "Liquipedia: AsiaPro League Season 2 (2025)."
+
+  - league_id: 18937
+    name: "Games of the Future 2025 Abu Dhabi"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: false
+    notes: "Liquipedia: Games of the Future 2025 Abu Dhabi (2025). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 19239
+    name: "FISSURE Universe Episode 8"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: false
+    notes: "Liquipedia: FISSURE Universe Episode 8 (2026). Listed on Liquipedia FISSURE Universe series; tier per Tier_2 pattern until promoted on tier page. STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 19099
+    name: "BLAST SLAM VI"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: BLAST SLAM VI (2026). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 19269
+    name: "DreamLeague Season 28"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: DreamLeague Season 28 (2026). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 19435
+    name: "PGL Wallachia 2026 Season 7"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: PGL Wallachia Season 7 (2026). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 19422
+    name: "ESL One Birmingham 2026"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: ESL One Birmingham 2026 (2026). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 19543
+    name: "PGL Wallachia 2026 Season 8"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: PGL Wallachia Season 8 (2026). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 19696
+    name: "DreamLeague Season 29"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: DreamLeague Season 29 (2026). STRATZ league(id) null at verification; pending ingest."
+
+  - league_id: 19101
+    name: "BLAST SLAM VII"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: BLAST SLAM VII (2026). STRATZ league(id) null but match leagueId likely 19101; ingest blocked until API exposes league."
+
+  - league_id: 19785
+    name: "Esports World Cup 2026"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: false
+    notes: "Liquipedia: Esports World Cup 2026 (2026). STRATZ league(id) null at verification; pending ingest."
+
+  # --- Liquipedia events without STRATZ league_id (add to STRATZ_ID_MAP) ---
+  # PENDING: 2025 T2 Asian Champions League 2025
+  # PENDING: 2026 T1 PGL Wallachia Season 9
+  # PENDING: 2026 T1 BLAST SLAM IX
+  # PENDING: 2026 T1 The International 2026
+
+  # --- Qualifiers (Liquipedia; excluded from ingestion) ---
+
+  - league_id: 17299
+    name: "ESL One Bangkok 2024 Qualifiers powered by Intel"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Qualifier for ESL One Bangkok 2024."
+
+  - league_id: 17525
+    name: "FISSURE PLAYGROUND - Closed Qualifiers - Americas"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Qualifier for FISSURE PLAYGROUND 1."
+
+  - league_id: 17628
+    name: "DreamLeague Season 25 Qualifiers powered by Intel"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Qualifier for DreamLeague Season 25."
+
+  - league_id: 17629
+    name: "ESL One Raleigh 2025 Qualifiers"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Qualifier for ESL One Raleigh 2025."
+
+  - league_id: 17874
+    name: "DreamLeague Season 26 Qualifiers"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Qualifier for DreamLeague Season 26."
+
+  - league_id: 18210
+    name: "Esports World Cup 2025 Qualifiers"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Qualifier for Esports World Cup 2025."
+
+  - league_id: 18629
+    name: "DreamLeague Season 27 Qualifiers"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Qualifier for DreamLeague Season 27; STRATZ league(id) null."
+
+  - league_id: 16776
+    name: "Elite League Season 2 EEU Closed Qualifiers – presented by ESB"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Qualifier for Elite League Season 2."
+
+  - league_id: 19089
+    name: "DreamLeague Season 28 Qualifiers"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Qualifier for DreamLeague Season 28; STRATZ league(id) null."
+
+  - league_id: 19090
+    name: "ESL One Birmingham 2026 Qualifiers"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Qualifier for ESL One Birmingham 2026; STRATZ league(id) null."
+
+  # --- Pre-2024 / non-Liquipedia-T1/T2 (audit only) ---
+
+  - league_id: 14892
+    name: "DPC 2023 WEU Winter Tour Division I – presented by PGL"
+    stratz_tier: "DPC_LEAGUE"
+    liquipedia_tier: "T2"
+    in_scope: false
+    notes: "Pre-2024; out of scope."
+
+  - league_id: 14050
+    name: "DPC NA Division II Spring Tour - 2021/2022 - ESL One Spring presented by Intel"
+    stratz_tier: "DPC_LEAGUE"
+    liquipedia_tier: "T2"
+    in_scope: false
+    notes: "Pre-2024; out of scope."
+
+  - league_id: 15693
+    name: "Road to TI 2023 - WEU Regional Qualifiers"
+    stratz_tier: "DPC_LEAGUE_QUALIFIER"
+    liquipedia_tier: "QUALIFIER"
+    in_scope: false
+    notes: "Pre-2024 DPC qualifier."
+
+  - league_id: 10979
+    name: "StarLadder ImbaTV Dota2 Minor #2"
+    stratz_tier: "MINOR"
+    liquipedia_tier: "MINOR"
+    in_scope: false
+    notes: "Pre-2024; out of scope."
+
+  - league_id: 17807
+    name: "RD2L Season 38"
+    stratz_tier: "AMATEUR"
+    liquipedia_tier: "EXCLUDED"
+    in_scope: false
+    notes: "Amateur; not on Liquipedia T1/T2."

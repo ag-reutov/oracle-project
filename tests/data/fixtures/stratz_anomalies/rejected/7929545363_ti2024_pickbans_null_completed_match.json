@@ -1,0 +1,115 @@
+{
+  "id": 7929545363,
+  "league": {
+    "id": 16935,
+    "name": null,
+    "tier": "INTERNATIONAL",
+    "region": null,
+    "prizePool": 2776566,
+    "displayName": "The International 2024",
+    "endDateTime": 1726358400,
+    "lastMatchDate": 1726418058,
+    "startDateTime": 1725235200
+  },
+  "series": {
+    "id": 903653,
+    "type": "BEST_OF_THREE",
+    "matches": [
+      {
+        "id": 7929545363,
+        "startDateTime": 1725555564
+      }
+    ],
+    "leagueId": 16935,
+    "teamOneId": 5,
+    "teamTwoId": 8291895,
+    "winningTeamId": null,
+    "teamOneWinCount": 0,
+    "teamTwoWinCount": 1,
+    "lastMatchDateTime": 1725556133
+  },
+  "players": [
+    {
+      "heroId": 49,
+      "isRadiant": true,
+      "playerSlot": 0,
+      "steamAccountId": 148215639
+    },
+    {
+      "heroId": 13,
+      "isRadiant": true,
+      "playerSlot": 1,
+      "steamAccountId": 173978074
+    },
+    {
+      "heroId": 97,
+      "isRadiant": true,
+      "playerSlot": 2,
+      "steamAccountId": 138857296
+    },
+    {
+      "heroId": 35,
+      "isRadiant": true,
+      "playerSlot": 3,
+      "steamAccountId": 207829314
+    },
+    {
+      "heroId": 110,
+      "isRadiant": true,
+      "playerSlot": 4,
+      "steamAccountId": 94296097
+    },
+    {
+      "heroId": 25,
+      "isRadiant": false,
+      "playerSlot": 128,
+      "steamAccountId": 331855530
+    },
+    {
+      "heroId": 23,
+      "isRadiant": false,
+      "playerSlot": 129,
+      "steamAccountId": 132851371
+    },
+    {
+      "heroId": 57,
+      "isRadiant": false,
+      "playerSlot": 130,
+      "steamAccountId": 136829091
+    },
+    {
+      "heroId": 9,
+      "isRadiant": false,
+      "playerSlot": 131,
+      "steamAccountId": 103735745
+    },
+    {
+      "heroId": 107,
+      "isRadiant": false,
+      "playerSlot": 132,
+      "steamAccountId": 94054712
+    }
+  ],
+  "direTeam": {
+    "id": 8291895,
+    "tag": "TUN",
+    "name": "Tundra Esports"
+  },
+  "leagueId": 16935,
+  "pickBans": null,
+  "seriesId": 903653,
+  "direTeamId": 8291895,
+  "endDateTime": 1725556133,
+  "radiantTeam": {
+    "id": 5,
+    "tag": "IG",
+    "name": "G2 x iG"
+  },
+  "tournamentId": null,
+  "didRadiantWin": false,
+  "gameVersionId": 176,
+  "radiantTeamId": 5,
+  "startDateTime": 1725555564,
+  "durationSeconds": 569,
+  "tournamentRound": null
+}
