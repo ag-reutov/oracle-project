@@ -44,6 +44,13 @@ from dota_predictor.features.pre_draft_snapshot import (
     TARGET_COLUMN,
     build_pre_draft_snapshot,
 )
+from dota_predictor.features.team_elo import (
+    DIRE_TEAM_ELO_COLUMN,
+    RADIANT_TEAM_ELO_COLUMN,
+    TEAM_ELO_DELTA_COLUMN,
+    TEAM_ELO_FEATURE_COLUMNS,
+    EloConfig,
+)
 
 T1 = datetime(2024, 1, 1, tzinfo=UTC)
 T2 = datetime(2024, 2, 1, tzinfo=UTC)
@@ -630,3 +637,192 @@ def test_feature_columns_are_disjoint_from_identity_and_target() -> None:
         tuple(IDENTITY_COLUMNS) + tuple(FEATURE_COLUMNS) + (TARGET_COLUMN,)
         == SNAPSHOT_COLUMNS
     )
+
+
+# --- Step 3C: team Elo integration -----------------------------------------
+
+
+def test_team_elo_columns_are_included_in_feature_columns_and_excluded_elsewhere() -> (
+    None
+):
+    assert set(TEAM_ELO_FEATURE_COLUMNS).issubset(FEATURE_COLUMNS)
+    assert set(TEAM_ELO_FEATURE_COLUMNS).isdisjoint(IDENTITY_COLUMNS)
+    assert TARGET_COLUMN not in TEAM_ELO_FEATURE_COLUMNS
+
+
+def test_team_elo_present_in_full_frame_and_feature_frame_but_not_target(
+    tmp_path: Path,
+) -> None:
+    matches, players = _build_multi_match_matches()
+    config = build_feature_store_config(tmp_path, matches=matches, players=players)
+
+    with connect(config) as store:
+        snapshot = build_pre_draft_snapshot(store)
+        full = snapshot.to_frame()
+        features = snapshot.feature_frame()
+        target = snapshot.target_series()
+
+    for column in TEAM_ELO_FEATURE_COLUMNS:
+        assert column in full.columns
+        assert column in features.columns
+    assert TARGET_COLUMN not in features.columns
+    assert TARGET_COLUMN not in TEAM_ELO_FEATURE_COLUMNS
+    assert target.name == TARGET_COLUMN
+
+
+def test_first_appearance_teams_both_get_default_elo_rating(
+    multi_match_snapshot: pd.DataFrame,
+) -> None:
+    row = multi_match_snapshot.loc[M1]
+    assert row[RADIANT_TEAM_ELO_COLUMN] == 1500.0
+    assert row[DIRE_TEAM_ELO_COLUMN] == 1500.0
+    assert row[TEAM_ELO_DELTA_COLUMN] == 0.0
+
+
+def test_team_elo_delta_is_exactly_radiant_minus_dire(
+    multi_match_snapshot: pd.DataFrame,
+) -> None:
+    diff = (
+        multi_match_snapshot[RADIANT_TEAM_ELO_COLUMN]
+        - multi_match_snapshot[DIRE_TEAM_ELO_COLUMN]
+    )
+    assert (multi_match_snapshot[TEAM_ELO_DELTA_COLUMN] == diff).all()
+
+
+def test_team_elo_output_has_exactly_one_row_per_canonical_match(
+    multi_match_snapshot: pd.DataFrame,
+) -> None:
+    assert len(multi_match_snapshot) == 4
+    for column in TEAM_ELO_FEATURE_COLUMNS:
+        assert multi_match_snapshot[column].notna().all()
+
+
+def test_team_elo_side_swap_preserves_rating_across_the_full_pipeline(
+    tmp_path: Path,
+) -> None:
+    """TeamA wins M1 as radiant, then appears as DIRE in a later match:
+    its rating must carry over through the full `PreDraftSnapshot`
+    pipeline (SQL history features + Python Elo merge), not just the
+    standalone `team_elo` module."""
+    matches = [
+        match_row(
+            1,
+            start_time=T1,
+            radiant_team_id=TEAM_A,
+            dire_team_id=TEAM_B,
+            radiant_win=True,
+        ),
+        match_row(
+            2,
+            start_time=T2,
+            radiant_team_id=TEAM_C,
+            dire_team_id=TEAM_A,
+            radiant_win=False,
+        ),
+    ]
+    players = player_rows(
+        1, radiant_ids=(1, 2, 3, 4, 5), dire_ids=(6, 7, 8, 9, 10)
+    ) + player_rows(2, radiant_ids=(11, 12, 13, 14, 15), dire_ids=(1, 2, 3, 4, 5))
+    config = build_feature_store_config(tmp_path, matches=matches, players=players)
+
+    with connect(config) as store:
+        df = build_pre_draft_snapshot(store).to_frame().set_index("match_id")
+
+    expected_rating = 1500.0 + EloConfig().k_factor * 0.5
+    assert df.loc[2, DIRE_TEAM_ELO_COLUMN] == pytest.approx(expected_rating)
+
+
+def test_team_elo_equal_start_time_matches_do_not_influence_each_other(
+    tmp_path: Path,
+) -> None:
+    matches = [
+        match_row(
+            1,
+            start_time=T1,
+            radiant_team_id=TEAM_A,
+            dire_team_id=TEAM_B,
+            radiant_win=True,
+        ),
+        match_row(
+            2,
+            start_time=T1,
+            radiant_team_id=TEAM_A,
+            dire_team_id=TEAM_C,
+            radiant_win=True,
+        ),
+    ]
+    players = player_rows(
+        1, radiant_ids=(1, 2, 3, 4, 5), dire_ids=(6, 7, 8, 9, 10)
+    ) + player_rows(2, radiant_ids=(1, 2, 3, 4, 5), dire_ids=(11, 12, 13, 14, 15))
+    config = build_feature_store_config(tmp_path, matches=matches, players=players)
+
+    with connect(config) as store:
+        df = build_pre_draft_snapshot(store).to_frame().set_index("match_id")
+
+    assert df.loc[1, RADIANT_TEAM_ELO_COLUMN] == 1500.0
+    assert df.loc[2, RADIANT_TEAM_ELO_COLUMN] == 1500.0
+
+
+def test_team_elo_match_id_permutation_within_equal_timestamps_is_stable(
+    tmp_path: Path,
+) -> None:
+    """Re-assigning match_ids among two equal-`start_time` matches must
+    not change any team's computed Elo feature values, mirroring
+    `test_match_id_ordering_does_not_affect_feature_values` for Step 3C."""
+    matches_a = [
+        match_row(
+            111,
+            start_time=T1,
+            radiant_team_id=TEAM_A,
+            dire_team_id=TEAM_B,
+            radiant_win=True,
+        ),
+        match_row(
+            222,
+            start_time=T1,
+            radiant_team_id=TEAM_C,
+            dire_team_id=TEAM_D,
+            radiant_win=False,
+        ),
+        match_row(
+            333,
+            start_time=T2,
+            radiant_team_id=TEAM_A,
+            dire_team_id=TEAM_C,
+            radiant_win=True,
+        ),
+    ]
+    players_a = (
+        player_rows(111, radiant_ids=(1, 2, 3, 4, 5), dire_ids=(6, 7, 8, 9, 10))
+        + player_rows(
+            222, radiant_ids=(11, 12, 13, 14, 15), dire_ids=(16, 17, 18, 19, 20)
+        )
+        + player_rows(333, radiant_ids=(1, 2, 3, 4, 5), dire_ids=(11, 12, 13, 14, 15))
+    )
+
+    remap = {111: 999, 222: 111, 333: 222}
+    matches_b = [{**row, "match_id": remap[row["match_id"]]} for row in matches_a]
+    players_b = [{**row, "match_id": remap[row["match_id"]]} for row in players_a]
+
+    config_a = build_feature_store_config(
+        tmp_path / "a", matches=matches_a, players=players_a
+    )
+    config_b = build_feature_store_config(
+        tmp_path / "b", matches=matches_b, players=players_b
+    )
+
+    with connect(config_a) as store_a:
+        df_a = build_pre_draft_snapshot(store_a).to_frame().sort_values("start_time")
+    with connect(config_b) as store_b:
+        df_b = build_pre_draft_snapshot(store_b).to_frame().sort_values("start_time")
+
+    pd.testing.assert_frame_equal(
+        df_a[list(TEAM_ELO_FEATURE_COLUMNS)].reset_index(drop=True),
+        df_b[list(TEAM_ELO_FEATURE_COLUMNS)].reset_index(drop=True),
+    )
+
+
+def test_full_snapshot_column_order_matches_snapshot_columns(
+    multi_match_snapshot: pd.DataFrame,
+) -> None:
+    assert list(multi_match_snapshot.reset_index().columns) == list(SNAPSHOT_COLUMNS)

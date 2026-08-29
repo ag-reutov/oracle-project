@@ -61,11 +61,27 @@ aggregating `team_appearances`/`player_appearances` per current match
 via `GROUP BY`, filtered by the strict historical-eligibility join
 condition -- bulk, relation-level SQL, not one query per match.
 
+Team Elo (Step 3C)
+------------------
+`TEAM_ELO_FEATURE_COLUMNS` (`radiant_team_elo`/`dire_team_elo`/
+`team_elo_delta`) are computed separately by `features.team_elo` --
+that module's docstring has the exact algorithm and temporal-integrity
+argument. They cannot be expressed by `PRE_DRAFT_SNAPSHOT_SQL` itself
+(Elo is a sequential recurrence, not a `GROUP BY`/`JOIN`-able
+aggregate), so `PreDraftSnapshot.to_frame` computes them from the
+materialized SQL result and merges them in as a plain left join on
+`match_id`, one-to-one -- see `to_frame`. `PRE_DRAFT_SNAPSHOT_SQL`
+itself is unchanged by Step 3C.
+
 Persistence
 ------------
 Nothing is persisted or materialized to disk by this module -- see
 `build_pre_draft_snapshot`, which returns a lazy `PreDraftSnapshot`
-wrapping an unmaterialized `duckdb.DuckDBPyRelation`.
+wrapping an unmaterialized `duckdb.DuckDBPyRelation`. `to_frame` (and
+therefore `feature_frame`/`target_series`) still has to materialize
+that relation to a `pandas.DataFrame` to compute Elo, exactly as it
+already did to return a `DataFrame` at all -- `build_pre_draft_snapshot`
+itself performs no materialization.
 """
 
 from __future__ import annotations
@@ -84,6 +100,12 @@ from dota_predictor.features.duckdb_layer import (
     MATCHES_VIEW,
     FeatureDuckDBConnection,
 )
+from dota_predictor.features.team_elo import (
+    DEFAULT_ELO_CONFIG,
+    TEAM_ELO_FEATURE_COLUMNS,
+    EloConfig,
+    compute_team_elo_features,
+)
 
 __all__ = [
     "FEATURE_COLUMNS",
@@ -93,6 +115,7 @@ __all__ = [
     "ROSTER_CONTINUITY_FEATURE_COLUMNS",
     "SNAPSHOT_COLUMNS",
     "TARGET_COLUMN",
+    "TEAM_ELO_FEATURE_COLUMNS",
     "TEAM_HISTORY_FEATURE_COLUMNS",
     "PreDraftSnapshot",
     "build_pre_draft_snapshot",
@@ -161,6 +184,7 @@ FEATURE_COLUMNS: tuple[str, ...] = (
     TEAM_HISTORY_FEATURE_COLUMNS
     + PLAYER_HISTORY_FEATURE_COLUMNS
     + ROSTER_CONTINUITY_FEATURE_COLUMNS
+    + TEAM_ELO_FEATURE_COLUMNS
 )
 
 # Full column order of one snapshot row, as returned by
@@ -450,11 +474,24 @@ class PreDraftSnapshot:
     identity_columns: tuple[str, ...] = field(default=IDENTITY_COLUMNS)
     feature_columns: tuple[str, ...] = field(default=FEATURE_COLUMNS)
     target_column: str = field(default=TARGET_COLUMN)
+    elo_config: EloConfig = field(default=DEFAULT_ELO_CONFIG)
 
     def to_frame(self) -> pd.DataFrame:
         """The full snapshot: identity + feature + target columns, one
-        row per canonical match."""
-        return self.relation.df()
+        row per canonical match.
+
+        Team Elo (`TEAM_ELO_FEATURE_COLUMNS`) is computed from this
+        same materialized frame (see `features.team_elo`) and merged
+        in one-to-one on `match_id` -- `validate="one_to_one"` is a
+        direct, load-bearing check on the "exactly one row per
+        canonical match" invariant, not just documentation of intent.
+        """
+        base = self.relation.df()
+        elo_features = compute_team_elo_features(base, config=self.elo_config)
+        merged = base.merge(
+            elo_features, on="match_id", how="left", validate="one_to_one"
+        )
+        return merged[list(SNAPSHOT_COLUMNS)]
 
     def feature_frame(self) -> pd.DataFrame:
         """Only `feature_columns` -- never the target, never identity
@@ -468,16 +505,22 @@ class PreDraftSnapshot:
         return self.to_frame()[self.target_column]
 
 
-def build_pre_draft_snapshot(store: FeatureDuckDBConnection) -> PreDraftSnapshot:
+def build_pre_draft_snapshot(
+    store: FeatureDuckDBConnection, *, elo_config: EloConfig | None = None
+) -> PreDraftSnapshot:
     """Build the PRE_DRAFT historical snapshot: one row per canonical
-    match in `store`, with strictly-earlier-match team/player history
-    and roster-continuity features plus the separated `radiant_win`
-    target.
+    match in `store`, with strictly-earlier-match team/player history,
+    roster-continuity, and team-Elo features plus the separated
+    `radiant_win` target.
 
     `store` must be an open `FeatureDuckDBConnection` (see
     `features.duckdb_layer.connect`). This is the single public entry
-    point for Step 3B; see `PRE_DRAFT_SNAPSHOT_SQL` for the exact
-    query and the module docstring for the temporal-integrity argument.
+    point for Step 3B/3C; see `PRE_DRAFT_SNAPSHOT_SQL` for the
+    team/player-history query, `features.team_elo` for the Elo
+    algorithm, and this module's docstring for the temporal-integrity
+    argument. `elo_config` defaults to `team_elo.DEFAULT_ELO_CONFIG`
+    (initial rating 1500.0, K-factor 32.0) when not given.
     """
     relation = store.sql(PRE_DRAFT_SNAPSHOT_SQL)
-    return PreDraftSnapshot(relation=relation)
+    resolved_elo_config = elo_config if elo_config is not None else DEFAULT_ELO_CONFIG
+    return PreDraftSnapshot(relation=relation, elo_config=resolved_elo_config)

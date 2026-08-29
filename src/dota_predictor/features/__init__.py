@@ -26,12 +26,25 @@ from dota_predictor.features.pre_draft_snapshot import (
     PreDraftSnapshot,
     build_pre_draft_snapshot,
 )
+from dota_predictor.features.team_elo import (
+    DEFAULT_ELO_CONFIG,
+    DIRE_TEAM_ELO_COLUMN,
+    RADIANT_TEAM_ELO_COLUMN,
+    TEAM_ELO_DELTA_COLUMN,
+    TEAM_ELO_FEATURE_COLUMNS,
+    EloConfig,
+    InvalidTeamIdError,
+    compute_team_elo_features,
+    expected_score,
+)
 from dota_predictor.features.temporal import (
     HISTORICAL_START_TIME_SQL_CONDITION,
     is_historical,
 )
 
 __all__ = [
+    "DEFAULT_ELO_CONFIG",
+    "DIRE_TEAM_ELO_COLUMN",
     "DRAFT_EVENTS_VIEW",
     "FEATURE_COLUMNS",
     "HISTORICAL_START_TIME_SQL_CONDITION",
@@ -40,19 +53,26 @@ __all__ = [
     "MATCH_PLAYERS_VIEW",
     "PLAYER_HISTORY_FEATURE_COLUMNS",
     "PRE_DRAFT_SNAPSHOT_SQL",
+    "RADIANT_TEAM_ELO_COLUMN",
     "ROSTER_CONTINUITY_FEATURE_COLUMNS",
     "SNAPSHOT_COLUMNS",
     "TARGET_COLUMN",
+    "TEAM_ELO_DELTA_COLUMN",
+    "TEAM_ELO_FEATURE_COLUMNS",
     "TEAM_HISTORY_FEATURE_COLUMNS",
+    "EloConfig",
     "FeatureAvailabilityError",
     "FeatureDuckDBConnection",
     "FeatureStoreConfig",
+    "InvalidTeamIdError",
     "PreDraftSnapshot",
     "SnapshotStage",
     "assert_columns_allowed_for_stage",
     "build_pre_draft_snapshot",
     "columns_allowed_for_stage",
+    "compute_team_elo_features",
     "connect",
+    "expected_score",
     "is_historical",
     "load_feature_store_config",
 ]
