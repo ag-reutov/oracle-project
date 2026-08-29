@@ -23,6 +23,7 @@ from dota_predictor.data.stratz_mapping import (
 )
 
 ANOMALY_FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "stratz_anomalies"
+REJECTED_ANOMALY_FIXTURES_DIR = ANOMALY_FIXTURES_DIR / "rejected"
 
 
 def _pick_ban_row(
@@ -176,7 +177,7 @@ def test_canonical_match_from_stratz_maps_realistic_payload() -> None:
     assert match.game_number_in_series is None
     assert match.game_version_id == 176
     assert match.radiant_team_id == 8261500
-    assert match.radiant_team_name == "Xtreme Gaming"
+    assert match.radiant_team_name_observed == "Xtreme Gaming"
     assert list(match.radiant_player_ids) == RADIANT_IDS
     assert match.dire_team_id == 9247354
     assert list(match.dire_player_ids) == DIRE_IDS
@@ -272,3 +273,78 @@ def test_real_anomaly_fixtures_still_map_successfully(fixture_path: Path) -> Non
     assert match.match_id == raw["id"]
     assert len(match.radiant_final_hero_ids) == 5
     assert len(match.dire_final_hero_ids) == 5
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    sorted(REJECTED_ANOMALY_FIXTURES_DIR.glob("*.json"))
+    if REJECTED_ANOMALY_FIXTURES_DIR.is_dir()
+    else [],
+    ids=lambda path: path.name,
+)
+def test_rejected_anomaly_fixtures_fail_canonicalization(
+    fixture_path: Path,
+) -> None:
+    """Real STRATZ payloads that lack draft data must stay rejected.
+
+    These are completed professional matches where STRATZ returns
+    `pickBans: null` even though `players[].heroId` is populated. Final
+    hero lineups alone cannot reconstruct draft order, so canonicalization
+    must fail rather than invent draft events.
+    """
+    raw = json.loads(fixture_path.read_text(encoding="utf-8"))
+    assert raw.get("pickBans") in (None, [])
+    with pytest.raises(
+        CanonicalMatchError,
+        match="expected exactly 5 actual radiant picks",
+    ):
+        canonical_match_from_stratz(raw)
+
+
+def test_paired_matches_confirm_radiant_dire_side_swap_not_inverted() -> None:
+    """Two real games of one series with Radiant/Dire swapped map correctly.
+
+    `8461956309` (game 5) and `8461854486` (game 4) are the same real
+    STRATZ `BEST_OF_FIVE` series (`seriesId` 1010717); Team Falcons is
+    Dire in game 5 but Radiant in game 4, and vice versa for Xtreme
+    Gaming. This proves the mapper derives side from each match's own
+    `radiantTeamId`/`direTeamId`/`isRadiant` fields rather than from any
+    assumption that a team keeps one side across a series, and that
+    there is no accidental Radiant/Dire inversion in either direction.
+    """
+    game_five = json.loads(
+        (
+            ANOMALY_FIXTURES_DIR
+            / "8461956309_ti2025_tournamentid_and_tournamentround_null.json"
+        ).read_text(encoding="utf-8")
+    )
+    game_four = json.loads(
+        (
+            ANOMALY_FIXTURES_DIR
+            / "8461854486_ti2025_radiant_dire_side_swap_within_series.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    match_five = canonical_match_from_stratz(game_five)
+    match_four = canonical_match_from_stratz(game_four)
+
+    assert match_five.series_id == match_four.series_id
+    # Same two teams, but sides are swapped between the two games.
+    assert match_five.radiant_team_id == match_four.dire_team_id
+    assert match_five.dire_team_id == match_four.radiant_team_id
+    # Same two rosters (as sets, since lineups can vary in playerSlot
+    # order across games), also swapped.
+    assert set(match_five.radiant_player_ids) == set(match_four.dire_player_ids)
+    assert set(match_five.dire_player_ids) == set(match_four.radiant_player_ids)
+
+    # Each raw player's `isVictory` must agree with `radiant_win` combined
+    # with that player's `isRadiant`, in both games -- the ground-truth
+    # check for "no accidental inversion".
+    for raw_match, canonical in ((game_five, match_five), (game_four, match_four)):
+        for player in raw_match["players"]:
+            expected_victory = (
+                canonical.radiant_win
+                if player["isRadiant"]
+                else not canonical.radiant_win
+            )
+            assert player["isVictory"] == expected_victory

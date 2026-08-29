@@ -63,7 +63,21 @@ from dota_predictor.data.canonical_schema import (
     Side,
 )
 
-__all__ = ["canonical_match_from_stratz", "draft_event_from_stratz_pick_ban"]
+__all__ = [
+    "CANONICAL_MAPPER_VERSION",
+    "canonical_match_from_stratz",
+    "draft_event_from_stratz_pick_ban",
+]
+
+# Monotonic version of this module's mapping *logic*, not the package
+# version. Bump this whenever a change to `canonical_match_from_stratz` or
+# `draft_event_from_stratz_pick_ban` would change the output for
+# already-ingested raw payloads (e.g. a new fallback rule, a fixed bug in
+# field selection). Persisted alongside each canonical row
+# (`storage.schema.MATCHES.c.mapper_version`) so a future reprocessing job
+# can select rows with `mapper_version < CANONICAL_MAPPER_VERSION` instead
+# of reprocessing everything or nothing.
+CANONICAL_MAPPER_VERSION = 1
 
 
 def _require(raw: Mapping[str, Any], key: str, *, context: str) -> Any:
@@ -227,10 +241,10 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
         game_number_in_series=game_number_in_series,
         game_version_id=raw.get("gameVersionId"),
         radiant_team_id=radiant_team_id,
-        radiant_team_name=radiant_team.get("name"),
+        radiant_team_name_observed=radiant_team.get("name"),
         radiant_player_ids=radiant_player_ids,
         dire_team_id=dire_team_id,
-        dire_team_name=dire_team.get("name"),
+        dire_team_name_observed=dire_team.get("name"),
         dire_player_ids=dire_player_ids,
         draft_events=draft_events,
         radiant_win=radiant_win,

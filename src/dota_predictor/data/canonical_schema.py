@@ -59,6 +59,13 @@ __all__ = [
 MatchId = int
 LeagueId = int
 SeriesId = int
+# `TeamId`/`PlayerId` are STRATZ's own team id / `steamAccountId`. They
+# are the stable source identifiers this project joins/aggregates on --
+# not a guarantee that they map 1:1 to a permanent real-world
+# organization or person (team ids can be reused/rebranded by STRATZ;
+# player accounts are not verified real-world identity). Treat them as
+# "stable within STRATZ", not as a stronger identity claim, unless a
+# future richer identity model is introduced with explicit evidence.
 TeamId = int
 PlayerId = int
 HeroId = int
@@ -123,10 +130,10 @@ FIELD_INFORMATION_AVAILABILITY: dict[str, InformationAvailability] = {
     "game_number_in_series": InformationAvailability.PRE_DRAFT,
     "game_version_id": InformationAvailability.PRE_DRAFT,
     "radiant_team_id": InformationAvailability.PRE_DRAFT,
-    "radiant_team_name": InformationAvailability.PRE_DRAFT,
+    "radiant_team_name_observed": InformationAvailability.PRE_DRAFT,
     "radiant_player_ids": InformationAvailability.PRE_DRAFT,
     "dire_team_id": InformationAvailability.PRE_DRAFT,
-    "dire_team_name": InformationAvailability.PRE_DRAFT,
+    "dire_team_name_observed": InformationAvailability.PRE_DRAFT,
     "dire_player_ids": InformationAvailability.PRE_DRAFT,
     "draft_events": InformationAvailability.DRAFT,
     "radiant_win": InformationAvailability.POST_MATCH,
@@ -231,12 +238,18 @@ class CanonicalMatch:
 
     # --- Radiant (PRE_DRAFT) ---
     radiant_team_id: TeamId
-    radiant_team_name: str | None = None
+    # What the source reported as this team's name for THIS match, at the
+    # time it was observed -- not this team's current/best-known display
+    # name. `team_id` is the stable join key across matches; this field is
+    # an immutable per-match fact and must never be overwritten to reflect
+    # a "latest known" name (that is an entity-level, derived concern for
+    # a future team registry/dataset-build layer, not this dataclass).
+    radiant_team_name_observed: str | None = None
     radiant_player_ids: tuple[PlayerId, PlayerId, PlayerId, PlayerId, PlayerId]
 
     # --- Dire (PRE_DRAFT) ---
     dire_team_id: TeamId
-    dire_team_name: str | None = None
+    dire_team_name_observed: str | None = None
     dire_player_ids: tuple[PlayerId, PlayerId, PlayerId, PlayerId, PlayerId]
 
     # --- Draft (DRAFT) ---
