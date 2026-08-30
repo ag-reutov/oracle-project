@@ -8,6 +8,11 @@ already-computed rows/columns are usable for ML and how they are
 split. No feature/Elo/history computation lives here.
 """
 
+from dota_predictor.training.baselines import (
+    ConstantProbabilityBaseline,
+    EloOnlyProbabilityBaseline,
+    EmpiricalRateBaseline,
+)
 from dota_predictor.training.dataset import (
     ModelReadyDataset,
     TrainingDatasetError,
@@ -16,6 +21,23 @@ from dota_predictor.training.dataset import (
 from dota_predictor.training.diagnostics import (
     missing_value_report,
     rows_with_any_missing,
+)
+from dota_predictor.training.evaluation import BenchmarkReport, run_step4b_benchmark
+from dota_predictor.training.feature_sets import (
+    ALL_FEATURE_COLUMNS,
+    ELO_ONLY_FEATURE_COLUMNS,
+    HISTORICAL_WITHOUT_ELO_COLUMNS,
+)
+from dota_predictor.training.logistic_model import (
+    LogisticRegressionConfig,
+    LogisticRegressionPredictor,
+    build_logistic_pipeline,
+    standardized_coefficients,
+)
+from dota_predictor.training.metrics import EvaluationMetrics, evaluate_probabilities
+from dota_predictor.training.preprocessing import (
+    PreprocessingSpec,
+    build_preprocessing_pipeline,
 )
 from dota_predictor.training.split import (
     DEFAULT_SPLIT_CONFIG,
@@ -29,17 +51,33 @@ from dota_predictor.training.split import (
 )
 
 __all__ = [
+    "ALL_FEATURE_COLUMNS",
+    "BenchmarkReport",
+    "ConstantProbabilityBaseline",
     "DEFAULT_SPLIT_CONFIG",
+    "ELO_ONLY_FEATURE_COLUMNS",
+    "EmpiricalRateBaseline",
+    "EvaluationMetrics",
+    "HISTORICAL_WITHOUT_ELO_COLUMNS",
+    "LogisticRegressionConfig",
+    "LogisticRegressionPredictor",
     "ChronologicalSplit",
     "ChronologicalSplitConfig",
     "ChronologicalSplitError",
     "DatasetPartition",
+    "EloOnlyProbabilityBaseline",
     "ModelReadyDataset",
+    "PreprocessingSpec",
     "SplitBoundaries",
     "TrainingDatasetError",
+    "build_logistic_pipeline",
     "build_model_ready_dataset",
+    "build_preprocessing_pipeline",
     "chronological_split",
+    "evaluate_probabilities",
     "missing_value_report",
     "resolve_split_boundaries",
     "rows_with_any_missing",
+    "run_step4b_benchmark",
+    "standardized_coefficients",
 ]

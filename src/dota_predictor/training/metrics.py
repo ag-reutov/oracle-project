@@ -1,0 +1,137 @@
+"""Step 4B: probability-focused evaluation metrics and calibration."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+import pandas as pd
+from sklearn.metrics import (
+    accuracy_score,
+    brier_score_loss,
+    log_loss,
+    roc_auc_score,
+)
+
+__all__ = [
+    "CalibrationBin",
+    "EvaluationMetrics",
+    "accuracy_at_threshold",
+    "calibration_bins",
+    "evaluate_probabilities",
+    "expected_calibration_error",
+]
+
+
+@dataclass(frozen=True)
+class CalibrationBin:
+    bin_lower: float
+    bin_upper: float
+    predicted_mean: float
+    observed_frequency: float
+    count: int
+
+
+@dataclass(frozen=True)
+class EvaluationMetrics:
+    """Probability-quality metrics for one model on one partition."""
+
+    log_loss: float
+    brier_score: float
+    accuracy_at_0_5: float
+    roc_auc: float
+    expected_calibration_error: float
+    calibration_table: pd.DataFrame
+    n_samples: int
+
+
+def accuracy_at_threshold(
+    y_true: np.ndarray | pd.Series, y_prob: np.ndarray | pd.Series, *, threshold: float = 0.5
+) -> float:
+    y = np.asarray(y_true, dtype=int)
+    p = np.asarray(y_prob, dtype=float)
+    return float(accuracy_score(y, p >= threshold))
+
+
+def calibration_bins(
+    y_true: np.ndarray | pd.Series,
+    y_prob: np.ndarray | pd.Series,
+    *,
+    n_bins: int = 10,
+) -> pd.DataFrame:
+    """Equal-width bins over [0, 1] with predicted mean, observed frequency,
+    and sample count per bin."""
+    y = np.asarray(y_true, dtype=int)
+    p = np.clip(np.asarray(y_prob, dtype=float), 0.0, 1.0)
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    bin_index = np.clip(np.digitize(p, edges, right=True) - 1, 0, n_bins - 1)
+
+    rows: list[dict[str, object]] = []
+    for idx in range(n_bins):
+        mask = bin_index == idx
+        count = int(mask.sum())
+        if count == 0:
+            rows.append(
+                {
+                    "bin_lower": edges[idx],
+                    "bin_upper": edges[idx + 1],
+                    "predicted_mean": np.nan,
+                    "observed_frequency": np.nan,
+                    "count": 0,
+                }
+            )
+            continue
+        rows.append(
+            {
+                "bin_lower": edges[idx],
+                "bin_upper": edges[idx + 1],
+                "predicted_mean": float(p[mask].mean()),
+                "observed_frequency": float(y[mask].mean()),
+                "count": count,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def expected_calibration_error(
+    y_true: np.ndarray | pd.Series,
+    y_prob: np.ndarray | pd.Series,
+    *,
+    n_bins: int = 10,
+) -> float:
+    """Weighted mean absolute difference between bin predicted mean and
+    observed frequency (ECE)."""
+    table = calibration_bins(y_true, y_prob, n_bins=n_bins)
+    total = table["count"].sum()
+    if total == 0:
+        return float("nan")
+    valid = table["count"] > 0
+    abs_diff = (
+        table.loc[valid, "predicted_mean"] - table.loc[valid, "observed_frequency"]
+    ).abs()
+    weights = table.loc[valid, "count"] / total
+    return float((abs_diff * weights).sum())
+
+
+def evaluate_probabilities(
+    y_true: np.ndarray | pd.Series,
+    y_prob: np.ndarray | pd.Series,
+    *,
+    n_calibration_bins: int = 10,
+) -> EvaluationMetrics:
+    """Compute the full Step 4B metric bundle for Radiant-win probabilities."""
+    y = np.asarray(y_true, dtype=int)
+    p = np.clip(np.asarray(y_prob, dtype=float), 1e-15, 1.0 - 1e-15)
+
+    cal_table = calibration_bins(y, p, n_bins=n_calibration_bins)
+    return EvaluationMetrics(
+        log_loss=float(log_loss(y, p, labels=[0, 1])),
+        brier_score=float(brier_score_loss(y, p)),
+        accuracy_at_0_5=accuracy_at_threshold(y, p, threshold=0.5),
+        roc_auc=float(roc_auc_score(y, p)),
+        expected_calibration_error=expected_calibration_error(
+            y, p, n_bins=n_calibration_bins
+        ),
+        calibration_table=cal_table,
+        n_samples=len(y),
+    )
