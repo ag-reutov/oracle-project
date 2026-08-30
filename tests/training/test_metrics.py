@@ -41,9 +41,40 @@ def test_calibration_bins_report_counts_and_frequencies() -> None:
     assert table.loc[table["count"] > 0, "observed_frequency"].between(0, 1).all()
 
 
-def test_expected_calibration_error_is_zero_for_perfect_calibration() -> None:
+def test_calibration_bins_place_boundary_values_with_right_closed_edges() -> None:
+    """``digitize(..., right=True)``: 0.0 and 0.5 land in the lower bin,
+    1.0 in the last bin."""
+    y = np.array([0, 0, 1])
+    p = np.array([0.0, 0.5, 1.0])
+    table = calibration_bins(y, p, n_bins=2)
+    assert table.loc[0, "count"] == 2
+    assert table.loc[1, "count"] == 1
+    assert table.loc[0, "predicted_mean"] == pytest.approx(0.25)
+    assert table.loc[1, "predicted_mean"] == pytest.approx(1.0)
+
+
+def test_confident_predictions_are_not_perfectly_calibrated() -> None:
+    """Accurate/confident is not the same as calibrated.
+
+    Lower bin: observed rate 0.0 vs mean prediction 0.1.
+    Upper bin: observed rate 1.0 vs mean prediction 0.9.
+    Equal-weight ECE is 0.1.
+    """
     y = np.array([0, 0, 1, 1])
     p = np.array([0.1, 0.1, 0.9, 0.9])
+    table = calibration_bins(y, p, n_bins=2)
+    assert table.loc[0, "predicted_mean"] == pytest.approx(0.1)
+    assert table.loc[0, "observed_frequency"] == pytest.approx(0.0)
+    assert table.loc[1, "predicted_mean"] == pytest.approx(0.9)
+    assert table.loc[1, "observed_frequency"] == pytest.approx(1.0)
+    assert expected_calibration_error(y, p, n_bins=2) == pytest.approx(0.1)
+
+
+def test_expected_calibration_error_is_zero_for_perfect_calibration() -> None:
+    """In each occupied equal-width bin, mean predicted probability
+    equals the empirical positive rate."""
+    y = np.array([0, 0, 0, 1, 0, 1, 1, 1])
+    p = np.array([0.25, 0.25, 0.25, 0.25, 0.75, 0.75, 0.75, 0.75])
     ece = expected_calibration_error(y, p, n_bins=2)
     assert ece == pytest.approx(0.0, abs=1e-12)
 

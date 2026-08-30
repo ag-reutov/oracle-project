@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 from sklearn.exceptions import NotFittedError
 
+from dota_predictor.training.feature_sets import ALL_FEATURE_COLUMNS
 from dota_predictor.training.preprocessing import (
     MISSINGNESS_INDICATOR_SUFFIX,
     build_preprocessing_pipeline,
@@ -65,3 +66,34 @@ def test_pipeline_transform_before_fit_raises() -> None:
     pipeline = build_preprocessing_pipeline()
     with pytest.raises(NotFittedError):
         pipeline.transform(pd.DataFrame({"a": [1.0]}))
+
+
+def test_get_feature_names_out_doubles_input_columns_in_transform_order() -> None:
+    """Regression: indicator names must be derived from the original
+    ``feature_names_in_``, not from the list being extended (that
+    generator never terminates)."""
+    assert len(ALL_FEATURE_COLUMNS) == 33
+    train = pd.DataFrame(
+        {column: np.arange(4, dtype=float) for column in ALL_FEATURE_COLUMNS}
+    )
+    train.iloc[0, 0] = np.nan
+
+    pipeline = build_preprocessing_pipeline()
+    pipeline.fit(train)
+    imputer = pipeline.named_steps["missingness_impute"]
+    names = imputer.get_feature_names_out()
+    transformed = imputer.transform(train)
+
+    assert len(names) == 66
+    assert list(names[:33]) == list(ALL_FEATURE_COLUMNS)
+    assert list(names[33:]) == [
+        f"{column}{MISSINGNESS_INDICATOR_SUFFIX}" for column in ALL_FEATURE_COLUMNS
+    ]
+    assert transformed.shape == (len(train), 66)
+    labeled = pd.DataFrame(transformed, columns=names)
+    first_feature = ALL_FEATURE_COLUMNS[0]
+    first_indicator = f"{first_feature}{MISSINGNESS_INDICATOR_SUFFIX}"
+    assert labeled.columns.tolist() == list(names)
+    assert labeled.loc[0, first_indicator] == 1.0
+    assert labeled.loc[1, first_indicator] == 0.0
+    assert transformed[0, 33] == labeled.loc[0, first_indicator]

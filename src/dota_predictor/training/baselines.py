@@ -30,8 +30,8 @@ class ProbabilityPredictor:
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         raise NotImplementedError
 
-    def predict_radiant_win_proba(self, X: pd.DataFrame) -> np.ndarray:
-        return self.predict_proba(X)[:, 1]
+    def predict_radiant_win_proba(self, X: pd.DataFrame) -> pd.Series:
+        return pd.Series(self.predict_proba(X)[:, 1], index=X.index)
 
 
 @dataclass
