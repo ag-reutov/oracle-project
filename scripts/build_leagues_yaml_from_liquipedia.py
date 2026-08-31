@@ -35,12 +35,15 @@ HEADER = dedent(
     # Pre-2024 DPC-era rows kept for audit only (in_scope: false).
     # Qualifiers listed but excluded (in_scope: false).
     #
+    # fetch_mode (optional, default league): league = league(id) pagination;
+    # match_ids = STRATZ match(id) after ID discovery. Independent of in_scope.
+    #
     # Sync: scripts/load_league_registry.py → leagues / ingestion_leagues tables.
     """
 ).strip()
 
 # liquipedia_name -> (league_id, stratz_display_name, stratz_tier, in_scope, extra_notes)
-# in_scope false when STRATZ league(id) GraphQL returns null (ingest blocked).
+# in_scope false when STRATZ league(id) GraphQL returns null (use fetch_mode match_ids).
 STRATZ_ID_MAP: dict[str, tuple[int, str, str, bool, str | None]] = {
     # 2024 T1
     "BetBoom Dacha Dubai 2024": (16169, "BetBoom Dacha Dubai 2024", "PROFESSIONAL", True, None),
@@ -128,6 +131,26 @@ AUDIT_ONLY = [
     (17807, "RD2L Season 38", "EXCLUDED", "Amateur; not on Liquipedia T1/T2.", "AMATEUR"),
 ]
 
+# Catalog-null STRATZ leagues: `ingest_stratz_leagues --all` uses match(id).
+MATCH_ID_FETCH_LEAGUE_IDS = {
+    17419,
+    17420,
+    18633,
+    18863,
+    18920,
+    18937,
+    18988,
+    19099,
+    19101,
+    19239,
+    19269,
+    19422,
+    19435,
+    19543,
+    19696,
+    19785,
+}
+
 
 def fmt_entry(
     league_id: int,
@@ -144,6 +167,8 @@ def fmt_entry(
         f"    liquipedia_tier: \"{tier}\"",
         f"    in_scope: {'true' if in_scope else 'false'}",
     ]
+    if league_id in MATCH_ID_FETCH_LEAGUE_IDS:
+        lines.append("    fetch_mode: match_ids")
     if notes:
         lines.append(f"    notes: \"{notes}\"")
     return "\n".join(lines)

@@ -35,7 +35,10 @@ def _build_parser() -> argparse.ArgumentParser:
     group.add_argument(
         "--all",
         action="store_true",
-        help="Ingest all leagues currently present in ingestion_leagues.",
+        help="Ingest all leagues currently present in ingestion_leagues. "
+        "Each league uses `leagues.fetch_mode` (`league` or `match_ids`); "
+        "catalog-null leagues must be `match_ids` so `--all` never calls "
+        "STRATZ `league(id)` for them.",
     )
     parser.add_argument(
         "--log-level",

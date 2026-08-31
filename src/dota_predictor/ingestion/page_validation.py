@@ -8,7 +8,11 @@ from typing import Any
 
 from dota_predictor.ingestion.errors import PageValidationError
 
-__all__ = ["PageValidationResult", "validate_match_page"]
+__all__ = [
+    "PageValidationResult",
+    "validate_match_belongs_to_league",
+    "validate_match_page",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -87,3 +91,18 @@ def validate_match_page(
         overlap_with_persisted=overlap,
         start_times_non_increasing=non_increasing,
     )
+
+
+def validate_match_belongs_to_league(match: dict[str, Any], league_id: int) -> None:
+    """Reject a single match whose `leagueId` is missing or not `league_id`.
+
+    Stricter than `validate_match_page`, which ignores a null `leagueId`.
+    League-scoped match-id import requires the STRATZ payload to confirm
+    membership; a missing `leagueId` is treated as a mismatch.
+    """
+    returned = match.get("leagueId")
+    if returned is None or int(returned) != league_id:
+        match_id = match.get("id")
+        raise PageValidationError(
+            f"Match {match_id} has leagueId {returned!r}, expected {league_id}"
+        )

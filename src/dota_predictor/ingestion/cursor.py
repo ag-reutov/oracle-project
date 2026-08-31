@@ -7,7 +7,16 @@ from typing import Any
 
 from dota_predictor.ingestion.config import DEFAULT_PAGE_SIZE
 
-__all__ = ["CursorState", "cursor_from_dict", "cursor_to_dict"]
+__all__ = [
+    "MATCH_IDS_CURSOR_MODE",
+    "CursorState",
+    "cursor_from_dict",
+    "cursor_to_dict",
+]
+
+# Stored on `league_ingestion_state.cursor_state` so the legacy
+# `league(id)` pagination path will not try to page a catalog-null league.
+MATCH_IDS_CURSOR_MODE = "match_ids"
 
 
 @dataclass
@@ -17,6 +26,7 @@ class CursorState:
     last_match_id: int | None = None
     last_start_date_time: int | None = None
     fetch_complete: bool = False
+    mode: str | None = None
 
 
 def cursor_from_dict(data: dict[str, Any] | None) -> CursorState:
@@ -28,6 +38,7 @@ def cursor_from_dict(data: dict[str, Any] | None) -> CursorState:
         last_match_id=data.get("last_match_id"),
         last_start_date_time=data.get("last_start_date_time"),
         fetch_complete=bool(data.get("fetch_complete", False)),
+        mode=data.get("mode"),
     )
 
 
@@ -38,4 +49,5 @@ def cursor_to_dict(cursor: CursorState) -> dict[str, Any]:
         "last_match_id": cursor.last_match_id,
         "last_start_date_time": cursor.last_start_date_time,
         "fetch_complete": cursor.fetch_complete,
+        "mode": cursor.mode,
     }

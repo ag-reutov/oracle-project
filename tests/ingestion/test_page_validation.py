@@ -23,6 +23,20 @@ def test_rejects_wrong_league() -> None:
         validate_match_page(matches, league_id=10)
 
 
+def test_validate_match_belongs_to_league_rejects_mismatch() -> None:
+    from dota_predictor.ingestion.page_validation import validate_match_belongs_to_league
+
+    with pytest.raises(PageValidationError, match="expected 10"):
+        validate_match_belongs_to_league({"id": 1, "leagueId": 99}, league_id=10)
+
+
+def test_validate_match_belongs_to_league_rejects_missing_league_id() -> None:
+    from dota_predictor.ingestion.page_validation import validate_match_belongs_to_league
+
+    with pytest.raises(PageValidationError, match="expected 10"):
+        validate_match_belongs_to_league({"id": 1, "leagueId": None}, league_id=10)
+
+
 def test_overlap_is_logged_not_fatal() -> None:
     matches = [{"id": 1, "leagueId": 10, "startDateTime": 100}]
     result = validate_match_page(

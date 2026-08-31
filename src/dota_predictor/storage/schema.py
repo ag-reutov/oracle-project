@@ -76,6 +76,9 @@ __all__ = [
     "DRAFT_EVENTS",
     "INGESTION_LEAGUES",
     "LEAGUES",
+    "LEAGUE_FETCH_MODES",
+    "LEAGUE_FETCH_MODE_LEAGUE",
+    "LEAGUE_FETCH_MODE_MATCH_IDS",
     "LEAGUE_INGESTION_STATE",
     "LEAGUE_INGESTION_STATUSES",
     "LIQUIPEDIA_TIERS",
@@ -107,6 +110,9 @@ METADATA = sa.MetaData(naming_convention=NAMING_CONVENTION)
 LIQUIPEDIA_TIERS = ("T1", "T2", "MINOR", "QUALIFIER", "EXCLUDED")
 LEAGUE_INGESTION_STATUSES = ("PENDING", "IN_PROGRESS", "COMPLETE", "ERROR")
 MATCH_INGESTION_ERROR_STAGES = ("FETCH", "MAP", "WRITE")
+LEAGUE_FETCH_MODE_LEAGUE = "league"
+LEAGUE_FETCH_MODE_MATCH_IDS = "match_ids"
+LEAGUE_FETCH_MODES = (LEAGUE_FETCH_MODE_LEAGUE, LEAGUE_FETCH_MODE_MATCH_IDS)
 
 # `Side`/`DraftAction` are reused from canonical_schema.py (single source
 # of truth for the Python enum) but mapped as non-native SQLAlchemy enums:
@@ -136,6 +142,15 @@ LEAGUES = sa.Table(
     sa.Column("stratz_tier", sa.Text, nullable=True),
     sa.Column("liquipedia_tier", sa.Text, nullable=False),
     sa.Column("in_scope", sa.Boolean, nullable=False, server_default=sa.false()),
+    # How allowlisted leagues are fetched. Independent of `in_scope`.
+    # `league` pages `league(id) { matches }`; `match_ids` uses STRATZ
+    # `match(id)` after ID discovery. Default preserves historical behavior.
+    sa.Column(
+        "fetch_mode",
+        sa.Text,
+        nullable=False,
+        server_default=sa.text(f"'{LEAGUE_FETCH_MODE_LEAGUE}'"),
+    ),
     sa.Column("notes", sa.Text, nullable=True),
     sa.Column("source", sa.Text, nullable=True),
     sa.Column("start_date", sa.Date, nullable=True),
@@ -149,6 +164,10 @@ LEAGUES = sa.Table(
     sa.CheckConstraint(
         f"liquipedia_tier IN {LIQUIPEDIA_TIERS!r}",
         name="liquipedia_tier_valid",
+    ),
+    sa.CheckConstraint(
+        f"fetch_mode IN {LEAGUE_FETCH_MODES!r}",
+        name="fetch_mode_valid",
     ),
 )
 

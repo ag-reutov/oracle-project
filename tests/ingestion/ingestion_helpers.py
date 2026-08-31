@@ -20,13 +20,20 @@ RADIANT_IDS = [898754153, 137129583, 129958758, 157475523, 94296097]
 DIRE_IDS = [10366616, 100058342, 898455820, 183719386, 25907144]
 
 
-def seed_ingestion_league(conn: Connection, league_id: int, *, name: str = "Test League") -> None:
+def seed_ingestion_league(
+    conn: Connection,
+    league_id: int,
+    *,
+    name: str = "Test League",
+    fetch_mode: str = "league",
+) -> None:
     conn.execute(
         LEAGUES.insert().values(
             league_id=league_id,
             name=name,
             liquipedia_tier="T1",
             in_scope=True,
+            fetch_mode=fetch_mode,
         )
     )
     conn.execute(INGESTION_LEAGUES.insert().values(league_id=league_id))

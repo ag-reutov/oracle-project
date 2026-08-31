@@ -48,6 +48,19 @@ def test_leagues_rejects_invalid_liquipedia_tier(engine):
         )
 
 
+def test_leagues_rejects_invalid_fetch_mode(engine):
+    with pytest.raises(IntegrityError), engine.begin() as conn:
+        conn.execute(
+            LEAGUES.insert().values(
+                league_id=3,
+                name="Bad fetch mode",
+                liquipedia_tier="T1",
+                in_scope=True,
+                fetch_mode="not_a_mode",
+            )
+        )
+
+
 def test_excluded_league_is_not_a_valid_fk_target_for_matches(engine):
     """The core fix from this revision: a FK to `leagues` alone would let
     an excluded league be a valid target. `ingestion_leagues` must not

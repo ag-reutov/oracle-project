@@ -55,3 +55,30 @@ query LeagueMatchesIngest($id: Int!, $request: LeagueMatchesRequestType!) {{
   }}
 }}
 """
+
+# Individual match fetch for leagues whose `league(id)` catalog entry is
+# null. Nested `league {{ ... }}` is still requested (same selection as
+# the league path) but is allowed to come back null; canonicalization
+# keys off `leagueId`.
+MATCH_BY_ID_QUERY = f"""
+query MatchByIdIngest($id: Long!) {{
+  match(id: $id) {{
+    {MATCH_SELECTION}
+  }}
+}}
+"""
+
+# Lightweight discovery only -- ids and team ids, not canonical payloads.
+TEAM_LEAGUE_MATCH_IDS_QUERY = """
+query TeamLeagueMatchIds($teamId: Int!, $request: TeamMatchesRequestType!) {
+  team(teamId: $teamId) {
+    id
+    matches(request: $request) {
+      id
+      leagueId
+      radiantTeamId
+      direTeamId
+    }
+  }
+}
+"""

@@ -13,6 +13,12 @@
 # Pre-2024 DPC-era rows kept for audit only (in_scope: false).
 # Qualifiers listed but excluded (in_scope: false).
 #
+# fetch_mode (optional, default league):
+#   league     — STRATZ league(id) { matches } pagination (historical default)
+#   match_ids  — discover match IDs, then STRATZ match(id)
+# Independent of in_scope. Catalog-null post-TI leagues use match_ids so
+# `ingest_stratz_leagues --all` never calls the broken league(id) endpoint.
+#
 # Sync: scripts/load_league_registry.py → leagues / ingestion_leagues tables.
 
 leagues:
@@ -261,14 +267,16 @@ leagues:
     name: "SLAM IV"
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
-    in_scope: false
-    notes: "Liquipedia: BLAST Slam IV (2025). STRATZ league(id) null but match leagueId 17419 confirmed; ingest blocked until API exposes league."
+    in_scope: true
+    fetch_mode: match_ids
+    notes: "Liquipedia: BLAST Slam IV (2025). STRATZ league(id) null; ingest via match(id) after ID discovery."
 
   - league_id: 18863
     name: "FISSURE PLAYGROUND 2"
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: FISSURE PLAYGROUND 2 (2025). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 18920
@@ -276,6 +284,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: PGL Wallachia Season 6 (2025). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 17420
@@ -283,6 +292,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: BLAST Slam V (2025). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 18988
@@ -290,6 +300,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: DreamLeague Season 27 (2025). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 18046
@@ -311,6 +322,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T2"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: FISSURE Universe Episode 7 (2025). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 17622
@@ -325,6 +337,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T2"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: Games of the Future 2025 Abu Dhabi (2025). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 19239
@@ -332,6 +345,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T2"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: FISSURE Universe Episode 8 (2026). Listed on Liquipedia FISSURE Universe series; tier per Tier_2 pattern until promoted on tier page. STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 19099
@@ -339,6 +353,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: BLAST SLAM VI (2026). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 19269
@@ -346,6 +361,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: DreamLeague Season 28 (2026). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 19435
@@ -353,6 +369,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: PGL Wallachia Season 7 (2026). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 19422
@@ -360,6 +377,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: ESL One Birmingham 2026 (2026). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 19543
@@ -367,6 +385,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: PGL Wallachia Season 8 (2026). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 19696
@@ -374,6 +393,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: DreamLeague Season 29 (2026). STRATZ league(id) null at verification; pending ingest."
 
   - league_id: 19101
@@ -381,13 +401,15 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
-    notes: "Liquipedia: BLAST SLAM VII (2026). STRATZ league(id) null but match leagueId likely 19101; ingest blocked until API exposes league."
+    fetch_mode: match_ids
+    notes: "Liquipedia: BLAST SLAM VII (2026). STRATZ league(id) null but match leagueId likely 19101; ingest via match(id) after ID discovery."
 
   - league_id: 19785
     name: "Esports World Cup 2026"
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T1"
     in_scope: false
+    fetch_mode: match_ids
     notes: "Liquipedia: Esports World Cup 2026 (2026). STRATZ league(id) null at verification; pending ingest."
 
   # --- Liquipedia events without STRATZ league_id (add to STRATZ_ID_MAP) ---

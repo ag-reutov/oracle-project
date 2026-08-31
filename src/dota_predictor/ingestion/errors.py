@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 __all__ = [
+    "LeagueFetchModeError",
     "LeagueNotAllowlistedError",
+    "LeagueNotRegisteredError",
     "PageValidationError",
     "PaginationDriftError",
     "StratzClientError",
@@ -34,3 +36,11 @@ class PaginationDriftError(Exception):
 
 class LeagueNotAllowlistedError(Exception):
     """League is not present in ingestion_leagues."""
+
+
+class LeagueNotRegisteredError(Exception):
+    """League is not present in the `leagues` registry table."""
+
+
+class LeagueFetchModeError(Exception):
+    """Configured `fetch_mode` cannot be executed with the given fetcher."""

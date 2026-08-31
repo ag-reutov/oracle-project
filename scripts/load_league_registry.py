@@ -10,7 +10,9 @@ Behavior:
 1. Upsert every entry in the YAML file into `leagues` (full registry,
    including `in_scope: false` rows, for audit purposes).
 2. Insert any newly in-scope league into `ingestion_leagues` (the strict
-   allowlist that raw/canonical/progress tables are gated on).
+   allowlist that raw/canonical/progress tables are gated on). `in_scope`
+   does not select a fetch strategy; `fetch_mode` (`league` or
+   `match_ids`) does.
 3. If a league was previously in-scope and is no longer, attempt to
    remove it from `ingestion_leagues`. If matches have already been
    ingested for it, the `ON DELETE RESTRICT` foreign key will block this
@@ -40,6 +42,8 @@ from dota_predictor.storage.engine import get_engine
 from dota_predictor.storage.schema import (
     INGESTION_LEAGUES,
     LEAGUES,
+    LEAGUE_FETCH_MODES,
+    LEAGUE_FETCH_MODE_LEAGUE,
     LIQUIPEDIA_TIERS,
 )
 from dota_predictor.utils.env import load_project_env
@@ -61,6 +65,13 @@ def load_registry_entries(config_path: Path) -> list[dict]:
                 f"league_id {league_id}: liquipedia_tier "
                 f"{entry['liquipedia_tier']!r} not in {LIQUIPEDIA_TIERS}"
             )
+        fetch_mode = entry.get("fetch_mode") or LEAGUE_FETCH_MODE_LEAGUE
+        if fetch_mode not in LEAGUE_FETCH_MODES:
+            raise ValueError(
+                f"league_id {league_id}: fetch_mode {fetch_mode!r} not in "
+                f"{LEAGUE_FETCH_MODES}"
+            )
+        entry["fetch_mode"] = fetch_mode
     return entries
 
 
@@ -77,6 +88,7 @@ def sync_leagues(conn: Connection, entries: list[dict]) -> None:
             "stratz_tier": entry.get("stratz_tier"),
             "liquipedia_tier": entry["liquipedia_tier"],
             "in_scope": bool(entry.get("in_scope", False)),
+            "fetch_mode": entry.get("fetch_mode") or LEAGUE_FETCH_MODE_LEAGUE,
             "notes": entry.get("notes"),
             "source": entry.get("source"),
             "start_date": entry.get("start_date"),

@@ -16,9 +16,19 @@ from tenacity import (
 
 from dota_predictor.ingestion.config import IngestionConfig
 from dota_predictor.ingestion.errors import StratzPermanentError, StratzRetryableError
-from dota_predictor.ingestion.queries import LEAGUE_MATCHES_QUERY
+from dota_predictor.ingestion.queries import (
+    LEAGUE_MATCHES_QUERY,
+    MATCH_BY_ID_QUERY,
+    TEAM_LEAGUE_MATCH_IDS_QUERY,
+)
 
-__all__ = ["LeagueMatchesFetcher", "StratzClient"]
+__all__ = [
+    "LeagueMatchesFetcher",
+    "MatchByIdFetcher",
+    "StratzClient",
+    "TeamLeagueMatchIdsFetcher",
+    "parse_match_query_payload",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +43,44 @@ class LeagueMatchesFetcher(Protocol):
         skip: int,
         take: int,
     ) -> list[dict[str, Any]]: ...
+
+
+class MatchByIdFetcher(Protocol):
+    """Protocol for fetching one STRATZ match by id."""
+
+    def fetch_match(self, match_id: int) -> dict[str, Any] | None: ...
+
+
+class TeamLeagueMatchIdsFetcher(Protocol):
+    """Protocol for paginating a team's matches in one league (id harvest)."""
+
+    def fetch_team_league_match_ids_page(
+        self,
+        team_id: int,
+        *,
+        league_id: int,
+        skip: int,
+        take: int,
+    ) -> list[dict[str, Any]]: ...
+
+
+def parse_match_query_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Extract the `match` object from a `match(id)` GraphQL response.
+
+    Returns `None` when STRATZ has no row for that id (`data.match` is
+    null). Nested `league` metadata may be null; callers must not require
+    it. Raises `StratzPermanentError` if the payload is structurally
+    unusable (missing `data`, or a non-object match).
+    """
+    data = payload.get("data")
+    if data is None:
+        raise StratzPermanentError("match(id) response missing data")
+    match = data.get("match")
+    if match is None:
+        return None
+    if not isinstance(match, dict) or match.get("id") is None:
+        raise StratzPermanentError("match(id) returned a malformed match object")
+    return match
 
 
 def _graphql_errors_are_retryable(errors: list[dict[str, Any]]) -> bool:
@@ -176,3 +224,31 @@ class StratzClient:
         if league is None:
             raise StratzPermanentError(f"League {league_id} not found in STRATZ")
         return list(league.get("matches") or [])
+
+    def fetch_match(self, match_id: int) -> dict[str, Any] | None:
+        payload = self._fetch_with_retry(MATCH_BY_ID_QUERY, {"id": match_id})
+        return parse_match_query_payload(payload)
+
+    def fetch_team_league_match_ids_page(
+        self,
+        team_id: int,
+        *,
+        league_id: int,
+        skip: int,
+        take: int,
+    ) -> list[dict[str, Any]]:
+        payload = self._fetch_with_retry(
+            TEAM_LEAGUE_MATCH_IDS_QUERY,
+            {
+                "teamId": team_id,
+                "request": {
+                    "leagueId": league_id,
+                    "skip": skip,
+                    "take": take,
+                },
+            },
+        )
+        team = (payload.get("data") or {}).get("team")
+        if team is None:
+            return []
+        return list(team.get("matches") or [])

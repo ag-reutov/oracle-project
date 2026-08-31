@@ -11,17 +11,22 @@ from sqlalchemy.engine import Connection
 
 from dota_predictor.data.stratz_mapping import CANONICAL_MAPPER_VERSION
 from dota_predictor.ingestion.cursor import CursorState, cursor_to_dict
+from dota_predictor.ingestion.errors import LeagueNotRegisteredError
 from dota_predictor.storage.schema import (
     INGESTION_LEAGUES,
+    LEAGUE_FETCH_MODE_LEAGUE,
     LEAGUE_INGESTION_STATE,
+    LEAGUES,
     MATCH_INGESTION_ERRORS,
     MATCHES,
     STRATZ_RAW_MATCHES,
 )
 
 __all__ = [
+    "ensure_league_allowlisted",
     "ensure_league_ingestion_state",
     "get_canonical_mapper_version",
+    "get_league_fetch_mode",
     "get_persisted_match_ids_for_league",
     "insert_match_ingestion_error",
     "is_league_allowlisted",
@@ -43,11 +48,45 @@ def is_league_allowlisted(conn: Connection, league_id: int) -> bool:
     return row is not None
 
 
+def ensure_league_allowlisted(conn: Connection, league_id: int) -> None:
+    """Ensure `league_id` is in `ingestion_leagues` so raw/canonical FKs hold.
+
+    The league must already exist in `leagues`. This is the seam used by
+    match-id ingest for catalog-null STRATZ leagues that remain
+    `in_scope: false` in the yaml (so `load_league_registry` will not
+    allowlist them itself).
+    """
+    if is_league_allowlisted(conn, league_id):
+        return
+    registered = conn.execute(
+        select(LEAGUES.c.league_id).where(LEAGUES.c.league_id == league_id)
+    ).first()
+    if registered is None:
+        raise LeagueNotRegisteredError(
+            f"League {league_id} is not in the leagues registry"
+        )
+    conn.execute(INGESTION_LEAGUES.insert().values(league_id=league_id))
+
+
 def list_allowlisted_league_ids(conn: Connection) -> list[int]:
     rows = conn.execute(
         select(INGESTION_LEAGUES.c.league_id).order_by(INGESTION_LEAGUES.c.league_id)
     ).all()
     return [int(row.league_id) for row in rows]
+
+
+def get_league_fetch_mode(conn: Connection, league_id: int) -> str:
+    """Return the registry fetch_mode for a league (`league` or `match_ids`).
+
+    Missing rows and null/blank values default to `league` so historical
+    leagues keep `league(id)` pagination unless explicitly configured.
+    """
+    row = conn.execute(
+        select(LEAGUES.c.fetch_mode).where(LEAGUES.c.league_id == league_id)
+    ).first()
+    if row is None or not row.fetch_mode:
+        return LEAGUE_FETCH_MODE_LEAGUE
+    return str(row.fetch_mode)
 
 
 def ensure_league_ingestion_state(conn: Connection, league_id: int) -> None:
