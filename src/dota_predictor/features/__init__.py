@@ -32,6 +32,14 @@ from dota_predictor.features.hero_meta import (
     hero_meta_sql,
     rank_hero_meta,
 )
+from dota_predictor.features.player_hero import (
+    PLAYER_HERO_COLUMNS,
+    PLAYER_HERO_IDENTITY_COLUMNS,
+    PLAYER_HERO_METRIC_COLUMNS,
+    PlayerHeroState,
+    build_player_hero,
+    player_hero_sql,
+)
 from dota_predictor.features.pre_draft_snapshot import (
     FEATURE_COLUMNS,
     IDENTITY_COLUMNS,
@@ -74,6 +82,9 @@ __all__ = [
     "IDENTITY_COLUMNS",
     "MATCHES_VIEW",
     "MATCH_PLAYERS_VIEW",
+    "PLAYER_HERO_COLUMNS",
+    "PLAYER_HERO_IDENTITY_COLUMNS",
+    "PLAYER_HERO_METRIC_COLUMNS",
     "PLAYER_HISTORY_FEATURE_COLUMNS",
     "PRE_DRAFT_SNAPSHOT_SQL",
     "RADIANT_TEAM_ELO_COLUMN",
@@ -90,11 +101,13 @@ __all__ = [
     "FeatureStoreConfig",
     "HeroMetaState",
     "InvalidTeamIdError",
+    "PlayerHeroState",
     "PreDraftSnapshot",
     "ReferenceStoreConfig",
     "SnapshotStage",
     "assert_columns_allowed_for_stage",
     "build_hero_meta",
+    "build_player_hero",
     "build_pre_draft_snapshot",
     "columns_allowed_for_stage",
     "compute_team_elo_features",
@@ -104,6 +117,7 @@ __all__ = [
     "is_historical",
     "load_feature_store_config",
     "load_reference_store_config",
+    "player_hero_sql",
     "rank_hero_meta",
     "register_reference_views",
 ]
