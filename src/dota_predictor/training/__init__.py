@@ -25,7 +25,9 @@ from dota_predictor.training.diagnostics import (
 from dota_predictor.training.evaluation import BenchmarkReport, run_step4b_benchmark
 from dota_predictor.training.feature_sets import (
     ALL_FEATURE_COLUMNS,
+    DRAFT_COMPARISON_FEATURE_COLUMNS,
     ELO_ONLY_FEATURE_COLUMNS,
+    ELO_PLUS_DRAFT_COMPARISON_COLUMNS,
     HISTORICAL_WITHOUT_ELO_COLUMNS,
 )
 from dota_predictor.training.logistic_model import (
@@ -35,6 +37,11 @@ from dota_predictor.training.logistic_model import (
     standardized_coefficients,
 )
 from dota_predictor.training.metrics import EvaluationMetrics, evaluate_probabilities
+from dota_predictor.training.post_draft import (
+    PostDraftBenchmarkReport,
+    build_post_draft_model_ready_dataset,
+    run_post_draft_benchmark,
+)
 from dota_predictor.training.preprocessing import (
     PreprocessingSpec,
     build_preprocessing_pipeline,
@@ -52,32 +59,37 @@ from dota_predictor.training.split import (
 
 __all__ = [
     "ALL_FEATURE_COLUMNS",
-    "BenchmarkReport",
-    "ConstantProbabilityBaseline",
     "DEFAULT_SPLIT_CONFIG",
+    "DRAFT_COMPARISON_FEATURE_COLUMNS",
     "ELO_ONLY_FEATURE_COLUMNS",
-    "EmpiricalRateBaseline",
-    "EvaluationMetrics",
+    "ELO_PLUS_DRAFT_COMPARISON_COLUMNS",
     "HISTORICAL_WITHOUT_ELO_COLUMNS",
-    "LogisticRegressionConfig",
-    "LogisticRegressionPredictor",
+    "BenchmarkReport",
     "ChronologicalSplit",
     "ChronologicalSplitConfig",
     "ChronologicalSplitError",
+    "ConstantProbabilityBaseline",
     "DatasetPartition",
     "EloOnlyProbabilityBaseline",
+    "EmpiricalRateBaseline",
+    "EvaluationMetrics",
+    "LogisticRegressionConfig",
+    "LogisticRegressionPredictor",
     "ModelReadyDataset",
+    "PostDraftBenchmarkReport",
     "PreprocessingSpec",
     "SplitBoundaries",
     "TrainingDatasetError",
     "build_logistic_pipeline",
     "build_model_ready_dataset",
+    "build_post_draft_model_ready_dataset",
     "build_preprocessing_pipeline",
     "chronological_split",
     "evaluate_probabilities",
     "missing_value_report",
     "resolve_split_boundaries",
     "rows_with_any_missing",
+    "run_post_draft_benchmark",
     "run_step4b_benchmark",
     "standardized_coefficients",
 ]

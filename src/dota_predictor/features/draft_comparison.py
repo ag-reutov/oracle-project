@@ -23,10 +23,12 @@ NULL semantics
 If either side's underlying value is NULL, the difference is NULL.
 No zero-fill, imputation, smoothing, or missingness indicators.
 
-This module never writes Parquet, never bumps schema versions, never
-adds columns to the fact/reference files, and is not part of the
-training feature matrix. `radiant_win` is not a comparison column;
-outcome may be joined separately for descriptive evaluation only.
+This module never writes Parquet, never bumps schema versions, and never
+adds columns to the fact/reference files. `radiant_win` is not a
+comparison column. The diffs are not part of the PRE_DRAFT
+`FEATURE_COLUMNS` contract; the post-draft benchmark may join them onto
+Elo features without dropping any metric from descriptive correlations.
+Outcome may only be used as a training label, never as an input.
 """
 
 from __future__ import annotations
