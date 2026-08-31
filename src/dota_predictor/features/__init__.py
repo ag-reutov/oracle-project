@@ -61,15 +61,22 @@ from dota_predictor.features.pre_draft_snapshot import (
     build_pre_draft_snapshot,
 )
 from dota_predictor.features.team_elo import (
+    DEFAULT_ACTIVE_DAYS,
     DEFAULT_ELO_CONFIG,
     DIRE_TEAM_ELO_COLUMN,
     RADIANT_TEAM_ELO_COLUMN,
     TEAM_ELO_DELTA_COLUMN,
     TEAM_ELO_FEATURE_COLUMNS,
+    TEAM_ELO_STATE_COLUMNS,
     EloConfig,
     InvalidTeamIdError,
+    active_team_elo_cutoff,
     compute_team_elo_features,
+    compute_team_elo_state,
     expected_score,
+    filter_active_team_elo,
+    rank_team_elo_state,
+    team_elo_trajectories,
 )
 from dota_predictor.features.team_hero import (
     TEAM_HERO_COLUMNS,
@@ -85,6 +92,7 @@ from dota_predictor.features.temporal import (
 )
 
 __all__ = [
+    "DEFAULT_ACTIVE_DAYS",
     "DEFAULT_ELO_CONFIG",
     "DIRE_TEAM_ELO_COLUMN",
     "DRAFT_EVENTS_VIEW",
@@ -113,6 +121,7 @@ __all__ = [
     "TARGET_COLUMN",
     "TEAM_ELO_DELTA_COLUMN",
     "TEAM_ELO_FEATURE_COLUMNS",
+    "TEAM_ELO_STATE_COLUMNS",
     "TEAM_HERO_COLUMNS",
     "TEAM_HERO_IDENTITY_COLUMNS",
     "TEAM_HERO_METRIC_COLUMNS",
@@ -129,6 +138,7 @@ __all__ = [
     "ReferenceStoreConfig",
     "SnapshotStage",
     "TeamHeroState",
+    "active_team_elo_cutoff",
     "assert_columns_allowed_for_stage",
     "build_draft_profile",
     "build_hero_meta",
@@ -137,15 +147,19 @@ __all__ = [
     "build_team_hero",
     "columns_allowed_for_stage",
     "compute_team_elo_features",
+    "compute_team_elo_state",
     "connect",
     "draft_profile_sql",
     "expected_score",
+    "filter_active_team_elo",
     "hero_meta_sql",
     "is_historical",
     "load_feature_store_config",
     "load_reference_store_config",
     "player_hero_sql",
     "rank_hero_meta",
+    "rank_team_elo_state",
     "register_reference_views",
+    "team_elo_trajectories",
     "team_hero_sql",
 ]

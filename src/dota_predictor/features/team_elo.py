@@ -56,25 +56,39 @@ genuinely sequential recurrence. Forcing that into SQL window
 functions would trade transparency for premature optimization on a
 dataset size where a Python loop is already fast enough -- see the
 Step 3C task scope.
+
+Elo *state* (the per-team rating after the last processed match, plus
+career counts) is not stored separately: it is the same sequential
+replay's terminal `ratings` dict. `compute_team_elo_state` exposes that
+terminal state without changing the update rule. Feature snapshots
+remain pre-match; the latest rating for a team is the post-update
+value after its most recent temporal group.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import pandas as pd
 
 __all__ = [
+    "DEFAULT_ACTIVE_DAYS",
     "DEFAULT_ELO_CONFIG",
     "DIRE_TEAM_ELO_COLUMN",
     "MATCH_ID_COLUMN",
     "RADIANT_TEAM_ELO_COLUMN",
     "TEAM_ELO_DELTA_COLUMN",
     "TEAM_ELO_FEATURE_COLUMNS",
+    "TEAM_ELO_STATE_COLUMNS",
     "EloConfig",
     "InvalidTeamIdError",
+    "active_team_elo_cutoff",
     "compute_team_elo_features",
+    "compute_team_elo_state",
     "expected_score",
+    "filter_active_team_elo",
+    "rank_team_elo_state",
+    "team_elo_trajectories",
 ]
 
 
@@ -109,6 +123,43 @@ TEAM_ELO_FEATURE_COLUMNS: tuple[str, ...] = (
     DIRE_TEAM_ELO_COLUMN,
     TEAM_ELO_DELTA_COLUMN,
 )
+
+TEAM_ID_COLUMN = "team_id"
+ELO_COLUMN = "elo"
+N_MATCHES_COLUMN = "n_matches"
+WINS_COLUMN = "wins"
+LOSSES_COLUMN = "losses"
+LAST_MATCH_TIMESTAMP_COLUMN = "last_match_timestamp"
+LAST_MATCH_ID_COLUMN = "last_match_id"
+ELO_BEFORE_LAST_MATCH_COLUMN = "elo_before_last_match"
+ELO_AFTER_LAST_MATCH_COLUMN = "elo_after_last_match"
+STARTING_ELO_COLUMN = "starting_elo"
+PEAK_ELO_COLUMN = "peak_elo"
+LOWEST_ELO_COLUMN = "lowest_elo"
+PEAK_AFTER_MATCH_ID_COLUMN = "peak_after_match_id"
+PEAK_AFTER_MATCH_TIMESTAMP_COLUMN = "peak_after_match_timestamp"
+LAST_GROUP_N_MATCHES_COLUMN = "last_group_n_matches"
+
+TEAM_ELO_STATE_COLUMNS: tuple[str, ...] = (
+    TEAM_ID_COLUMN,
+    ELO_COLUMN,
+    N_MATCHES_COLUMN,
+    WINS_COLUMN,
+    LOSSES_COLUMN,
+    LAST_MATCH_TIMESTAMP_COLUMN,
+    LAST_MATCH_ID_COLUMN,
+    ELO_BEFORE_LAST_MATCH_COLUMN,
+    ELO_AFTER_LAST_MATCH_COLUMN,
+    STARTING_ELO_COLUMN,
+    PEAK_ELO_COLUMN,
+    LOWEST_ELO_COLUMN,
+    PEAK_AFTER_MATCH_ID_COLUMN,
+    PEAK_AFTER_MATCH_TIMESTAMP_COLUMN,
+    LAST_GROUP_N_MATCHES_COLUMN,
+)
+
+DEFAULT_ACTIVE_DAYS = 90
+CURRENT_ELO_COLUMN = "current_elo"
 
 MATCH_ID_COLUMN = "match_id"
 _START_TIME_COLUMN = "start_time"
@@ -182,37 +233,94 @@ def _apply_group_updates(
         ratings[team_id] = ratings.get(team_id, initial_rating) + delta
 
 
-def compute_team_elo_features(
-    matches: pd.DataFrame, *, config: EloConfig = DEFAULT_ELO_CONFIG
-) -> pd.DataFrame:
-    """One row per input match: `match_id` plus `TEAM_ELO_FEATURE_COLUMNS`.
+@dataclass
+class _TeamTracker:
+    """Mutable per-team bookkeeping accumulated during a sequential replay.
 
-    `matches` must contain `MATCH_ID_COLUMN`, `start_time`,
-    `radiant_team_id`, `dire_team_id`, and `radiant_win` (extra columns
-    are ignored). Rows are processed chronologically by `start_time`;
-    see the module docstring for the exact temporal-grouping algorithm.
-    `radiant_win` is read only to update state for later matches -- it
-    never affects the snapshot computed for its own row.
-
-    Raises `InvalidTeamIdError` if any `radiant_team_id`/`dire_team_id`
-    is missing or not a positive integer (see that class's docstring
-    for why this fails loudly instead of substituting a placeholder).
+    Not part of the public API: `compute_team_elo_state` projects this
+    into a DataFrame. Peak/lowest start at `starting_elo` (the rating
+    before any match) so a team that only loses still has a defined peak
+    at the initial rating, with `peak_after_match_id` left as None.
     """
+
+    starting_elo: float
+    n_matches: int = 0
+    wins: int = 0
+    losses: int = 0
+    last_match_id: int | None = None
+    last_match_timestamp: object = None
+    elo_before_last_match: float = 0.0
+    peak_elo: float = 0.0
+    lowest_elo: float = 0.0
+    peak_after_match_id: int | None = None
+    peak_after_match_timestamp: object = None
+    last_group_n_matches: int = 0
+
+    def __post_init__(self) -> None:
+        self.elo_before_last_match = self.starting_elo
+        self.peak_elo = self.starting_elo
+        self.lowest_elo = self.starting_elo
+
+
+@dataclass
+class _EloReplay:
+    snapshots: list[dict[str, object]]
+    ratings: dict[int, float]
+    trackers: dict[int, _TeamTracker]
+    config: EloConfig = field(repr=False)
+
+
+def _require_match_columns(matches: pd.DataFrame) -> None:
     missing_columns = [c for c in _REQUIRED_COLUMNS if c not in matches.columns]
     if missing_columns:
         raise ValueError(
             f"matches frame is missing required columns: {missing_columns}"
         )
 
+
+def _ensure_tracker(
+    trackers: dict[int, _TeamTracker], team_id: int, *, starting_elo: float
+) -> _TeamTracker:
+    tracker = trackers.get(team_id)
+    if tracker is None:
+        tracker = _TeamTracker(starting_elo=starting_elo)
+        trackers[team_id] = tracker
+    return tracker
+
+
+def _record_appearance(
+    tracker: _TeamTracker, *, won: bool
+) -> None:
+    tracker.n_matches += 1
+    if won:
+        tracker.wins += 1
+    else:
+        tracker.losses += 1
+
+
+def _replay_elo(
+    matches: pd.DataFrame, *, config: EloConfig
+) -> _EloReplay:
+    """Single sequential pass used by both feature snapshots and state.
+
+    Snapshot rows and rating updates are computed identically to the
+    original `compute_team_elo_features` loop; trackers only observe
+    those updates and never feed back into `ratings`.
+    """
+    _require_match_columns(matches)
+
     ordered = matches[list(_REQUIRED_COLUMNS)].sort_values(
         _START_TIME_COLUMN, kind="stable"
     )
 
     ratings: dict[int, float] = {}
+    trackers: dict[int, _TeamTracker] = {}
     snapshot_rows: list[dict[str, object]] = []
 
-    for _, group in ordered.groupby(_START_TIME_COLUMN, sort=False):
+    for start_time, group in ordered.groupby(_START_TIME_COLUMN, sort=False):
         pending_delta: dict[int, float] = {}
+        group_match_ids: dict[int, list[int]] = {}
+        group_pre_rating: dict[int, float] = {}
 
         for record in group.itertuples(index=False):
             match_id = int(record.match_id)
@@ -247,10 +355,210 @@ def compute_team_elo_features(
                 pending_delta.get(dire_team_id, 0.0) - radiant_change
             )
 
+            group_pre_rating.setdefault(radiant_team_id, radiant_rating)
+            group_pre_rating.setdefault(dire_team_id, dire_rating)
+            group_match_ids.setdefault(radiant_team_id, []).append(match_id)
+            group_match_ids.setdefault(dire_team_id, []).append(match_id)
+
+            _record_appearance(
+                _ensure_tracker(
+                    trackers, radiant_team_id, starting_elo=config.initial_rating
+                ),
+                won=radiant_win,
+            )
+            _record_appearance(
+                _ensure_tracker(
+                    trackers, dire_team_id, starting_elo=config.initial_rating
+                ),
+                won=not radiant_win,
+            )
+
         _apply_group_updates(
             ratings, pending_delta, initial_rating=config.initial_rating
         )
 
-    return pd.DataFrame(
-        snapshot_rows, columns=[MATCH_ID_COLUMN, *TEAM_ELO_FEATURE_COLUMNS]
+        for team_id in pending_delta:
+            tracker = trackers[team_id]
+            match_ids = group_match_ids[team_id]
+            tracker.last_match_id = match_ids[-1]
+            tracker.last_match_timestamp = start_time
+            tracker.elo_before_last_match = group_pre_rating[team_id]
+            tracker.last_group_n_matches = len(match_ids)
+            new_elo = ratings[team_id]
+            if new_elo > tracker.peak_elo:
+                tracker.peak_elo = new_elo
+                tracker.peak_after_match_id = match_ids[-1]
+                tracker.peak_after_match_timestamp = start_time
+            tracker.lowest_elo = min(tracker.lowest_elo, new_elo)
+
+    return _EloReplay(
+        snapshots=snapshot_rows,
+        ratings=ratings,
+        trackers=trackers,
+        config=config,
     )
+
+
+def compute_team_elo_features(
+    matches: pd.DataFrame, *, config: EloConfig = DEFAULT_ELO_CONFIG
+) -> pd.DataFrame:
+    """One row per input match: `match_id` plus `TEAM_ELO_FEATURE_COLUMNS`.
+
+    `matches` must contain `MATCH_ID_COLUMN`, `start_time`,
+    `radiant_team_id`, `dire_team_id`, and `radiant_win` (extra columns
+    are ignored). Rows are processed chronologically by `start_time`;
+    see the module docstring for the exact temporal-grouping algorithm.
+    `radiant_win` is read only to update state for later matches -- it
+    never affects the snapshot computed for its own row.
+
+    Raises `InvalidTeamIdError` if any `radiant_team_id`/`dire_team_id`
+    is missing or not a positive integer (see that class's docstring
+    for why this fails loudly instead of substituting a placeholder).
+    """
+    replay = _replay_elo(matches, config=config)
+    return pd.DataFrame(
+        replay.snapshots, columns=[MATCH_ID_COLUMN, *TEAM_ELO_FEATURE_COLUMNS]
+    )
+
+
+def compute_team_elo_state(
+    matches: pd.DataFrame, *, config: EloConfig = DEFAULT_ELO_CONFIG
+) -> pd.DataFrame:
+    """One row per team after replaying `matches` with the production Elo rule.
+
+    Ratings, snapshots, and group-batch updates are produced by the same
+    `_replay_elo` pass as `compute_team_elo_features`; this function only
+    projects the terminal per-team bookkeeping. Rows are ordered by
+    `team_id` (use `rank_team_elo_state` for a leaderboard). Extra input
+    columns are ignored.
+
+    `elo_before_last_match` is the pre-group rating the team carried into
+    its most recent temporal group. If that group contained more than one
+    match involving the team, `last_group_n_matches` is > 1 and
+    `elo_after_last_match` reflects the batched update from every match
+    in the group, not a sequential compound of those matches.
+    """
+    replay = _replay_elo(matches, config=config)
+    rows: list[dict[str, object]] = []
+    for team_id in sorted(replay.trackers):
+        tracker = replay.trackers[team_id]
+        elo = replay.ratings[team_id]
+        rows.append(
+            {
+                TEAM_ID_COLUMN: team_id,
+                ELO_COLUMN: elo,
+                N_MATCHES_COLUMN: tracker.n_matches,
+                WINS_COLUMN: tracker.wins,
+                LOSSES_COLUMN: tracker.losses,
+                LAST_MATCH_TIMESTAMP_COLUMN: tracker.last_match_timestamp,
+                LAST_MATCH_ID_COLUMN: tracker.last_match_id,
+                ELO_BEFORE_LAST_MATCH_COLUMN: tracker.elo_before_last_match,
+                ELO_AFTER_LAST_MATCH_COLUMN: elo,
+                STARTING_ELO_COLUMN: tracker.starting_elo,
+                PEAK_ELO_COLUMN: tracker.peak_elo,
+                LOWEST_ELO_COLUMN: tracker.lowest_elo,
+                PEAK_AFTER_MATCH_ID_COLUMN: tracker.peak_after_match_id,
+                PEAK_AFTER_MATCH_TIMESTAMP_COLUMN: tracker.peak_after_match_timestamp,
+                LAST_GROUP_N_MATCHES_COLUMN: tracker.last_group_n_matches,
+            }
+        )
+    return pd.DataFrame(rows, columns=list(TEAM_ELO_STATE_COLUMNS))
+
+
+def rank_team_elo_state(state: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy of `state` sorted by Elo descending, `team_id` ascending.
+
+    Does not mutate `state`. Equal ratings keep a deterministic order by
+    `team_id` rather than an arbitrary row position.
+    """
+    if ELO_COLUMN not in state.columns or TEAM_ID_COLUMN not in state.columns:
+        raise ValueError(
+            f"state frame is missing required columns: "
+            f"{[c for c in (ELO_COLUMN, TEAM_ID_COLUMN) if c not in state.columns]}"
+        )
+    ranked = state.sort_values(
+        [ELO_COLUMN, TEAM_ID_COLUMN],
+        ascending=[False, True],
+        kind="mergesort",
+    ).reset_index(drop=True)
+    return ranked
+
+
+def active_team_elo_cutoff(
+    dataset_max_timestamp: object, *, active_days: int = DEFAULT_ACTIVE_DAYS
+) -> pd.Timestamp:
+    """Inclusive lower bound for "played within the last `active_days` days
+    of `dataset_max_timestamp`".
+
+    Uses the dataset clock, never wall-clock `now`. `active_days=0`
+    keeps only teams whose last match timestamp equals the dataset max.
+    """
+    if active_days < 0:
+        raise ValueError(f"active_days must be >= 0, got {active_days}")
+    return pd.Timestamp(dataset_max_timestamp) - pd.Timedelta(days=active_days)
+
+
+def filter_active_team_elo(
+    state: pd.DataFrame,
+    *,
+    dataset_max_timestamp: object,
+    active_days: int = DEFAULT_ACTIVE_DAYS,
+) -> pd.DataFrame:
+    """Teams whose last rated match is within `active_days` of the dataset max.
+
+    A team is active when
+    `last_match_timestamp >= dataset_max_timestamp - active_days`.
+    The cutoff is computed from `dataset_max_timestamp`, never from
+    wall-clock time. Returns a copy; does not re-rank.
+    """
+    if LAST_MATCH_TIMESTAMP_COLUMN not in state.columns:
+        raise ValueError(
+            f"state frame is missing required column: {LAST_MATCH_TIMESTAMP_COLUMN!r}"
+        )
+    cutoff = active_team_elo_cutoff(
+        dataset_max_timestamp, active_days=active_days
+    )
+    timestamps = pd.to_datetime(state[LAST_MATCH_TIMESTAMP_COLUMN], utc=True)
+    cutoff_utc = pd.Timestamp(cutoff)
+    if cutoff_utc.tzinfo is None:
+        cutoff_utc = cutoff_utc.tz_localize("UTC")
+    else:
+        cutoff_utc = cutoff_utc.tz_convert("UTC")
+    return state.loc[timestamps >= cutoff_utc].copy()
+
+
+_TRAJECTORY_COLUMNS: tuple[str, ...] = (
+    TEAM_ID_COLUMN,
+    STARTING_ELO_COLUMN,
+    ELO_COLUMN,
+    PEAK_ELO_COLUMN,
+    LOWEST_ELO_COLUMN,
+    N_MATCHES_COLUMN,
+    PEAK_AFTER_MATCH_ID_COLUMN,
+    PEAK_AFTER_MATCH_TIMESTAMP_COLUMN,
+)
+
+
+def team_elo_trajectories(
+    state: pd.DataFrame, *, n: int | None = None
+) -> pd.DataFrame:
+    """Trajectory fields projected from already-computed `state` rows.
+
+    `current_elo` is a rename of `elo` -- the same values the leaderboard
+    ranks on, not a second replay or an independent reconstruction.
+    Optional display columns such as `team_name` are copied through when
+    present. Does not mutate `state`.
+    """
+    missing = [c for c in (TEAM_ID_COLUMN, ELO_COLUMN) if c not in state.columns]
+    if missing:
+        raise ValueError(f"state frame is missing required columns: {missing}")
+
+    ordered: list[str] = [TEAM_ID_COLUMN]
+    if "team_name" in state.columns:
+        ordered.append("team_name")
+    ordered.extend(c for c in _TRAJECTORY_COLUMNS if c != TEAM_ID_COLUMN and c in state.columns)
+
+    frame = state.loc[:, ordered]
+    if n is not None:
+        frame = frame.head(n)
+    return frame.rename(columns={ELO_COLUMN: CURRENT_ELO_COLUMN}).reset_index(drop=True)
