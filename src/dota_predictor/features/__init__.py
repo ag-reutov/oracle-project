@@ -6,13 +6,21 @@ from dota_predictor.features.availability import (
     assert_columns_allowed_for_stage,
     columns_allowed_for_stage,
 )
-from dota_predictor.features.config import FeatureStoreConfig, load_feature_store_config
+from dota_predictor.features.config import (
+    FeatureStoreConfig,
+    ReferenceStoreConfig,
+    load_feature_store_config,
+    load_reference_store_config,
+)
 from dota_predictor.features.duckdb_layer import (
     DRAFT_EVENTS_VIEW,
+    GAME_VERSIONS_VIEW,
+    HEROES_VIEW,
     MATCH_PLAYERS_VIEW,
     MATCHES_VIEW,
     FeatureDuckDBConnection,
     connect,
+    register_reference_views,
 )
 from dota_predictor.features.pre_draft_snapshot import (
     FEATURE_COLUMNS,
@@ -47,6 +55,8 @@ __all__ = [
     "DIRE_TEAM_ELO_COLUMN",
     "DRAFT_EVENTS_VIEW",
     "FEATURE_COLUMNS",
+    "GAME_VERSIONS_VIEW",
+    "HEROES_VIEW",
     "HISTORICAL_START_TIME_SQL_CONDITION",
     "IDENTITY_COLUMNS",
     "MATCHES_VIEW",
@@ -66,6 +76,7 @@ __all__ = [
     "FeatureStoreConfig",
     "InvalidTeamIdError",
     "PreDraftSnapshot",
+    "ReferenceStoreConfig",
     "SnapshotStage",
     "assert_columns_allowed_for_stage",
     "build_pre_draft_snapshot",
@@ -75,4 +86,6 @@ __all__ = [
     "expected_score",
     "is_historical",
     "load_feature_store_config",
+    "load_reference_store_config",
+    "register_reference_views",
 ]

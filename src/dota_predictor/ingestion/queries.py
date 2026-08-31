@@ -82,3 +82,31 @@ query TeamLeagueMatchIds($teamId: Int!, $request: TeamMatchesRequestType!) {
   }
 }
 """
+
+# Identity-only hero catalog. `displayName` is the human-readable name;
+# STRATZ `name` (npc_dota_hero_*), aliases, roles, stats, facets, talents,
+# abilities, localization, and `gameVersionId` are intentionally omitted.
+HEROES_QUERY = """
+query HeroesReference {
+  constants {
+    heroes {
+      id
+      displayName
+    }
+  }
+}
+"""
+
+# Source-native game-version catalog. `name` is the STRATZ patch label
+# (e.g. "7.38", "7.40b"); `asOfDateTime` is a Unix-seconds timestamp.
+GAME_VERSIONS_QUERY = """
+query GameVersionsReference {
+  constants {
+    gameVersions {
+      id
+      name
+      asOfDateTime
+    }
+  }
+}
+"""

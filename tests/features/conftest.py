@@ -22,8 +22,10 @@ import pytest
 
 from dota_predictor.datasets.canonical_export import (
     DRAFT_EVENTS_FILENAME,
+    MATCH_PLAYERS_FILENAME,
     MATCHES_FILENAME,
     build_draft_events_table,
+    build_match_players_table,
     build_matches_table,
     write_canonical_dataset,
 )
@@ -48,6 +50,13 @@ MATCH_LATE_DIRE_TEAM_ID = 400
 MATCH_LATE_RADIANT_PLAYER_IDS = (31, 32, 33, 34, 35)
 MATCH_LATE_DIRE_PLAYER_IDS = (41, 42, 43, 44, 45)
 MATCH_LATE_NUM_BANS = 0  # real, observed 10-event zero-ban draft shape
+
+# Deterministic positive hero ids per lobby slot. `slot_in_side` is lobby
+# order, not Dota position 1-5 -- these values are fixture identity only.
+MATCH_EARLY_RADIANT_HERO_IDS = (1, 2, 3, 4, 5)
+MATCH_EARLY_DIRE_HERO_IDS = (6, 7, 8, 9, 10)
+MATCH_LATE_RADIANT_HERO_IDS = (11, 12, 13, 14, 15)
+MATCH_LATE_DIRE_HERO_IDS = (16, 17, 18, 19, 20)
 
 
 def _match_row(
@@ -83,24 +92,32 @@ def _player_rows(
     *,
     radiant_ids: tuple[int, ...],
     dire_ids: tuple[int, ...],
+    radiant_hero_ids: tuple[int, ...],
+    dire_hero_ids: tuple[int, ...],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for slot, player_id in enumerate(radiant_ids):
+    for slot, (player_id, hero_id) in enumerate(
+        zip(radiant_ids, radiant_hero_ids, strict=True)
+    ):
         rows.append(
             {
                 "match_id": match_id,
                 "side": "RADIANT",
                 "slot_in_side": slot,
                 "player_id": player_id,
+                "hero_id": hero_id,
             }
         )
-    for slot, player_id in enumerate(dire_ids):
+    for slot, (player_id, hero_id) in enumerate(
+        zip(dire_ids, dire_hero_ids, strict=True)
+    ):
         rows.append(
             {
                 "match_id": match_id,
                 "side": "DIRE",
                 "slot_in_side": slot,
                 "player_id": player_id,
+                "hero_id": hero_id,
             }
         )
     return rows
@@ -140,7 +157,7 @@ def _draft_rows(match_id: int, *, num_bans: int) -> list[dict[str, Any]]:
 @pytest.fixture
 def feature_store_config(tmp_path: Path) -> FeatureStoreConfig:
     """A `FeatureStoreConfig` pointing at a freshly built, real Step 2
-    `matches.parquet` / `draft_events.parquet` pair under `tmp_path`."""
+    analytical schema-v2 Parquet triple under `tmp_path`."""
     match_rows = [
         _match_row(
             MATCH_EARLY_ID,
@@ -161,23 +178,32 @@ def feature_store_config(tmp_path: Path) -> FeatureStoreConfig:
         MATCH_EARLY_ID,
         radiant_ids=MATCH_EARLY_RADIANT_PLAYER_IDS,
         dire_ids=MATCH_EARLY_DIRE_PLAYER_IDS,
+        radiant_hero_ids=MATCH_EARLY_RADIANT_HERO_IDS,
+        dire_hero_ids=MATCH_EARLY_DIRE_HERO_IDS,
     ) + _player_rows(
         MATCH_LATE_ID,
         radiant_ids=MATCH_LATE_RADIANT_PLAYER_IDS,
         dire_ids=MATCH_LATE_DIRE_PLAYER_IDS,
+        radiant_hero_ids=MATCH_LATE_RADIANT_HERO_IDS,
+        dire_hero_ids=MATCH_LATE_DIRE_HERO_IDS,
     )
     draft_rows = _draft_rows(
         MATCH_EARLY_ID, num_bans=MATCH_EARLY_NUM_BANS
     ) + _draft_rows(MATCH_LATE_ID, num_bans=MATCH_LATE_NUM_BANS)
 
     matches_table = build_matches_table(match_rows, player_rows)
+    match_players_table = build_match_players_table(match_rows, player_rows)
     draft_events_table = build_draft_events_table(draft_rows)
 
     write_canonical_dataset(
-        tmp_path, matches_table=matches_table, draft_events_table=draft_events_table
+        tmp_path,
+        matches_table=matches_table,
+        draft_events_table=draft_events_table,
+        match_players_table=match_players_table,
     )
 
     return FeatureStoreConfig(
         matches_path=tmp_path / MATCHES_FILENAME,
+        match_players_path=tmp_path / MATCH_PLAYERS_FILENAME,
         draft_events_path=tmp_path / DRAFT_EVENTS_FILENAME,
     )

@@ -17,6 +17,8 @@ from tenacity import (
 from dota_predictor.ingestion.config import IngestionConfig
 from dota_predictor.ingestion.errors import StratzPermanentError, StratzRetryableError
 from dota_predictor.ingestion.queries import (
+    GAME_VERSIONS_QUERY,
+    HEROES_QUERY,
     LEAGUE_MATCHES_QUERY,
     MATCH_BY_ID_QUERY,
     TEAM_LEAGUE_MATCH_IDS_QUERY,
@@ -27,6 +29,8 @@ __all__ = [
     "MatchByIdFetcher",
     "StratzClient",
     "TeamLeagueMatchIdsFetcher",
+    "parse_game_versions_query_payload",
+    "parse_heroes_query_payload",
     "parse_match_query_payload",
 ]
 
@@ -81,6 +85,41 @@ def parse_match_query_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
     if not isinstance(match, dict) or match.get("id") is None:
         raise StratzPermanentError("match(id) returned a malformed match object")
     return match
+
+
+def _constants_list(payload: dict[str, Any], field: str) -> list[dict[str, Any]]:
+    """Extract `data.constants.<field>` as a list of objects.
+
+    Raises `StratzPermanentError` if the payload is missing `data` or
+    `constants`, or if the named field is present but not a list. A
+    null/absent list is treated as empty -- catalog validation belongs
+    to the reference-export layer, not this parser.
+    """
+    data = payload.get("data")
+    if data is None:
+        raise StratzPermanentError(f"constants.{field} response missing data")
+    constants = data.get("constants")
+    if constants is None:
+        raise StratzPermanentError(f"constants.{field} response missing constants")
+    rows = constants.get(field)
+    if rows is None:
+        return []
+    if not isinstance(rows, list):
+        raise StratzPermanentError(f"constants.{field} returned a non-list value")
+    return list(rows)
+
+
+def parse_heroes_query_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract the `heroes` list from a `constants.heroes` GraphQL response."""
+    return _constants_list(payload, "heroes")
+
+
+def parse_game_versions_query_payload(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Extract the `gameVersions` list from a `constants.gameVersions`
+    GraphQL response."""
+    return _constants_list(payload, "gameVersions")
 
 
 def _graphql_errors_are_retryable(errors: list[dict[str, Any]]) -> bool:
@@ -252,3 +291,13 @@ class StratzClient:
         if team is None:
             return []
         return list(team.get("matches") or [])
+
+    def fetch_heroes(self) -> list[dict[str, Any]]:
+        """Fetch the STRATZ hero identity catalog (`id`, `displayName`)."""
+        payload = self._fetch_with_retry(HEROES_QUERY, {})
+        return parse_heroes_query_payload(payload)
+
+    def fetch_game_versions(self) -> list[dict[str, Any]]:
+        """Fetch the STRATZ game-version catalog (`id`, `name`, `asOfDateTime`)."""
+        payload = self._fetch_with_retry(GAME_VERSIONS_QUERY, {})
+        return parse_game_versions_query_payload(payload)

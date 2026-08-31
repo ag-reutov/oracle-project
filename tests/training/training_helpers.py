@@ -14,8 +14,10 @@ from typing import Any
 
 from dota_predictor.datasets.canonical_export import (
     DRAFT_EVENTS_FILENAME,
+    MATCH_PLAYERS_FILENAME,
     MATCHES_FILENAME,
     build_draft_events_table,
+    build_match_players_table,
     build_matches_table,
     write_canonical_dataset,
 )
@@ -68,7 +70,11 @@ def player_rows(
     radiant_ids: tuple[int, int, int, int, int],
     dire_ids: tuple[int, int, int, int, int],
 ) -> list[dict[str, Any]]:
-    """The 10 `match_players` rows for one match, 5 per side, in slot order."""
+    """The 10 `match_players` rows for one match, 5 per side, in slot order.
+
+    `hero_id` is a deterministic positive fixture value keyed by lobby
+    slot (0-4), not Dota position 1-5. Training assembly does not read it.
+    """
     rows: list[dict[str, Any]] = []
     for slot, player_id in enumerate(radiant_ids):
         rows.append(
@@ -77,6 +83,7 @@ def player_rows(
                 "side": "RADIANT",
                 "slot_in_side": slot,
                 "player_id": player_id,
+                "hero_id": slot + 1,
             }
         )
     for slot, player_id in enumerate(dire_ids):
@@ -86,6 +93,7 @@ def player_rows(
                 "side": "DIRE",
                 "slot_in_side": slot,
                 "player_id": player_id,
+                "hero_id": slot + 6,
             }
         )
     return rows
@@ -97,19 +105,24 @@ def build_feature_store_config(
     matches: list[dict[str, Any]],
     players: list[dict[str, Any]],
 ) -> FeatureStoreConfig:
-    """Write a real `matches.parquet`/`draft_events.parquet` pair for
-    `matches`/`players` under `tmp_path` (empty `draft_events`, exactly
-    as `tests/features/pre_draft_helpers.py` does -- Step 4A never
-    reads it either)."""
+    """Write the analytical schema-v2 Parquet triple for `matches`/`players`
+    under `tmp_path` (empty `draft_events`, exactly as
+    `tests/features/pre_draft_helpers.py` does -- Step 4A never reads it
+    either)."""
     matches_table = build_matches_table(matches, players)
+    match_players_table = build_match_players_table(matches, players)
     draft_events_table = build_draft_events_table([])
 
     write_canonical_dataset(
-        tmp_path, matches_table=matches_table, draft_events_table=draft_events_table
+        tmp_path,
+        matches_table=matches_table,
+        draft_events_table=draft_events_table,
+        match_players_table=match_players_table,
     )
 
     return FeatureStoreConfig(
         matches_path=tmp_path / MATCHES_FILENAME,
+        match_players_path=tmp_path / MATCH_PLAYERS_FILENAME,
         draft_events_path=tmp_path / DRAFT_EVENTS_FILENAME,
     )
 

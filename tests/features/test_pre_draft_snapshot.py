@@ -35,7 +35,11 @@ import pytest
 from pre_draft_helpers import build_feature_store_config, match_row, player_rows
 
 from dota_predictor.features.availability import MATCHES_COLUMN_AVAILABILITY
-from dota_predictor.features.duckdb_layer import DRAFT_EVENTS_VIEW, connect
+from dota_predictor.features.duckdb_layer import (
+    DRAFT_EVENTS_VIEW,
+    MATCH_PLAYERS_VIEW,
+    connect,
+)
 from dota_predictor.features.pre_draft_snapshot import (
     FEATURE_COLUMNS,
     IDENTITY_COLUMNS,
@@ -582,6 +586,40 @@ def test_no_draft_information_is_available_in_pre_draft_snapshot() -> None:
     # Structural guard: the query must never even reference the draft
     # events view.
     assert DRAFT_EVENTS_VIEW not in PRE_DRAFT_SNAPSHOT_SQL
+    assert "hero_id" not in PRE_DRAFT_SNAPSHOT_SQL
+    assert "hero_id" not in FEATURE_COLUMNS
+
+
+def test_hero_id_on_match_players_does_not_leak_into_pre_draft_snapshot(
+    tmp_path: Path,
+) -> None:
+    """Played hero_id is on the DuckDB roster relation but is DRAFT data.
+
+    PRE_DRAFT snapshot SQL, snapshot output, and the training feature
+    matrix must not read or expose it.
+    """
+    from dota_predictor.training.dataset import build_model_ready_dataset
+
+    matches, players = _build_multi_match_matches()
+    config = build_feature_store_config(tmp_path, matches=matches, players=players)
+
+    with connect(config) as store:
+        mp_columns = store.relation(MATCH_PLAYERS_VIEW).columns
+        hero_ids = store.sql(
+            f"SELECT hero_id FROM {MATCH_PLAYERS_VIEW} WHERE hero_id IS NOT NULL"
+        ).fetchall()
+        snapshot = build_pre_draft_snapshot(store)
+        full = snapshot.to_frame()
+        features = snapshot.feature_frame()
+        dataset = build_model_ready_dataset(snapshot)
+
+    assert "hero_id" in mp_columns
+    assert hero_ids
+    assert "hero_id" not in SNAPSHOT_COLUMNS
+    assert "hero_id" not in full.columns
+    assert "hero_id" not in features.columns
+    assert "hero_id" not in dataset.X.columns
+    assert "hero_id" not in dataset.context.columns
 
 
 def test_no_post_match_information_other_than_the_separated_target() -> None:

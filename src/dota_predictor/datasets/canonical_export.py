@@ -658,8 +658,9 @@ def write_canonical_dataset(
 
     Always writes `matches.parquet` and `draft_events.parquet`. When
     `match_players_table` is provided (the production `build_canonical_dataset`
-    path), also writes `match_players.parquet`. Feature-layer test fixtures
-    that only need the v1 pair may omit it.
+    path and feature-layer fixtures), also writes `match_players.parquet`.
+    Omitting it is only for tests that intentionally exercise a missing
+    `match_players.parquet` file.
 
     Pattern: write each table to a temporary file inside `output_dir`,
     read it back to confirm it is well-formed, and only then replace the

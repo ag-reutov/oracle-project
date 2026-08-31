@@ -11,6 +11,8 @@ import pytest
 
 from dota_predictor.features.availability import (
     DRAFT_EVENTS_COLUMN_AVAILABILITY,
+    GAME_VERSIONS_COLUMN_AVAILABILITY,
+    HEROES_COLUMN_AVAILABILITY,
     MATCH_PLAYERS_COLUMN_AVAILABILITY,
     MATCHES_COLUMN_AVAILABILITY,
     PROVENANCE_COLUMNS,
@@ -81,12 +83,55 @@ def test_provenance_columns_absent_from_matches_availability_map() -> None:
     assert PROVENANCE_COLUMNS.isdisjoint(MATCHES_COLUMN_AVAILABILITY)
 
 
-# --- match_players columns are all PRE_DRAFT -----------------------------
+# --- match_players columns -----------------------------------------------
+
+MATCH_PLAYERS_PRE_DRAFT_COLUMNS = {
+    "match_id",
+    "start_time",
+    "side",
+    "slot_in_side",
+    "player_id",
+    "team_id",
+}
 
 
-def test_match_players_columns_all_available_pre_draft() -> None:
+def test_match_players_roster_columns_available_pre_draft() -> None:
     allowed = columns_allowed_for_stage("match_players", SnapshotStage.PRE_DRAFT)
-    assert allowed == set(MATCH_PLAYERS_COLUMN_AVAILABILITY)
+    assert allowed == MATCH_PLAYERS_PRE_DRAFT_COLUMNS
+
+
+def test_match_players_hero_id_is_draft_not_pre_draft() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert MATCH_PLAYERS_COLUMN_AVAILABILITY["hero_id"] == InformationAvailability.DRAFT
+    for column in MATCH_PLAYERS_PRE_DRAFT_COLUMNS:
+        assert (
+            MATCH_PLAYERS_COLUMN_AVAILABILITY[column]
+            == InformationAvailability.PRE_DRAFT
+        )
+
+    pre_draft = columns_allowed_for_stage("match_players", SnapshotStage.PRE_DRAFT)
+    assert "hero_id" not in pre_draft
+
+    post_draft = columns_allowed_for_stage("match_players", SnapshotStage.POST_DRAFT)
+    assert "hero_id" in post_draft
+    assert MATCH_PLAYERS_PRE_DRAFT_COLUMNS.issubset(post_draft)
+
+
+def test_unclassified_match_players_column_is_rejected() -> None:
+    with pytest.raises(FeatureAvailabilityError, match="not_a_real_column"):
+        assert_columns_allowed_for_stage(
+            "match_players",
+            SnapshotStage.POST_DRAFT,
+            ["match_id", "not_a_real_column"],
+        )
+
+
+def test_match_players_hero_id_rejected_at_pre_draft() -> None:
+    with pytest.raises(FeatureAvailabilityError, match="hero_id"):
+        assert_columns_allowed_for_stage(
+            "match_players", SnapshotStage.PRE_DRAFT, ["match_id", "hero_id"]
+        )
 
 
 # --- assert_columns_allowed_for_stage raises for violations --------------
@@ -142,4 +187,62 @@ def test_draft_events_column_availability_has_no_post_match_entries() -> None:
     assert (
         InformationAvailability.POST_MATCH
         not in DRAFT_EVENTS_COLUMN_AVAILABILITY.values()
+    )
+
+
+# --- reference views do not reclassify fact hero_id ----------------------
+
+
+def test_heroes_dimension_is_pre_draft_static_metadata() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert HEROES_COLUMN_AVAILABILITY == {
+        "hero_id": InformationAvailability.PRE_DRAFT,
+        "name": InformationAvailability.PRE_DRAFT,
+    }
+    allowed = columns_allowed_for_stage("heroes", SnapshotStage.PRE_DRAFT)
+    assert allowed == {"hero_id", "name"}
+
+
+def test_game_versions_dimension_is_pre_draft() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert set(GAME_VERSIONS_COLUMN_AVAILABILITY) == {
+        "game_version_id",
+        "name",
+        "as_of_datetime",
+    }
+    assert set(GAME_VERSIONS_COLUMN_AVAILABILITY.values()) == {
+        InformationAvailability.PRE_DRAFT
+    }
+    allowed = columns_allowed_for_stage("game_versions", SnapshotStage.PRE_DRAFT)
+    assert allowed == {"game_version_id", "name", "as_of_datetime"}
+
+
+def test_hero_catalog_does_not_make_match_players_hero_id_pre_draft() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert MATCH_PLAYERS_COLUMN_AVAILABILITY["hero_id"] == InformationAvailability.DRAFT
+    pre_draft = columns_allowed_for_stage("match_players", SnapshotStage.PRE_DRAFT)
+    assert "hero_id" not in pre_draft
+    with pytest.raises(FeatureAvailabilityError, match="hero_id"):
+        assert_columns_allowed_for_stage(
+            "match_players", SnapshotStage.PRE_DRAFT, ["hero_id"]
+        )
+
+
+def test_hero_catalog_does_not_make_draft_events_hero_id_pre_draft() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert DRAFT_EVENTS_COLUMN_AVAILABILITY["hero_id"] == InformationAvailability.DRAFT
+    pre_draft = columns_allowed_for_stage("draft_events", SnapshotStage.PRE_DRAFT)
+    assert "hero_id" not in pre_draft
+
+
+def test_matches_game_version_id_remains_pre_draft() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert (
+        MATCHES_COLUMN_AVAILABILITY["game_version_id"]
+        == InformationAvailability.PRE_DRAFT
     )

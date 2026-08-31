@@ -1,17 +1,23 @@
 """DuckDB analytical layer over the canonical Parquet dataset (Step 3A).
 
 Opens an in-memory DuckDB connection with three views registered directly
-over the canonical Parquet files -- `matches`/`draft_events` are read via
-`read_parquet` (DuckDB streams/pushes-down projections and filters against
-the Parquet file; nothing is materialized into pandas), and
-`match_players` is a SQL reconstruction of the ten pivoted player columns
-in `matches.parquet` back into one long-form row per (match, side, slot).
+over the canonical Parquet files. `matches` and `draft_events` are read
+via `read_parquet` (DuckDB streams/pushes-down projections and filters
+against the Parquet file; nothing is materialized into pandas).
+`match_players` is `match_players.parquet` joined to `matches` so the
+relation keeps a denormalized `start_time` (required by PRE_DRAFT
+historical SQL) without storing `start_time` on the player file.
+
+Optional STRATZ reference catalogs (`heroes`, `game_versions`) are not
+registered by `connect()`. Call `register_reference_views` explicitly
+when those Parquet files are present. They are never auto-joined into
+the fact views.
 
 This module is intentionally small (see the Step 3A scope note below): it
-only opens the connection and defines the three reusable relations. It
+only opens the connection and defines the reusable relations. It
 does not build feature matrices, does not cache/materialize anything to
-disk, and does not require PostgreSQL -- the two canonical Parquet files
-are the only input.
+disk, and does not require PostgreSQL -- the three canonical Parquet files
+are the only input required by `connect()`.
 
 Scope note (Step 3A)
 ---------------------
@@ -31,22 +37,29 @@ from typing import Self
 
 import duckdb
 
-from dota_predictor.features.config import FeatureStoreConfig, load_feature_store_config
+from dota_predictor.features.config import (
+    FeatureStoreConfig,
+    ReferenceStoreConfig,
+    load_feature_store_config,
+    load_reference_store_config,
+)
 
 __all__ = [
     "DRAFT_EVENTS_VIEW",
+    "GAME_VERSIONS_VIEW",
+    "HEROES_VIEW",
     "MATCHES_VIEW",
     "MATCH_PLAYERS_VIEW",
     "FeatureDuckDBConnection",
     "connect",
+    "register_reference_views",
 ]
 
 MATCHES_VIEW = "matches"
 DRAFT_EVENTS_VIEW = "draft_events"
 MATCH_PLAYERS_VIEW = "match_players"
-
-_PLAYERS_PER_SIDE = 5
-_SIDES = ("radiant", "dire")
+HEROES_VIEW = "heroes"
+GAME_VERSIONS_VIEW = "game_versions"
 
 
 def _quote_literal_path(path: Path) -> str:
@@ -57,39 +70,45 @@ def _quote_literal_path(path: Path) -> str:
     rejects `?`/`$n` there -- the view definition must be a plain SQL
     string), so the path is escaped and inlined directly instead. Single
     quotes are doubled per standard SQL string-literal escaping; `path`
-    always comes from `FeatureStoreConfig` (our own configuration), never
-    from untrusted external input.
+    always comes from `FeatureStoreConfig` or `ReferenceStoreConfig`
+    (our own configuration), never from untrusted external input.
     """
     return "'" + str(path).replace("'", "''") + "'"
 
 
-def _match_players_view_sql(matches_view: str) -> str:
-    """`SELECT` reconstructing the long-form player relation from the ten
-    pivoted `{side}_player_{slot}_id` / `{side}_team_id` columns on
-    `matches_view`.
+def _require_parquet_file(path: Path, *, relation: str) -> None:
+    """Raise `FileNotFoundError` if `path` is not an existing Parquet file.
 
-    One `SELECT ... FROM matches_view` per (side, slot) -- 10 total --
-    unioned together, so every one of the 10 canonical roster slots for a
-    match becomes exactly one output row, preserving the exact
-    `slot_in_side` -> `player_id` correspondence Step 2 already pivoted
-    losslessly (see `datasets.canonical_export`). No aggregation or
-    dedup is needed: the source columns are already one-per-slot.
+    DuckDB's own missing-file error is an opaque IOException; failing here
+    names the analytical relation and the resolved path before any view is
+    registered.
     """
-    selects = [
-        f"""
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Parquet for DuckDB relation {relation!r} is missing: {path}"
+        )
+
+
+def _match_players_view_sql(*, match_players_path: Path, matches_view: str) -> str:
+    """Explicit projection of `match_players.parquet` joined to `matches`.
+
+    `start_time` is taken from `matches_view`, not from the player file.
+    Column order is the DuckDB `match_players` contract and must not
+    follow physical Parquet column or row order.
+    """
+    quoted = _quote_literal_path(match_players_path)
+    return f"""
         SELECT
-            match_id,
-            start_time,
-            '{side.upper()}' AS side,
-            {slot} AS slot_in_side,
-            {side}_player_{slot}_id AS player_id,
-            {side}_team_id AS team_id
-        FROM {matches_view}
-        """
-        for side in _SIDES
-        for slot in range(_PLAYERS_PER_SIDE)
-    ]
-    return " UNION ALL ".join(selects)
+            mp.match_id,
+            m.start_time,
+            mp.side,
+            mp.slot_in_side,
+            mp.player_id,
+            mp.team_id,
+            mp.hero_id
+        FROM read_parquet({quoted}) AS mp
+        JOIN {matches_view} AS m USING (match_id)
+    """
 
 
 @dataclass(frozen=True)
@@ -108,8 +127,12 @@ class FeatureDuckDBConnection:
     config: FeatureStoreConfig
 
     def relation(self, view: str) -> duckdb.DuckDBPyRelation:
-        """A lazy DuckDB relation over `view` (one of `MATCHES_VIEW`,
-        `DRAFT_EVENTS_VIEW`, `MATCH_PLAYERS_VIEW`). Nothing is executed or
+        """A lazy DuckDB relation over `view`.
+
+        Fact views (`MATCHES_VIEW`, `DRAFT_EVENTS_VIEW`,
+        `MATCH_PLAYERS_VIEW`) are always registered by `connect()`.
+        Reference views (`HEROES_VIEW`, `GAME_VERSIONS_VIEW`) exist only
+        after `register_reference_views`. Nothing is executed or
         materialized until the caller consumes the relation (`.df()`,
         `.fetchall()`, `.arrow()`, ...)."""
         return self.connection.table(view)
@@ -144,6 +167,14 @@ def connect(config: FeatureStoreConfig | None = None) -> FeatureDuckDBConnection
     lazily by `read_parquet`); no PostgreSQL connection is ever opened.
     """
     resolved_config = config if config is not None else load_feature_store_config()
+    _require_parquet_file(resolved_config.matches_path, relation=MATCHES_VIEW)
+    _require_parquet_file(
+        resolved_config.match_players_path, relation=MATCH_PLAYERS_VIEW
+    )
+    _require_parquet_file(
+        resolved_config.draft_events_path, relation=DRAFT_EVENTS_VIEW
+    )
+
     connection = duckdb.connect(database=":memory:")
 
     connection.execute(
@@ -155,7 +186,55 @@ def connect(config: FeatureStoreConfig | None = None) -> FeatureDuckDBConnection
         f"SELECT * FROM read_parquet({_quote_literal_path(resolved_config.draft_events_path)})"
     )
     connection.execute(
-        f"CREATE VIEW {MATCH_PLAYERS_VIEW} AS {_match_players_view_sql(MATCHES_VIEW)}"
+        f"CREATE VIEW {MATCH_PLAYERS_VIEW} AS "
+        + _match_players_view_sql(
+            match_players_path=resolved_config.match_players_path,
+            matches_view=MATCHES_VIEW,
+        )
     )
 
     return FeatureDuckDBConnection(connection=connection, config=resolved_config)
+
+
+def _heroes_view_sql(heroes_path: Path) -> str:
+    quoted = _quote_literal_path(heroes_path)
+    return f"""
+        SELECT
+            hero_id,
+            name
+        FROM read_parquet({quoted})
+    """
+
+
+def _game_versions_view_sql(game_versions_path: Path) -> str:
+    quoted = _quote_literal_path(game_versions_path)
+    return f"""
+        SELECT
+            game_version_id,
+            name,
+            as_of_datetime
+        FROM read_parquet({quoted})
+    """
+
+
+def register_reference_views(
+    store: FeatureDuckDBConnection,
+    config: ReferenceStoreConfig | None = None,
+) -> None:
+    """Register optional `heroes` and `game_versions` views on `store`.
+
+    Requires both reference Parquet files to exist. Does not join them
+    into `matches` / `match_players` / `draft_events`. `connect()` does
+    not call this.
+    """
+    resolved = config if config is not None else load_reference_store_config()
+    _require_parquet_file(resolved.heroes_path, relation=HEROES_VIEW)
+    _require_parquet_file(resolved.game_versions_path, relation=GAME_VERSIONS_VIEW)
+
+    store.connection.execute(
+        f"CREATE VIEW {HEROES_VIEW} AS " + _heroes_view_sql(resolved.heroes_path)
+    )
+    store.connection.execute(
+        f"CREATE VIEW {GAME_VERSIONS_VIEW} AS "
+        + _game_versions_view_sql(resolved.game_versions_path)
+    )

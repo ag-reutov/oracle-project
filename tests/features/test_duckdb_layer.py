@@ -8,20 +8,26 @@ of that property.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from conftest import (
     EARLY_START_TIME,
     LATE_START_TIME,
+    MATCH_EARLY_DIRE_HERO_IDS,
     MATCH_EARLY_DIRE_PLAYER_IDS,
     MATCH_EARLY_DIRE_TEAM_ID,
     MATCH_EARLY_ID,
     MATCH_EARLY_NUM_BANS,
+    MATCH_EARLY_RADIANT_HERO_IDS,
     MATCH_EARLY_RADIANT_PLAYER_IDS,
     MATCH_EARLY_RADIANT_TEAM_ID,
+    MATCH_LATE_DIRE_HERO_IDS,
     MATCH_LATE_DIRE_PLAYER_IDS,
     MATCH_LATE_DIRE_TEAM_ID,
     MATCH_LATE_ID,
     MATCH_LATE_NUM_BANS,
+    MATCH_LATE_RADIANT_HERO_IDS,
     MATCH_LATE_RADIANT_PLAYER_IDS,
     MATCH_LATE_RADIANT_TEAM_ID,
 )
@@ -92,75 +98,129 @@ def test_zero_ban_draft_is_supported(feature_store_config: FeatureStoreConfig) -
     assert actions.count("PICK") == 10
 
 
-# --- match_players reconstruction --------------------------------------
+# --- match_players parquet-backed view ---------------------------------
 
 
-def test_match_players_reconstructs_all_ten_players_exactly_once_per_match(
+MATCH_PLAYERS_COLUMNS = [
+    "match_id",
+    "start_time",
+    "side",
+    "slot_in_side",
+    "player_id",
+    "team_id",
+    "hero_id",
+]
+
+
+def _expected_match_player_rows() -> list[tuple]:
+    """Identity rows in `(match_id, side, slot_in_side)` order.
+
+    Used so assertions compare logical keys, never physical Parquet order.
+    """
+    expected: list[tuple] = []
+    specs = (
+        (
+            MATCH_LATE_ID,
+            MATCH_LATE_RADIANT_PLAYER_IDS,
+            MATCH_LATE_DIRE_PLAYER_IDS,
+            MATCH_LATE_RADIANT_TEAM_ID,
+            MATCH_LATE_DIRE_TEAM_ID,
+            MATCH_LATE_RADIANT_HERO_IDS,
+            MATCH_LATE_DIRE_HERO_IDS,
+        ),
+        (
+            MATCH_EARLY_ID,
+            MATCH_EARLY_RADIANT_PLAYER_IDS,
+            MATCH_EARLY_DIRE_PLAYER_IDS,
+            MATCH_EARLY_RADIANT_TEAM_ID,
+            MATCH_EARLY_DIRE_TEAM_ID,
+            MATCH_EARLY_RADIANT_HERO_IDS,
+            MATCH_EARLY_DIRE_HERO_IDS,
+        ),
+    )
+    for (
+        match_id,
+        radiant_players,
+        dire_players,
+        radiant_team,
+        dire_team,
+        radiant_heroes,
+        dire_heroes,
+    ) in specs:
+        for slot, (player_id, hero_id) in enumerate(
+            zip(radiant_players, radiant_heroes, strict=True)
+        ):
+            expected.append(
+                (match_id, "RADIANT", slot, player_id, radiant_team, hero_id)
+            )
+        for slot, (player_id, hero_id) in enumerate(
+            zip(dire_players, dire_heroes, strict=True)
+        ):
+            expected.append((match_id, "DIRE", slot, player_id, dire_team, hero_id))
+    return sorted(expected)
+
+
+def test_match_players_has_exactly_seven_columns_in_contract_order(
     feature_store_config: FeatureStoreConfig,
 ) -> None:
     with connect(feature_store_config) as store:
-        rows = store.relation(MATCH_PLAYERS_VIEW).fetchall()
         columns = store.relation(MATCH_PLAYERS_VIEW).columns
-
-    assert columns == [
-        "match_id",
-        "start_time",
-        "side",
-        "slot_in_side",
-        "player_id",
-        "team_id",
-    ]
-    assert len(rows) == 20  # 2 matches * 10 players
-
-    by_match: dict[int, list[tuple]] = {}
-    for row in rows:
-        by_match.setdefault(row[0], []).append(row)
-
-    assert set(by_match) == {MATCH_EARLY_ID, MATCH_LATE_ID}
-    for match_id, match_rows in by_match.items():
-        assert len(match_rows) == 10
-        player_ids = [row[4] for row in match_rows]
-        assert len(set(player_ids)) == 10, f"match {match_id}: duplicate player_id"
+    assert columns == MATCH_PLAYERS_COLUMNS
 
 
-def test_match_players_side_team_and_slot_are_correct(
+def test_match_players_has_ten_rows_per_match_five_per_side(
     feature_store_config: FeatureStoreConfig,
 ) -> None:
     with connect(feature_store_config) as store:
         rows = store.sql(
             f"""
-            SELECT match_id, side, slot_in_side, player_id, team_id
+            SELECT match_id, side, COUNT(*) AS n
+            FROM {MATCH_PLAYERS_VIEW}
+            GROUP BY match_id, side
+            ORDER BY match_id, side
+            """
+        ).fetchall()
+
+    by_match: dict[int, dict[str, int]] = {}
+    for match_id, side, n in rows:
+        by_match.setdefault(match_id, {})[side] = n
+    assert set(by_match) == {MATCH_EARLY_ID, MATCH_LATE_ID}
+    for match_id, sides in by_match.items():
+        assert sides == {"RADIANT": 5, "DIRE": 5}, match_id
+
+
+def test_match_players_match_side_slot_is_unique(
+    feature_store_config: FeatureStoreConfig,
+) -> None:
+    with connect(feature_store_config) as store:
+        duplicates = store.sql(
+            f"""
+            SELECT match_id, side, slot_in_side, COUNT(*) AS n
+            FROM {MATCH_PLAYERS_VIEW}
+            GROUP BY match_id, side, slot_in_side
+            HAVING COUNT(*) > 1
+            """
+        ).fetchall()
+    assert duplicates == []
+
+
+def test_match_players_preserves_parquet_player_team_and_hero_ids(
+    feature_store_config: FeatureStoreConfig,
+) -> None:
+    with connect(feature_store_config) as store:
+        rows = store.sql(
+            f"""
+            SELECT match_id, side, slot_in_side, player_id, team_id, hero_id
             FROM {MATCH_PLAYERS_VIEW}
             ORDER BY match_id, side, slot_in_side
             """
         ).fetchall()
 
-    expected = []
-    for slot, player_id in enumerate(MATCH_LATE_RADIANT_PLAYER_IDS):
-        expected.append(
-            (MATCH_LATE_ID, "RADIANT", slot, player_id, MATCH_LATE_RADIANT_TEAM_ID)
-        )
-    for slot, player_id in enumerate(MATCH_LATE_DIRE_PLAYER_IDS):
-        expected.append(
-            (MATCH_LATE_ID, "DIRE", slot, player_id, MATCH_LATE_DIRE_TEAM_ID)
-        )
-    for slot, player_id in enumerate(MATCH_EARLY_RADIANT_PLAYER_IDS):
-        expected.append(
-            (MATCH_EARLY_ID, "RADIANT", slot, player_id, MATCH_EARLY_RADIANT_TEAM_ID)
-        )
-    for slot, player_id in enumerate(MATCH_EARLY_DIRE_PLAYER_IDS):
-        expected.append(
-            (MATCH_EARLY_ID, "DIRE", slot, player_id, MATCH_EARLY_DIRE_TEAM_ID)
-        )
-
-    # `rows`/`expected` are both ordered by (match_id, side, slot_in_side);
-    # match_id sorts MATCH_LATE_ID (1001) before MATCH_EARLY_ID (2002)
-    # numerically, independent of start_time -- see conftest docstring.
-    assert sorted(rows) == sorted(expected)
-    assert rows == sorted(expected)
+    expected = _expected_match_player_rows()
+    assert rows == expected
 
 
-def test_match_players_preserves_start_time_per_match(
+def test_match_players_joins_start_time_from_matches(
     feature_store_config: FeatureStoreConfig,
 ) -> None:
     with connect(feature_store_config) as store:
@@ -171,6 +231,56 @@ def test_match_players_preserves_start_time_per_match(
     start_times = dict(rows)
     assert start_times[MATCH_EARLY_ID] == EARLY_START_TIME
     assert start_times[MATCH_LATE_ID] == LATE_START_TIME
+
+
+def test_match_players_independent_of_parquet_row_order(
+    feature_store_config: FeatureStoreConfig,
+) -> None:
+    import pyarrow.parquet as pq
+
+    table = pq.read_table(feature_store_config.match_players_path)
+    reversed_indices = list(range(table.num_rows - 1, -1, -1))
+    reversed_table = table.take(reversed_indices)
+    assert reversed_table.column("match_id").to_pylist() != table.column(
+        "match_id"
+    ).to_pylist()
+    pq.write_table(reversed_table, feature_store_config.match_players_path)
+
+    with connect(feature_store_config) as store:
+        rows = store.sql(
+            f"""
+            SELECT match_id, side, slot_in_side, player_id, team_id, hero_id
+            FROM {MATCH_PLAYERS_VIEW}
+            ORDER BY match_id, side, slot_in_side
+            """
+        ).fetchall()
+
+    assert rows == _expected_match_player_rows()
+
+
+def test_missing_match_players_parquet_fails_clearly(
+    feature_store_config: FeatureStoreConfig, tmp_path: Path
+) -> None:
+    missing = tmp_path / "absent" / "match_players.parquet"
+    config = FeatureStoreConfig(
+        matches_path=feature_store_config.matches_path,
+        match_players_path=missing,
+        draft_events_path=feature_store_config.draft_events_path,
+    )
+    with pytest.raises(FileNotFoundError, match="match_players"):
+        connect(config)
+
+
+def test_duckdb_layer_does_not_unpivot_matches_player_columns() -> None:
+    """`match_players.parquet` is the only authoritative player-row source."""
+    import inspect
+
+    from dota_predictor.features import duckdb_layer
+
+    source = inspect.getsource(duckdb_layer)
+    assert "UNION ALL" not in source
+    assert "radiant_player_0_id" not in source
+    assert "_match_players_view_sql(MATCHES_VIEW)" not in source
 
 
 # --- chronological ordering uses start_time, not match_id --------------

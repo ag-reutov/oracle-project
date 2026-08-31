@@ -6,13 +6,20 @@ from pathlib import Path
 
 import pytest
 
-from dota_predictor.features.config import load_feature_store_config
+from dota_predictor.datasets.canonical_export import MATCH_PLAYERS_FILENAME
+from dota_predictor.features.config import (
+    load_feature_store_config,
+    load_reference_store_config,
+)
 
 
 def test_defaults_to_data_processed_under_root(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("PROCESSED_DATA_DIR", raising=False)
     config = load_feature_store_config(root=Path("/repo"))
     assert config.matches_path == Path("/repo/data/processed/matches.parquet")
+    assert config.match_players_path == Path(
+        "/repo/data/processed/match_players.parquet"
+    )
     assert config.draft_events_path == Path("/repo/data/processed/draft_events.parquet")
 
 
@@ -29,4 +36,31 @@ def test_agrees_with_dataset_export_config_on_directory(
     feature_config = load_feature_store_config(root=Path("/repo"))
 
     assert feature_config.matches_path.parent == export_config.output_dir
+    assert feature_config.match_players_path.parent == export_config.output_dir
     assert feature_config.draft_events_path.parent == export_config.output_dir
+    assert feature_config.match_players_path == (
+        export_config.output_dir / MATCH_PLAYERS_FILENAME
+    )
+
+
+def test_reference_store_defaults_to_same_processed_directory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("PROCESSED_DATA_DIR", raising=False)
+    config = load_reference_store_config(root=Path("/repo"))
+    assert config.heroes_path == Path("/repo/data/processed/heroes.parquet")
+    assert config.game_versions_path == Path(
+        "/repo/data/processed/game_versions.parquet"
+    )
+
+
+def test_reference_store_agrees_with_feature_store_directory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PROCESSED_DATA_DIR", "/custom/output")
+    feature_config = load_feature_store_config(root=Path("/repo"))
+    reference_config = load_reference_store_config(root=Path("/repo"))
+    assert reference_config.heroes_path.parent == feature_config.matches_path.parent
+    assert (
+        reference_config.game_versions_path.parent == feature_config.matches_path.parent
+    )

@@ -1,7 +1,8 @@
 """Step 3 information-availability contract for the DuckDB feature layer.
 
-Maps the column names of the three analytical relations
-(`matches`/`draft_events`/`match_players` -- see `duckdb_layer.py`) onto
+Maps the column names of the analytical relations
+(`matches`/`draft_events`/`match_players`, plus the optional reference
+views `heroes`/`game_versions` -- see `duckdb_layer.py`) onto
 `SnapshotStage`, so a future feature builder cannot casually select a
 column that was not actually knowable at the stage it claims to be
 building features for.
@@ -13,8 +14,9 @@ mean in `canonical_schema.py`. The per-column dictionaries here only
 translate that existing classification onto the *Parquet column names*
 of the analytical views, including columns that don't exist verbatim on
 `CanonicalMatch` (e.g. `radiant_player_0_id` is the pivoted form of
-`radiant_player_ids`; `match_players.team_id` is the reconstructed form
-of `radiant_team_id`/`dire_team_id`).
+`radiant_player_ids`; `match_players.team_id` is the side-derived form
+of `radiant_team_id`/`dire_team_id`; `match_players.hero_id` is the
+played-hero column from `match_players.parquet`).
 
 `PROVENANCE_COLUMNS` (`mapper_version`, `canonicalized_at`) is the one
 genuinely new category, and it is deliberately NOT expressed as
@@ -35,6 +37,8 @@ from dota_predictor.data.canonical_schema import InformationAvailability
 
 __all__ = [
     "DRAFT_EVENTS_COLUMN_AVAILABILITY",
+    "GAME_VERSIONS_COLUMN_AVAILABILITY",
+    "HEROES_COLUMN_AVAILABILITY",
     "MATCHES_COLUMN_AVAILABILITY",
     "MATCH_PLAYERS_COLUMN_AVAILABILITY",
     "PROVENANCE_COLUMNS",
@@ -130,11 +134,12 @@ DRAFT_EVENTS_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "was_successful": InformationAvailability.DRAFT,
 }
 
-# Column availability for the `match_players` view (reconstructed from
-# the ten pivoted player columns in `matches.parquet` -- see
-# `duckdb_layer.py`). All PRE_DRAFT: this view only re-exposes roster and
-# team-membership facts that are already PRE_DRAFT on `matches`
-# (`radiant_player_ids`/`dire_player_ids`/`radiant_team_id`/`dire_team_id`).
+# Column availability for the `match_players` view (`match_players.parquet`
+# joined to `matches.start_time` -- see `duckdb_layer.py`). Roster and
+# team-membership facts are PRE_DRAFT (the same classification as
+# `radiant_player_ids`/`dire_player_ids`/`radiant_team_id`/`dire_team_id`
+# on `matches`). Played `hero_id` is DRAFT: it is knowable once the draft
+# is complete, never before the first draft action.
 MATCH_PLAYERS_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "match_id": InformationAvailability.PRE_DRAFT,
     "start_time": InformationAvailability.PRE_DRAFT,
@@ -142,12 +147,34 @@ MATCH_PLAYERS_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "slot_in_side": InformationAvailability.PRE_DRAFT,
     "player_id": InformationAvailability.PRE_DRAFT,
     "team_id": InformationAvailability.PRE_DRAFT,
+    "hero_id": InformationAvailability.DRAFT,
+}
+
+# Column availability for the optional `heroes` reference view. This is
+# static catalog metadata (id -> display name). It does not reveal which
+# hero a player chose in a match: `match_players.hero_id` and
+# `draft_events.hero_id` remain DRAFT. Classified PRE_DRAFT because the
+# catalog is knowable before any draft action.
+HEROES_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    "hero_id": InformationAvailability.PRE_DRAFT,
+    "name": InformationAvailability.PRE_DRAFT,
+}
+
+# Column availability for the optional `game_versions` reference view.
+# Patch identity is PRE_DRAFT context, matching `matches.game_version_id`.
+# Names are not denormalized onto the fact views.
+GAME_VERSIONS_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    "game_version_id": InformationAvailability.PRE_DRAFT,
+    "name": InformationAvailability.PRE_DRAFT,
+    "as_of_datetime": InformationAvailability.PRE_DRAFT,
 }
 
 _VIEW_COLUMN_AVAILABILITY: dict[str, dict[str, InformationAvailability]] = {
     "matches": MATCHES_COLUMN_AVAILABILITY,
     "draft_events": DRAFT_EVENTS_COLUMN_AVAILABILITY,
     "match_players": MATCH_PLAYERS_COLUMN_AVAILABILITY,
+    "heroes": HEROES_COLUMN_AVAILABILITY,
+    "game_versions": GAME_VERSIONS_COLUMN_AVAILABILITY,
 }
 
 
