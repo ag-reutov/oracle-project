@@ -63,6 +63,14 @@ from dota_predictor.features.team_elo import (
     compute_team_elo_features,
     expected_score,
 )
+from dota_predictor.features.team_hero import (
+    TEAM_HERO_COLUMNS,
+    TEAM_HERO_IDENTITY_COLUMNS,
+    TEAM_HERO_METRIC_COLUMNS,
+    TeamHeroState,
+    build_team_hero,
+    team_hero_sql,
+)
 from dota_predictor.features.temporal import (
     HISTORICAL_START_TIME_SQL_CONDITION,
     is_historical,
@@ -94,6 +102,9 @@ __all__ = [
     "TARGET_COLUMN",
     "TEAM_ELO_DELTA_COLUMN",
     "TEAM_ELO_FEATURE_COLUMNS",
+    "TEAM_HERO_COLUMNS",
+    "TEAM_HERO_IDENTITY_COLUMNS",
+    "TEAM_HERO_METRIC_COLUMNS",
     "TEAM_HISTORY_FEATURE_COLUMNS",
     "EloConfig",
     "FeatureAvailabilityError",
@@ -105,10 +116,12 @@ __all__ = [
     "PreDraftSnapshot",
     "ReferenceStoreConfig",
     "SnapshotStage",
+    "TeamHeroState",
     "assert_columns_allowed_for_stage",
     "build_hero_meta",
     "build_player_hero",
     "build_pre_draft_snapshot",
+    "build_team_hero",
     "columns_allowed_for_stage",
     "compute_team_elo_features",
     "connect",
@@ -120,4 +133,5 @@ __all__ = [
     "player_hero_sql",
     "rank_hero_meta",
     "register_reference_views",
+    "team_hero_sql",
 ]
