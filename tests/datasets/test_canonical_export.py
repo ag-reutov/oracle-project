@@ -17,12 +17,15 @@ import pytest
 
 from dota_predictor.datasets.canonical_export import (
     DRAFT_EVENTS_FILENAME,
+    MATCH_PLAYERS_FILENAME,
     MATCHES_FILENAME,
     DatasetTransformError,
     DatasetValidationError,
     build_draft_events_table,
+    build_match_players_table,
     build_matches_table,
     validate_draft_events_table,
+    validate_match_players_table,
     validate_matches_table,
     write_canonical_dataset,
 )
@@ -58,8 +61,17 @@ def _match_row(
 
 
 def _player_rows(
-    match_id: int, *, radiant_ids: list[int], dire_ids: list[int]
+    match_id: int,
+    *,
+    radiant_ids: list[int],
+    dire_ids: list[int],
+    radiant_heroes: list[int] | None = None,
+    dire_heroes: list[int] | None = None,
 ) -> list[dict]:
+    if radiant_heroes is None:
+        radiant_heroes = [10 + i for i in range(5)]
+    if dire_heroes is None:
+        dire_heroes = [20 + i for i in range(5)]
     rows = []
     for slot, player_id in enumerate(radiant_ids):
         rows.append(
@@ -68,6 +80,7 @@ def _player_rows(
                 "side": "RADIANT",
                 "slot_in_side": slot,
                 "player_id": player_id,
+                "hero_id": radiant_heroes[slot],
             }
         )
     for slot, player_id in enumerate(dire_ids):
@@ -77,9 +90,16 @@ def _player_rows(
                 "side": "DIRE",
                 "slot_in_side": slot,
                 "player_id": player_id,
+                "hero_id": dire_heroes[slot],
             }
         )
     return rows
+
+
+def _pick_heroes_for_draft(num_bans: int) -> tuple[list[int], list[int]]:
+    """Hero ids assigned to the 5 radiant then 5 dire picks in `_draft_rows`."""
+    start = 1000 + num_bans
+    return list(range(start, start + 5)), list(range(start + 5, start + 10))
 
 
 def _draft_rows(match_id: int, *, num_bans: int) -> list[dict]:
@@ -401,3 +421,163 @@ def test_write_canonical_dataset_overwrites_previous_build(tmp_path: Path) -> No
     assert sorted(p.name for p in tmp_path.iterdir()) == sorted(
         [MATCHES_FILENAME, DRAFT_EVENTS_FILENAME]
     )
+
+
+def _aligned_players(
+    match_id: int,
+    *,
+    num_bans: int,
+    radiant_ids: list[int],
+    dire_ids: list[int],
+    radiant_team_id: int = 100,
+    dire_team_id: int = 200,
+) -> tuple[dict, list[dict], list[dict]]:
+    radiant_heroes, dire_heroes = _pick_heroes_for_draft(num_bans)
+    match = _match_row(
+        match_id, radiant_team_id=radiant_team_id, dire_team_id=dire_team_id
+    )
+    players = _player_rows(
+        match_id,
+        radiant_ids=radiant_ids,
+        dire_ids=dire_ids,
+        radiant_heroes=radiant_heroes,
+        dire_heroes=dire_heroes,
+    )
+    drafts = _draft_rows(match_id, num_bans=num_bans)
+    return match, players, drafts
+
+
+def test_build_match_players_table_long_form_and_team_derivation() -> None:
+    match, players, _drafts = _aligned_players(
+        1,
+        num_bans=4,
+        radiant_ids=[1, 2, 3, 4, 5],
+        dire_ids=[6, 7, 8, 9, 10],
+        radiant_team_id=111,
+        dire_team_id=222,
+    )
+    random.Random(3).shuffle(players)
+    table = build_match_players_table([match], players)
+    assert table.num_rows == 10
+    rows = table.to_pylist()
+    radiant = [row for row in rows if row["side"] == "RADIANT"]
+    dire = [row for row in rows if row["side"] == "DIRE"]
+    assert len(radiant) == 5
+    assert len(dire) == 5
+    assert [row["player_id"] for row in radiant] == [1, 2, 3, 4, 5]
+    assert all(row["team_id"] == 111 for row in radiant)
+    assert all(row["team_id"] == 222 for row in dire)
+    assert "hero_id" in rows[0]
+    assert all(row["hero_id"] is not None for row in rows)
+
+
+def test_validate_match_players_table_accepts_short_draft() -> None:
+    match, players, drafts = _aligned_players(
+        1, num_bans=0, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]
+    )
+    matches_table = build_matches_table([match], players)
+    players_table = build_match_players_table([match], players)
+    drafts_table = build_draft_events_table(drafts)
+    validate_match_players_table(players_table, matches_table, drafts_table)
+
+
+def test_validate_match_players_table_requires_ten_rows() -> None:
+    match, players, drafts = _aligned_players(
+        1, num_bans=4, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]
+    )
+    players = [row for row in players if not (row["side"] == "DIRE" and row["slot_in_side"] == 4)]
+    matches_table = build_matches_table(
+        [match],
+        _player_rows(1, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]),
+    )
+    players_table = build_match_players_table([match], players)
+    drafts_table = build_draft_events_table(drafts)
+    with pytest.raises(DatasetValidationError, match="row count"):
+        validate_match_players_table(players_table, matches_table, drafts_table)
+
+
+def test_validate_match_players_table_detects_duplicate_player() -> None:
+    match, players, drafts = _aligned_players(
+        1, num_bans=4, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]
+    )
+    players[5]["player_id"] = players[0]["player_id"]
+    matches_table = build_matches_table([match], players)
+    players_table = build_match_players_table([match], players)
+    drafts_table = build_draft_events_table(drafts)
+    with pytest.raises(DatasetValidationError, match="duplicate player_id"):
+        validate_match_players_table(players_table, matches_table, drafts_table)
+
+
+def test_validate_match_players_table_detects_duplicate_hero_per_side() -> None:
+    match, players, drafts = _aligned_players(
+        1, num_bans=4, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]
+    )
+    players[1]["hero_id"] = players[0]["hero_id"]
+    matches_table = build_matches_table([match], players)
+    players_table = build_match_players_table([match], players)
+    drafts_table = build_draft_events_table(drafts)
+    with pytest.raises(DatasetValidationError, match="not 5 distinct"):
+        validate_match_players_table(players_table, matches_table, drafts_table)
+
+
+def test_validate_match_players_table_detects_hero_set_mismatch() -> None:
+    match, players, drafts = _aligned_players(
+        1, num_bans=4, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]
+    )
+    players[0]["hero_id"] = 9999
+    matches_table = build_matches_table([match], players)
+    players_table = build_match_players_table([match], players)
+    drafts_table = build_draft_events_table(drafts)
+    with pytest.raises(DatasetValidationError, match="successful PICK set"):
+        validate_match_players_table(players_table, matches_table, drafts_table)
+
+
+def test_validate_match_players_table_detects_wrong_team_id() -> None:
+    match, players, drafts = _aligned_players(
+        1,
+        num_bans=4,
+        radiant_ids=[1, 2, 3, 4, 5],
+        dire_ids=[6, 7, 8, 9, 10],
+        radiant_team_id=111,
+        dire_team_id=222,
+    )
+    matches_table = build_matches_table([match], players)
+    players_table = build_match_players_table([match], players)
+    # Tamper after build: swap a radiant row onto the dire team id.
+    mutated = players_table.to_pylist()
+    for row in mutated:
+        if row["side"] == "RADIANT" and row["slot_in_side"] == 0:
+            row["team_id"] = 222
+    from dota_predictor.datasets.canonical_export import MATCH_PLAYERS_SCHEMA
+
+    tampered = pa.Table.from_pylist(mutated, schema=MATCH_PLAYERS_SCHEMA)
+    drafts_table = build_draft_events_table(drafts)
+    with pytest.raises(DatasetValidationError, match="team_id"):
+        validate_match_players_table(tampered, matches_table, drafts_table)
+
+
+def test_write_canonical_dataset_includes_match_players(tmp_path: Path) -> None:
+    match, players, drafts = _aligned_players(
+        1, num_bans=0, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]
+    )
+    matches_table = build_matches_table([match], players)
+    players_table = build_match_players_table([match], players)
+    drafts_table = build_draft_events_table(drafts)
+    validate_match_players_table(players_table, matches_table, drafts_table)
+
+    write_canonical_dataset(
+        tmp_path,
+        matches_table=matches_table,
+        draft_events_table=drafts_table,
+        match_players_table=players_table,
+    )
+    assert sorted(p.name for p in tmp_path.iterdir()) == sorted(
+        [MATCHES_FILENAME, MATCH_PLAYERS_FILENAME, DRAFT_EVENTS_FILENAME]
+    )
+    read_players = pq.read_table(tmp_path / MATCH_PLAYERS_FILENAME)
+    assert read_players.num_rows == 10
+    assert "hero_id" in read_players.column_names
+    assert "radiant_player_0_hero_id" not in pq.read_table(
+        tmp_path / MATCHES_FILENAME
+    ).column_names
+

@@ -96,12 +96,18 @@ def build_stratz_match(
         order += 1
         hero_id += 1
 
+    radiant_pick_heroes = [
+        row["heroId"] for row in pick_bans if row["isPick"] and row["isRadiant"]
+    ]
+    dire_pick_heroes = [
+        row["heroId"] for row in pick_bans if row["isPick"] and not row["isRadiant"]
+    ]
     players = [
         {
             "isRadiant": True,
             "playerSlot": i,
             "steamAccount": {"id": pid},
-            "heroId": 1,
+            "heroId": radiant_pick_heroes[i],
             "steamAccountId": pid,
         }
         for i, pid in enumerate(RADIANT_IDS)
@@ -110,7 +116,7 @@ def build_stratz_match(
             "isRadiant": False,
             "playerSlot": 128 + i,
             "steamAccount": {"id": pid},
-            "heroId": 1,
+            "heroId": dire_pick_heroes[i],
             "steamAccountId": pid,
         }
         for i, pid in enumerate(DIRE_IDS)

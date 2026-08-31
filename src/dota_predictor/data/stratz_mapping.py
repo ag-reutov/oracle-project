@@ -77,7 +77,7 @@ __all__ = [
 # (`storage.schema.MATCHES.c.mapper_version`) so a future reprocessing job
 # can select rows with `mapper_version < CANONICAL_MAPPER_VERSION` instead
 # of reprocessing everything or nothing.
-CANONICAL_MAPPER_VERSION = 1
+CANONICAL_MAPPER_VERSION = 2
 
 
 def _require(raw: Mapping[str, Any], key: str, *, context: str) -> Any:
@@ -168,22 +168,35 @@ def _sorted_pick_ban_rows(
     return sorted(pick_bans, key=lambda row: row["order"])
 
 
-def _side_player_ids(
+def _side_roster(
     players: Sequence[Mapping[str, Any]], *, is_radiant: bool
-) -> tuple[PlayerId, ...]:
+) -> tuple[tuple[PlayerId, HeroId], ...]:
+    """Return `(player_id, hero_id)` pairs for one side in lobby-slot order.
+
+    Order follows STRATZ `playerSlot` (canonical `slot_in_side`), not
+    draft pick order and not `pickBans.playerIndex`. `heroId` is taken
+    from the player row itself.
+    """
     side_players = sorted(
         (player for player in players if player.get("isRadiant") == is_radiant),
         key=lambda player: player.get("playerSlot") or 0,
     )
-    player_ids: list[PlayerId] = []
+    roster: list[tuple[PlayerId, HeroId]] = []
     for player in side_players:
         steam_account_id = player.get("steamAccountId")
         if steam_account_id is None:
             raise CanonicalMatchError(
                 "player row: missing required field 'steamAccountId'"
             )
-        player_ids.append(steam_account_id)
-    return tuple(player_ids)
+        hero_id = player.get("heroId")
+        if hero_id is None:
+            raise CanonicalMatchError("player row: missing required field 'heroId'")
+        if int(hero_id) <= 0:
+            raise CanonicalMatchError(
+                f"player row: heroId must be a positive integer, got {hero_id}"
+            )
+        roster.append((int(steam_account_id), int(hero_id)))
+    return tuple(roster)
 
 
 def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
@@ -216,8 +229,12 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
         raise CanonicalMatchError("match: missing required field 'direTeamId'")
 
     players = raw.get("players") or []
-    radiant_player_ids = _side_player_ids(players, is_radiant=True)
-    dire_player_ids = _side_player_ids(players, is_radiant=False)
+    radiant_roster = _side_roster(players, is_radiant=True)
+    dire_roster = _side_roster(players, is_radiant=False)
+    radiant_player_ids = tuple(player_id for player_id, _hero_id in radiant_roster)
+    dire_player_ids = tuple(player_id for player_id, _hero_id in dire_roster)
+    radiant_hero_ids = tuple(hero_id for _player_id, hero_id in radiant_roster)
+    dire_hero_ids = tuple(hero_id for _player_id, hero_id in dire_roster)
 
     pick_bans = raw.get("pickBans") or []
     draft_events = tuple(
@@ -246,6 +263,8 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
         dire_team_id=dire_team_id,
         dire_team_name_observed=dire_team.get("name"),
         dire_player_ids=dire_player_ids,
+        radiant_hero_ids=radiant_hero_ids,
+        dire_hero_ids=dire_hero_ids,
         draft_events=draft_events,
         radiant_win=radiant_win,
         duration_seconds=duration_seconds,

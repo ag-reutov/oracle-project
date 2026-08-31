@@ -142,6 +142,38 @@ def test_match_players_slot_in_side_out_of_range_rejected(engine):
                 side="RADIANT",
                 slot_in_side=5,  # valid range is 0-4
                 player_id=1,
+                hero_id=10,
+            )
+        )
+
+
+def test_match_players_rejects_non_positive_hero_id(engine):
+    with engine.begin() as conn:
+        seed_ingestion_league(conn, league_id=16)
+        _seed_teams(conn, 1, 2)
+        _seed_players(conn, 1)
+        conn.execute(
+            MATCHES.insert().values(
+                match_id=301,
+                league_id=16,
+                start_time=datetime(2024, 1, 1, tzinfo=UTC),
+                radiant_team_id=1,
+                dire_team_id=2,
+                radiant_win=True,
+                duration_seconds=1800,
+                mapper_version=1,
+                canonicalized_at=datetime.now(UTC),
+            )
+        )
+
+    with pytest.raises(IntegrityError), engine.begin() as conn:
+        conn.execute(
+            MATCH_PLAYERS.insert().values(
+                match_id=301,
+                side="RADIANT",
+                slot_in_side=0,
+                player_id=1,
+                hero_id=0,
             )
         )
 
@@ -233,6 +265,7 @@ def test_match_players_rejects_unregistered_player_id(engine):
                 side="RADIANT",
                 slot_in_side=0,
                 player_id=42,  # never registered in players
+                hero_id=10,
             )
         )
 

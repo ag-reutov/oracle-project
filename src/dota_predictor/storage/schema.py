@@ -291,9 +291,14 @@ MATCH_PLAYERS = sa.Table(
         sa.ForeignKey("players.player_id"),
         nullable=False,
     ),
+    # Played hero for this player in this match (STRATZ `players[].heroId`).
+    # Aligned with `slot_in_side` (lobby order), not draft pick order and
+    # not Dota position 1-5.
+    sa.Column("hero_id", sa.Integer, nullable=False),
     sa.CheckConstraint(
         "slot_in_side BETWEEN 0 AND 4", name="slot_in_side_valid_range"
     ),
+    sa.CheckConstraint("hero_id > 0", name="hero_id_positive"),
     sa.UniqueConstraint("match_id", "player_id", name="match_players_unique_player"),
 )
 

@@ -70,6 +70,20 @@ def make_match(*, num_bans: int = 14, **overrides: object) -> CanonicalMatch:
         "duration_seconds": 2400,
     }
     fields.update(overrides)
+    if "radiant_hero_ids" not in fields:
+        draft_events = fields["draft_events"]
+        fields["radiant_hero_ids"] = tuple(
+            event.hero_id
+            for event in draft_events
+            if event.action is DraftAction.PICK and event.side is Side.RADIANT
+        )
+    if "dire_hero_ids" not in fields:
+        draft_events = fields["draft_events"]
+        fields["dire_hero_ids"] = tuple(
+            event.hero_id
+            for event in draft_events
+            if event.action is DraftAction.PICK and event.side is Side.DIRE
+        )
     return CanonicalMatch(**fields)
 
 
@@ -106,6 +120,7 @@ def test_draft_order_is_preserved_not_resorted() -> None:
         ("match_id", InformationAvailability.PRE_DRAFT),
         ("radiant_team_id", InformationAvailability.PRE_DRAFT),
         ("radiant_player_ids", InformationAvailability.PRE_DRAFT),
+        ("radiant_hero_ids", InformationAvailability.DRAFT),
         ("draft_events", InformationAvailability.DRAFT),
         ("radiant_win", InformationAvailability.POST_MATCH),
         ("duration_seconds", InformationAvailability.POST_MATCH),
@@ -213,6 +228,40 @@ def test_supports_drafts_with_different_valid_event_counts() -> None:
     assert len(match_b.draft_events) == 24
     assert len(match_a.radiant_final_hero_ids) == 5
     assert len(match_b.radiant_final_hero_ids) == 5
+
+
+def test_player_hero_ids_match_successful_pick_set_not_order() -> None:
+    match = make_match(num_bans=4)
+    assert set(match.radiant_hero_ids) == set(match.radiant_final_hero_ids)
+    assert set(match.dire_hero_ids) == set(match.dire_final_hero_ids)
+    reversed_radiant = tuple(reversed(match.radiant_final_hero_ids))
+    if reversed_radiant != match.radiant_final_hero_ids:
+        reordered = make_match(num_bans=4, radiant_hero_ids=reversed_radiant)
+        assert reordered.radiant_hero_ids == reversed_radiant
+        assert set(reordered.radiant_hero_ids) == set(reordered.radiant_final_hero_ids)
+
+
+def test_rejects_duplicate_hero_id_within_side() -> None:
+    match = make_match(num_bans=4)
+    duplicated = (match.radiant_hero_ids[0],) * 5
+    with pytest.raises(CanonicalMatchError, match="duplicate hero ids"):
+        make_match(num_bans=4, radiant_hero_ids=duplicated)
+
+
+def test_rejects_player_hero_set_mismatch_with_picks() -> None:
+    match = make_match(num_bans=4)
+    wrong = tuple(hero_id + 1000 for hero_id in match.radiant_hero_ids)
+    with pytest.raises(CanonicalMatchError, match="does not match successful PICK set"):
+        make_match(num_bans=4, radiant_hero_ids=wrong)
+
+
+def test_short_draft_zero_ban_still_requires_five_heroes_per_side() -> None:
+    match = make_match(num_bans=0)
+    assert len(match.draft_events) == 10
+    assert len(match.radiant_hero_ids) == 5
+    assert len(match.dire_hero_ids) == 5
+    assert set(match.radiant_hero_ids) == set(match.radiant_final_hero_ids)
+    assert set(match.dire_hero_ids) == set(match.dire_final_hero_ids)
 
 
 def test_rejects_wrong_number_of_final_picks_per_side() -> None:

@@ -17,6 +17,7 @@ from helpers import build_canonical_match, requires_test_database, seed_ingestio
 from dota_predictor.datasets.canonical_export import (
     ANALYTICAL_SCHEMA_VERSION,
     DRAFT_EVENTS_FILENAME,
+    MATCH_PLAYERS_FILENAME,
     MATCHES_FILENAME,
 )
 from dota_predictor.datasets.canonical_export import (
@@ -63,16 +64,36 @@ def test_build_canonical_dataset_end_to_end(engine, tmp_path: Path) -> None:
     result = build_dataset(engine, tmp_path)
 
     assert result.matches_row_count == 3
+    assert result.match_players_row_count == 30
     assert result.draft_events_row_count == 16 + 10 + 24  # 6+10, 0+10, 14+10
     assert result.output_dir == tmp_path
     assert result.schema_version == ANALYTICAL_SCHEMA_VERSION
 
     matches_table = pq.read_table(tmp_path / MATCHES_FILENAME)
+    match_players_table = pq.read_table(tmp_path / MATCH_PLAYERS_FILENAME)
     draft_events_table = pq.read_table(tmp_path / DRAFT_EVENTS_FILENAME)
 
     exported_match_ids = matches_table.column("match_id").to_pylist()
     assert sorted(exported_match_ids) == [1001, 1002, 1003]
     assert 9999 not in exported_match_ids  # raw-only match excluded
+    assert "radiant_player_0_hero_id" not in matches_table.column_names
+    assert match_players_table.num_rows == 30
+    assert set(match_players_table.column("match_id").to_pylist()) == {1001, 1002, 1003}
+    match_b_players = [
+        row
+        for row in match_players_table.to_pylist()
+        if row["match_id"] == 1002
+    ]
+    assert len(match_b_players) == 10
+    assert {row["player_id"] for row in match_b_players if row["side"] == "RADIANT"} == {
+        21,
+        22,
+        23,
+        24,
+        25,
+    }
+    assert all(row["hero_id"] is not None for row in match_b_players)
+    assert len({row["hero_id"] for row in match_b_players if row["side"] == "RADIANT"}) == 5
 
     rows_by_id = {row["match_id"]: row for row in matches_table.to_pylist()}
     match_b_row = rows_by_id[1002]

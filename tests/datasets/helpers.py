@@ -84,6 +84,7 @@ def build_canonical_match(
             hero_id += 1
             sequence += 1
 
+    draft_events = tuple(events)
     return CanonicalMatch(
         match_id=match_id,
         start_time=datetime(2024, 1, 1, tzinfo=UTC),
@@ -92,10 +93,20 @@ def build_canonical_match(
         radiant_team_id=radiant_team_id,
         radiant_team_name_observed="Radiant Team",
         radiant_player_ids=radiant_player_ids,
+        radiant_hero_ids=tuple(
+            event.hero_id
+            for event in draft_events
+            if event.action is DraftAction.PICK and event.side is Side.RADIANT
+        ),
         dire_team_id=dire_team_id,
         dire_team_name_observed="Dire Team",
         dire_player_ids=dire_player_ids,
-        draft_events=tuple(events),
+        dire_hero_ids=tuple(
+            event.hero_id
+            for event in draft_events
+            if event.action is DraftAction.PICK and event.side is Side.DIRE
+        ),
+        draft_events=draft_events,
         radiant_win=radiant_win,
         duration_seconds=1800,
     )

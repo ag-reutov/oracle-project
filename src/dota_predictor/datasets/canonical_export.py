@@ -14,9 +14,12 @@ analytical Parquet datasets:
   `match_players` rows for that match are pivoted into fixed
   `radiant_player_{0..4}_id` / `dire_player_{0..4}_id` columns using each
   row's canonical `slot_in_side` (never inferred from player id or query
-  order). Every canonical match currently has exactly 5 players per side
-  (schema-guaranteed; see `canonical_schema.CanonicalMatch`), so this is a
-  lossless pivot, not an approximation.
+  order). Hero ids are **not** pivoted onto this file; they live on the
+  long-form `match_players.parquet` table.
+* `match_players.parquet` -- one row per player per match (exactly 10
+  rows per canonical match). Carries `player_id`, `hero_id`, `side`,
+  `slot_in_side` (lobby order, not Dota position 1-5), and `team_id`
+  derived from the parent match's radiant/dire team ids.
 * `draft_events.parquet` -- the normalized long representation of
   `draft_events`, one row per pick/ban, preserved verbatim. Draft length
   is **not** fixed across matches: real canonical data contains 10-, 23-,
@@ -62,7 +65,8 @@ row in the live dataset).
 Versioning
 ----------
 `ANALYTICAL_SCHEMA_VERSION` versions *this module's Parquet contract*
-(the column set/types/semantics of `matches.parquet`/`draft_events.parquet`)
+(the column set/types/semantics of `matches.parquet` /
+`match_players.parquet` / `draft_events.parquet`)
 -- it is independent of `stratz_mapping.CANONICAL_MAPPER_VERSION`, which
 versions the STRATZ-to-`CanonicalMatch` mapping logic upstream in
 Postgres. `matches.mapper_version`/`matches.canonicalized_at` are carried
@@ -101,6 +105,8 @@ __all__ = [
     "ANALYTICAL_SCHEMA_VERSION",
     "DRAFT_EVENTS_FILENAME",
     "DRAFT_EVENTS_SCHEMA",
+    "MATCH_PLAYERS_FILENAME",
+    "MATCH_PLAYERS_SCHEMA",
     "MATCHES_FILENAME",
     "MATCHES_SCHEMA",
     "CanonicalExportError",
@@ -109,16 +115,22 @@ __all__ = [
     "DatasetValidationError",
     "build_canonical_dataset",
     "build_draft_events_table",
+    "build_match_players_table",
     "build_matches_table",
     "validate_draft_events_table",
+    "validate_match_players_table",
     "validate_matches_table",
     "write_canonical_dataset",
 ]
 
 # Parquet contract version -- see module docstring "Versioning" section.
-ANALYTICAL_SCHEMA_VERSION = 1
+# v1: matches.parquet + draft_events.parquet.
+# v2: adds match_players.parquet (long-form player/hero rows). matches.parquet
+#     column set is unchanged from v1.
+ANALYTICAL_SCHEMA_VERSION = 2
 
 MATCHES_FILENAME = "matches.parquet"
+MATCH_PLAYERS_FILENAME = "match_players.parquet"
 DRAFT_EVENTS_FILENAME = "draft_events.parquet"
 
 _PLAYERS_PER_SIDE = 5
@@ -175,6 +187,17 @@ DRAFT_EVENTS_SCHEMA = pa.schema(
     ]
 )
 
+MATCH_PLAYERS_SCHEMA = pa.schema(
+    [
+        pa.field("match_id", pa.int64(), nullable=False),
+        pa.field("team_id", pa.int64(), nullable=False),
+        pa.field("side", pa.string(), nullable=False),
+        pa.field("slot_in_side", pa.int16(), nullable=False),
+        pa.field("player_id", pa.int64(), nullable=False),
+        pa.field("hero_id", pa.int32(), nullable=False),
+    ]
+)
+
 
 class CanonicalExportError(Exception):
     """Base class for canonical dataset export failures."""
@@ -199,6 +222,7 @@ class DatasetBuildResult:
     """Outcome of one successful `build_canonical_dataset` run."""
 
     matches_row_count: int
+    match_players_row_count: int
     draft_events_row_count: int
     output_dir: Path
     schema_version: int = ANALYTICAL_SCHEMA_VERSION
@@ -351,6 +375,61 @@ def build_draft_events_table(draft_event_rows: Sequence[Mapping[str, Any]]) -> p
     return pa.Table.from_pylist(out_rows, schema=DRAFT_EVENTS_SCHEMA)
 
 
+def build_match_players_table(
+    match_rows: Sequence[Mapping[str, Any]],
+    match_player_rows: Sequence[Mapping[str, Any]],
+) -> pa.Table:
+    """Build the `match_players.parquet` Arrow table.
+
+    One row per canonical player. `team_id` is taken from the parent
+    `matches` row (`radiant_team_id` / `dire_team_id` according to
+    `side`), never from raw STRATZ player objects. `slot_in_side` is
+    lobby order and is not rewritten as a Dota position.
+    """
+    teams_by_match: dict[int, dict[str, int]] = {}
+    for row in match_rows:
+        match_id = int(row["match_id"])
+        teams_by_match[match_id] = {
+            "RADIANT": int(row["radiant_team_id"]),
+            "DIRE": int(row["dire_team_id"]),
+        }
+
+    out_rows: list[dict[str, Any]] = []
+    for row in match_player_rows:
+        match_id = int(row["match_id"])
+        side = _enum_value(row["side"])
+        teams = teams_by_match.get(match_id)
+        if teams is None:
+            raise DatasetTransformError(
+                f"match {match_id}: match_players row has no parent matches row"
+            )
+        if side not in teams:
+            raise DatasetTransformError(
+                f"match {match_id}: unrecognized side {side!r} in match_players"
+            )
+        hero_id = row.get("hero_id")
+        if hero_id is None:
+            raise DatasetTransformError(
+                f"match {match_id}: match_players row missing hero_id"
+            )
+        out_rows.append(
+            {
+                "match_id": match_id,
+                "team_id": teams[side],
+                "side": side,
+                "slot_in_side": int(row["slot_in_side"]),
+                "player_id": int(row["player_id"]),
+                "hero_id": int(hero_id),
+            }
+        )
+
+    ordered = sorted(
+        out_rows,
+        key=lambda row: (row["match_id"], row["side"], row["slot_in_side"]),
+    )
+    return pa.Table.from_pylist(ordered, schema=MATCH_PLAYERS_SCHEMA)
+
+
 _PLAYER_COLUMNS = tuple(
     f"radiant_player_{i}_id" for i in range(_PLAYERS_PER_SIDE)
 ) + tuple(f"dire_player_{i}_id" for i in range(_PLAYERS_PER_SIDE))
@@ -421,6 +500,136 @@ def validate_draft_events_table(
         )
 
 
+def validate_match_players_table(
+    match_players_table: pa.Table,
+    matches_table: pa.Table,
+    draft_events_table: pa.Table,
+) -> None:
+    """Validate `match_players.parquet` invariants before publication.
+
+    Checks transformation correctness plus the player/hero contract:
+    10 rows per match, 5 per side, non-null ids, unique players, unique
+    heroes per side, `team_id` derived from the parent match side, and
+    per-side hero set equal to the successful PICK set. Does not treat
+    `slot_in_side` as Dota position 1-5.
+    """
+    match_ids = match_players_table.column("match_id").to_pylist()
+    sides = match_players_table.column("side").to_pylist()
+    slots = match_players_table.column("slot_in_side").to_pylist()
+    player_ids = match_players_table.column("player_id").to_pylist()
+    hero_ids = match_players_table.column("hero_id").to_pylist()
+    team_ids = match_players_table.column("team_id").to_pylist()
+
+    exported_match_ids = set(matches_table.column("match_id").to_pylist())
+    if match_players_table.num_rows != len(exported_match_ids) * _PLAYERS_PER_SIDE * 2:
+        raise DatasetValidationError(
+            f"match_players.parquet row count {match_players_table.num_rows} != "
+            f"canonical matches {len(exported_match_ids)} × 10"
+        )
+
+    orphaned = set(match_ids) - exported_match_ids
+    if orphaned:
+        raise DatasetValidationError(
+            "match_players.parquet references match_id(s) absent from "
+            f"matches.parquet: {sorted(orphaned)[:10]}"
+        )
+    missing_matches = exported_match_ids - set(match_ids)
+    if missing_matches:
+        raise DatasetValidationError(
+            "match_players.parquet missing match_id(s) present in "
+            f"matches.parquet: {sorted(missing_matches)[:10]}"
+        )
+
+    for column_name in ("player_id", "hero_id", "team_id"):
+        if match_players_table.column(column_name).null_count > 0:
+            raise DatasetValidationError(
+                f"match_players.parquet column {column_name!r} contains null(s)"
+            )
+
+    radiant_team = dict(
+        zip(
+            matches_table.column("match_id").to_pylist(),
+            matches_table.column("radiant_team_id").to_pylist(),
+            strict=True,
+        )
+    )
+    dire_team = dict(
+        zip(
+            matches_table.column("match_id").to_pylist(),
+            matches_table.column("dire_team_id").to_pylist(),
+            strict=True,
+        )
+    )
+
+    by_match_side: dict[tuple[int, str], list[tuple[int, int, int]]] = {}
+    seen_player: set[tuple[int, int]] = set()
+    seen_slot: set[tuple[int, str, int]] = set()
+    for match_id, side, slot, player_id, hero_id, team_id in zip(
+        match_ids, sides, slots, player_ids, hero_ids, team_ids, strict=True
+    ):
+        player_key = (match_id, player_id)
+        if player_key in seen_player:
+            raise DatasetValidationError(
+                f"match_players.parquet duplicate player_id {player_id} "
+                f"in match {match_id}"
+            )
+        seen_player.add(player_key)
+        slot_key = (match_id, side, slot)
+        if slot_key in seen_slot:
+            raise DatasetValidationError(
+                f"match_players.parquet duplicate ({side}, slot {slot}) "
+                f"in match {match_id}"
+            )
+        seen_slot.add(slot_key)
+        expected_team = radiant_team[match_id] if side == "RADIANT" else dire_team[match_id]
+        if team_id != expected_team:
+            raise DatasetValidationError(
+                f"match {match_id}: match_players team_id {team_id} does not "
+                f"match {side} team {expected_team}"
+            )
+        by_match_side.setdefault((match_id, side), []).append((slot, player_id, hero_id))
+
+    pick_heroes: dict[tuple[int, str], set[int]] = {}
+    draft_match_ids = draft_events_table.column("match_id").to_pylist()
+    draft_actions = draft_events_table.column("action").to_pylist()
+    draft_sides = draft_events_table.column("side").to_pylist()
+    draft_hero_ids = draft_events_table.column("hero_id").to_pylist()
+    draft_success = draft_events_table.column("was_successful").to_pylist()
+    for match_id, action, side, hero_id, was_successful in zip(
+        draft_match_ids,
+        draft_actions,
+        draft_sides,
+        draft_hero_ids,
+        draft_success,
+        strict=True,
+    ):
+        if action != "PICK":
+            continue
+        if was_successful is False:
+            continue
+        pick_heroes.setdefault((match_id, side), set()).add(hero_id)
+
+    for match_id in exported_match_ids:
+        for side in _SIDES:
+            rows = by_match_side.get((match_id, side), [])
+            if len(rows) != _PLAYERS_PER_SIDE:
+                raise DatasetValidationError(
+                    f"match {match_id}: expected {_PLAYERS_PER_SIDE} {side} "
+                    f"match_players rows, got {len(rows)}"
+                )
+            heroes = [hero_id for _slot, _player_id, hero_id in rows]
+            if len(set(heroes)) != _PLAYERS_PER_SIDE:
+                raise DatasetValidationError(
+                    f"match {match_id}: {side} hero_ids are not 5 distinct values"
+                )
+            expected_picks = pick_heroes.get((match_id, side), set())
+            if set(heroes) != expected_picks:
+                raise DatasetValidationError(
+                    f"match {match_id}: {side} player hero_id set does not "
+                    "match successful PICK set"
+                )
+
+
 def _write_and_read_back(table: pa.Table, path: Path) -> None:
     """Write `table` to `path` and immediately read it back, raising
     `DatasetValidationError` if the round trip doesn't reproduce the same
@@ -442,9 +651,15 @@ def write_canonical_dataset(
     *,
     matches_table: pa.Table,
     draft_events_table: pa.Table,
+    match_players_table: pa.Table | None = None,
 ) -> None:
-    """Atomically publish `matches.parquet`/`draft_events.parquet` under
+    """Atomically publish the canonical analytical Parquet files under
     `output_dir`.
+
+    Always writes `matches.parquet` and `draft_events.parquet`. When
+    `match_players_table` is provided (the production `build_canonical_dataset`
+    path), also writes `match_players.parquet`. Feature-layer test fixtures
+    that only need the v1 pair may omit it.
 
     Pattern: write each table to a temporary file inside `output_dir`,
     read it back to confirm it is well-formed, and only then replace the
@@ -454,22 +669,14 @@ def write_canonical_dataset(
     the temporary directory survives a successful call; on any failure,
     no final file has been touched yet, since every write+read-back
     happens before the first `os.replace`.
-
-    This is deliberately not a single cross-file transaction: replacing
-    `matches.parquet` and then `draft_events.parquet` is two separate
-    atomic renames, not one atomic pair. If the process were killed
-    between the two renames, one file would reflect the new build and the
-    other the previous one -- but neither file is ever left truncated or
-    partially written. A full multi-file transaction (e.g. staging a
-    whole replacement directory and swapping it in) is intentionally not
-    implemented; see module docstring for the full-rebuild, small-data-
-    volume context that makes this an acceptable simplification.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
-    tables = {
+    tables: dict[str, pa.Table] = {
         MATCHES_FILENAME: matches_table,
         DRAFT_EVENTS_FILENAME: draft_events_table,
     }
+    if match_players_table is not None:
+        tables[MATCH_PLAYERS_FILENAME] = match_players_table
 
     with tempfile.TemporaryDirectory(dir=output_dir, prefix=".build-") as tmp_dir_str:
         tmp_dir = Path(tmp_dir_str)
@@ -515,8 +722,8 @@ def _fetch_draft_event_rows(conn: Connection) -> Sequence[Mapping[str, Any]]:
 
 def build_canonical_dataset(engine: Engine, output_dir: Path) -> DatasetBuildResult:
     """Full pipeline: read canonical Postgres tables, transform, validate,
-    and atomically publish `matches.parquet`/`draft_events.parquet` under
-    `output_dir`.
+    and atomically publish `matches.parquet` / `match_players.parquet` /
+    `draft_events.parquet` under `output_dir`.
 
     Always a full, deterministic rebuild (see module docstring) -- there
     is no incremental update path. Reads only `matches`, `match_players`,
@@ -529,19 +736,25 @@ def build_canonical_dataset(engine: Engine, output_dir: Path) -> DatasetBuildRes
         draft_event_rows = _fetch_draft_event_rows(conn)
 
     matches_table = build_matches_table(match_rows, match_player_rows)
+    match_players_table = build_match_players_table(match_rows, match_player_rows)
     draft_events_table = build_draft_events_table(draft_event_rows)
 
     validate_matches_table(matches_table, expected_row_count=len(match_rows))
     validate_draft_events_table(draft_events_table, matches_table)
+    validate_match_players_table(
+        match_players_table, matches_table, draft_events_table
+    )
 
     write_canonical_dataset(
         output_dir,
         matches_table=matches_table,
         draft_events_table=draft_events_table,
+        match_players_table=match_players_table,
     )
 
     return DatasetBuildResult(
         matches_row_count=matches_table.num_rows,
+        match_players_row_count=match_players_table.num_rows,
         draft_events_row_count=draft_events_table.num_rows,
         output_dir=output_dir,
     )

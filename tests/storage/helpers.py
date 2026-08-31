@@ -52,7 +52,9 @@ def build_canonical_match(
     Draft events: `num_bans` alternating-side bans, then 5 radiant picks,
     then 5 dire picks -- every hero id is unique across the whole draft so
     `CanonicalMatch`'s hero-uniqueness invariant always holds regardless
-    of `num_bans`.
+    of `num_bans`. Player `hero_ids` match the successful PICK set per
+    side (pick order is used only as a convenient test assignment, not as
+    production mapping).
     """
     events: list[DraftEvent] = []
     hero_id = 1
@@ -82,6 +84,7 @@ def build_canonical_match(
             hero_id += 1
             sequence += 1
 
+    draft_events = tuple(events)
     return CanonicalMatch(
         match_id=match_id,
         start_time=datetime(2024, 1, 1, tzinfo=UTC),
@@ -90,10 +93,20 @@ def build_canonical_match(
         radiant_team_id=100,
         radiant_team_name_observed="Radiant Team",
         radiant_player_ids=(1, 2, 3, 4, 5),
+        radiant_hero_ids=tuple(
+            event.hero_id
+            for event in draft_events
+            if event.action is DraftAction.PICK and event.side is Side.RADIANT
+        ),
         dire_team_id=200,
         dire_team_name_observed="Dire Team",
         dire_player_ids=(6, 7, 8, 9, 10),
-        draft_events=tuple(events),
+        dire_hero_ids=tuple(
+            event.hero_id
+            for event in draft_events
+            if event.action is DraftAction.PICK and event.side is Side.DIRE
+        ),
+        draft_events=draft_events,
         radiant_win=radiant_win,
         duration_seconds=1800,
     )

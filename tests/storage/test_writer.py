@@ -84,6 +84,12 @@ def test_write_canonical_match_round_trip(engine):
         dire_ids = tuple(r.player_id for r in player_rows if r.side == Side.DIRE)
         assert radiant_ids == match.radiant_player_ids
         assert dire_ids == match.dire_player_ids
+        radiant_heroes = tuple(
+            r.hero_id for r in player_rows if r.side == Side.RADIANT
+        )
+        dire_heroes = tuple(r.hero_id for r in player_rows if r.side == Side.DIRE)
+        assert radiant_heroes == match.radiant_hero_ids
+        assert dire_heroes == match.dire_hero_ids
 
         draft_rows = conn.execute(
             DRAFT_EVENTS.select()
@@ -117,6 +123,12 @@ def test_write_canonical_match_is_upsert_for_matches_row(engine):
         ).all()
         assert len(rows) == 1
         assert rows[0].radiant_win is False
+        player_rows = conn.execute(
+            MATCH_PLAYERS.select().where(MATCH_PLAYERS.c.match_id == 1001)
+        ).all()
+        assert {row.hero_id for row in player_rows} == set(
+            match_v2.radiant_hero_ids + match_v2.dire_hero_ids
+        )
 
 
 def test_reprocessing_with_fewer_draft_events_leaves_no_stale_rows(engine):

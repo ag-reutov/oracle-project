@@ -48,6 +48,7 @@ def main() -> int:
 
     print("Canonical dataset build complete")
     print(f"matches: {result.matches_row_count}")
+    print(f"match players: {result.match_players_row_count}")
     print(f"draft events: {result.draft_events_row_count}")
     print(f"output: {result.output_dir}")
     print(f"schema version: {result.schema_version}")

@@ -88,11 +88,19 @@ def build_raw_match() -> dict:
         hero_id += 1
 
     players = [
-        _player_row(is_radiant=True, player_slot=i, steam_account_id=pid, hero_id=1)
+        _player_row(
+            is_radiant=True,
+            player_slot=i,
+            steam_account_id=pid,
+            hero_id=8 + i * 2,
+        )
         for i, pid in enumerate(RADIANT_IDS)
     ] + [
         _player_row(
-            is_radiant=False, player_slot=128 + i, steam_account_id=pid, hero_id=1
+            is_radiant=False,
+            player_slot=128 + i,
+            steam_account_id=pid,
+            hero_id=9 + i * 2,
         )
         for i, pid in enumerate(DIRE_IDS)
     ]
@@ -179,8 +187,10 @@ def test_canonical_match_from_stratz_maps_realistic_payload() -> None:
     assert match.radiant_team_id == 8261500
     assert match.radiant_team_name_observed == "Xtreme Gaming"
     assert list(match.radiant_player_ids) == RADIANT_IDS
+    assert list(match.radiant_hero_ids) == [8, 10, 12, 14, 16]
     assert match.dire_team_id == 9247354
     assert list(match.dire_player_ids) == DIRE_IDS
+    assert list(match.dire_hero_ids) == [9, 11, 13, 15, 17]
     assert match.radiant_win is False
     assert match.duration_seconds == 2734
     assert len(match.draft_events) == 17  # 7 bans + 10 picks in this fixture
@@ -248,6 +258,32 @@ def test_canonical_match_from_stratz_rejects_missing_order() -> None:
     raw = build_raw_match()
     del raw["pickBans"][0]["order"]
     with pytest.raises(CanonicalMatchError, match="order"):
+        canonical_match_from_stratz(raw)
+
+
+def test_canonical_match_from_stratz_maps_player_hero_id_from_players_not_pick_order() -> (
+    None
+):
+    raw = build_raw_match()
+    radiant_picks = [
+        row["heroId"] for row in raw["pickBans"] if row["isPick"] and row["isRadiant"]
+    ]
+    reversed_heroes = list(reversed(radiant_picks))
+    radiant_players = [player for player in raw["players"] if player["isRadiant"]]
+    for player, hero_id in zip(radiant_players, reversed_heroes, strict=True):
+        player["heroId"] = hero_id
+
+    match = canonical_match_from_stratz(raw)
+
+    assert list(match.radiant_hero_ids) == reversed_heroes
+    assert set(match.radiant_hero_ids) == set(radiant_picks)
+    assert list(match.radiant_hero_ids) != list(match.radiant_final_hero_ids)
+
+
+def test_canonical_match_from_stratz_raises_on_missing_player_hero_id() -> None:
+    raw = build_raw_match()
+    raw["players"][0]["heroId"] = None
+    with pytest.raises(CanonicalMatchError, match="heroId"):
         canonical_match_from_stratz(raw)
 
 

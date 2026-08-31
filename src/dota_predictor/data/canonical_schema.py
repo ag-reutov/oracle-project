@@ -135,6 +135,11 @@ FIELD_INFORMATION_AVAILABILITY: dict[str, InformationAvailability] = {
     "dire_team_id": InformationAvailability.PRE_DRAFT,
     "dire_team_name_observed": InformationAvailability.PRE_DRAFT,
     "dire_player_ids": InformationAvailability.PRE_DRAFT,
+    # Played heroes are known once the draft is complete. They are a
+    # per-player fact (`players[].heroId`), not inferred from pick order
+    # or lobby slot. Distinct from PRE_DRAFT roster identity.
+    "radiant_hero_ids": InformationAvailability.DRAFT,
+    "dire_hero_ids": InformationAvailability.DRAFT,
     "draft_events": InformationAvailability.DRAFT,
     "radiant_win": InformationAvailability.POST_MATCH,
     "duration_seconds": InformationAvailability.POST_MATCH,
@@ -246,11 +251,17 @@ class CanonicalMatch:
     # a future team registry/dataset-build layer, not this dataclass).
     radiant_team_name_observed: str | None = None
     radiant_player_ids: tuple[PlayerId, PlayerId, PlayerId, PlayerId, PlayerId]
+    # Played hero per Radiant slot, aligned with `radiant_player_ids`
+    # (same `slot_in_side` index). Source is STRATZ `players[].heroId`,
+    # not draft pick order and not lobby slot. `slot_in_side` is lobby
+    # order and is not Dota position 1-5.
+    radiant_hero_ids: tuple[HeroId, HeroId, HeroId, HeroId, HeroId]
 
     # --- Dire (PRE_DRAFT) ---
     dire_team_id: TeamId
     dire_team_name_observed: str | None = None
     dire_player_ids: tuple[PlayerId, PlayerId, PlayerId, PlayerId, PlayerId]
+    dire_hero_ids: tuple[HeroId, HeroId, HeroId, HeroId, HeroId]
 
     # --- Draft (DRAFT) ---
     draft_events: tuple[DraftEvent, ...]
@@ -289,6 +300,8 @@ class CanonicalMatch:
             )
 
         self._validate_draft_events()
+        self._validate_side_heroes("radiant", self.radiant_hero_ids)
+        self._validate_side_heroes("dire", self.dire_hero_ids)
 
         if self.duration_seconds <= 0:
             raise CanonicalMatchError(
@@ -308,6 +321,24 @@ class CanonicalMatch:
         if len(set(player_ids)) != len(player_ids):
             raise CanonicalMatchError(
                 f"{side_name}_player_ids contains duplicate player ids"
+            )
+
+    def _validate_side_heroes(self, side_name: str, hero_ids: tuple[HeroId, ...]) -> None:
+        if len(hero_ids) != 5:
+            raise CanonicalMatchError(
+                f"{side_name}_hero_ids must contain exactly 5 heroes, got {len(hero_ids)}"
+            )
+        for hero_id in hero_ids:
+            _require_positive(f"{side_name}_hero_ids entry", hero_id)
+        if len(set(hero_ids)) != len(hero_ids):
+            raise CanonicalMatchError(
+                f"{side_name}_hero_ids contains duplicate hero ids"
+            )
+        side = Side.RADIANT if side_name == "radiant" else Side.DIRE
+        pick_hero_ids = set(self._final_hero_ids(side))
+        if set(hero_ids) != pick_hero_ids:
+            raise CanonicalMatchError(
+                f"{side_name} player hero_id set does not match successful PICK set"
             )
 
     def _validate_draft_events(self) -> None:
