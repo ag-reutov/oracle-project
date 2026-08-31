@@ -12,6 +12,14 @@ from dota_predictor.features.config import (
     load_feature_store_config,
     load_reference_store_config,
 )
+from dota_predictor.features.draft_profile import (
+    DRAFT_PROFILE_COLUMNS,
+    DRAFT_PROFILE_IDENTITY_COLUMNS,
+    DRAFT_PROFILE_METRIC_COLUMNS,
+    DraftProfile,
+    build_draft_profile,
+    draft_profile_sql,
+)
 from dota_predictor.features.duckdb_layer import (
     DRAFT_EVENTS_VIEW,
     GAME_VERSIONS_VIEW,
@@ -80,6 +88,9 @@ __all__ = [
     "DEFAULT_ELO_CONFIG",
     "DIRE_TEAM_ELO_COLUMN",
     "DRAFT_EVENTS_VIEW",
+    "DRAFT_PROFILE_COLUMNS",
+    "DRAFT_PROFILE_IDENTITY_COLUMNS",
+    "DRAFT_PROFILE_METRIC_COLUMNS",
     "FEATURE_COLUMNS",
     "GAME_VERSIONS_VIEW",
     "HEROES_VIEW",
@@ -106,6 +117,7 @@ __all__ = [
     "TEAM_HERO_IDENTITY_COLUMNS",
     "TEAM_HERO_METRIC_COLUMNS",
     "TEAM_HISTORY_FEATURE_COLUMNS",
+    "DraftProfile",
     "EloConfig",
     "FeatureAvailabilityError",
     "FeatureDuckDBConnection",
@@ -118,6 +130,7 @@ __all__ = [
     "SnapshotStage",
     "TeamHeroState",
     "assert_columns_allowed_for_stage",
+    "build_draft_profile",
     "build_hero_meta",
     "build_player_hero",
     "build_pre_draft_snapshot",
@@ -125,6 +138,7 @@ __all__ = [
     "columns_allowed_for_stage",
     "compute_team_elo_features",
     "connect",
+    "draft_profile_sql",
     "expected_score",
     "hero_meta_sql",
     "is_historical",
