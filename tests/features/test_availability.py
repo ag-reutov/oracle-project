@@ -11,6 +11,7 @@ import pytest
 
 from dota_predictor.features.availability import (
     DRAFT_EVENTS_COLUMN_AVAILABILITY,
+    EXPECTED_POSITION_COLUMN_AVAILABILITY,
     GAME_VERSIONS_COLUMN_AVAILABILITY,
     HEROES_COLUMN_AVAILABILITY,
     MATCH_PLAYERS_COLUMN_AVAILABILITY,
@@ -334,4 +335,29 @@ def test_historical_position_metrics_are_pre_draft_current_position_is_not() -> 
             "player_position_state",
             SnapshotStage.PRE_DRAFT,
             ["player_id", "position"],
+        )
+
+
+def test_expected_position_is_pre_draft_observed_position_is_not() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert (
+        EXPECTED_POSITION_COLUMN_AVAILABILITY["expected_position"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    assert (
+        EXPECTED_POSITION_COLUMN_AVAILABILITY["observed_position"]
+        == InformationAvailability.POST_MATCH
+    )
+    pre_draft = columns_allowed_for_stage("expected_position", SnapshotStage.PRE_DRAFT)
+    assert "expected_position" in pre_draft
+    assert "assigned_position_score" in pre_draft
+    assert "previous_explicit_position" in pre_draft
+    assert "evidence_tier" in pre_draft
+    assert "observed_position" not in pre_draft
+    with pytest.raises(FeatureAvailabilityError, match="observed_position"):
+        assert_columns_allowed_for_stage(
+            "expected_position",
+            SnapshotStage.PRE_DRAFT,
+            ["player_id", "observed_position"],
         )

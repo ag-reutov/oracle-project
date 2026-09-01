@@ -34,10 +34,12 @@ from collections.abc import Iterable
 from enum import Enum
 
 from dota_predictor.data.canonical_schema import InformationAvailability
+from dota_predictor.features.expected_position import EXPECTED_POSITION_EVIDENCE_COLUMNS
 from dota_predictor.features.player_position import PLAYER_POSITION_STATE_METRIC_COLUMNS
 
 __all__ = [
     "DRAFT_EVENTS_COLUMN_AVAILABILITY",
+    "EXPECTED_POSITION_COLUMN_AVAILABILITY",
     "GAME_VERSIONS_COLUMN_AVAILABILITY",
     "HEROES_COLUMN_AVAILABILITY",
     "MATCHES_COLUMN_AVAILABILITY",
@@ -195,6 +197,24 @@ PLAYER_POSITION_STATE_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = 
     },
 }
 
+# Expected-position assignment. Historical evidence and the inferred
+# `expected_position` are PRE_DRAFT. `observed_position` is the current
+# match STRATZ parse label and remains POST_MATCH evaluation-only.
+EXPECTED_POSITION_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    "match_id": InformationAvailability.PRE_DRAFT,
+    "player_id": InformationAvailability.PRE_DRAFT,
+    "start_time": InformationAvailability.PRE_DRAFT,
+    "game_version_id": InformationAvailability.PRE_DRAFT,
+    "team_id": InformationAvailability.PRE_DRAFT,
+    "side": InformationAvailability.PRE_DRAFT,
+    "expected_position": InformationAvailability.PRE_DRAFT,
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in EXPECTED_POSITION_EVIDENCE_COLUMNS
+    },
+    "observed_position": InformationAvailability.POST_MATCH,
+}
+
 # Column availability for the optional `heroes` reference view. This is
 # static catalog metadata (id -> display name). It does not reveal which
 # hero a player chose in a match: `match_players.hero_id` and
@@ -220,6 +240,7 @@ _VIEW_COLUMN_AVAILABILITY: dict[str, dict[str, InformationAvailability]] = {
     "match_players": MATCH_PLAYERS_COLUMN_AVAILABILITY,
     "player_match": PLAYER_MATCH_COLUMN_AVAILABILITY,
     "player_position_state": PLAYER_POSITION_STATE_COLUMN_AVAILABILITY,
+    "expected_position": EXPECTED_POSITION_COLUMN_AVAILABILITY,
     "heroes": HEROES_COLUMN_AVAILABILITY,
     "game_versions": GAME_VERSIONS_COLUMN_AVAILABILITY,
 }
