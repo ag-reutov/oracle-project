@@ -97,12 +97,10 @@ def test_X_contains_exactly_feature_columns(dataset: ModelReadyDataset) -> None:
     assert list(dataset.X.columns) == list(FEATURE_COLUMNS)
 
 
-def test_X_never_contains_target_or_identity_columns(
-    dataset: ModelReadyDataset,
-) -> None:
-    assert TARGET_COLUMN not in dataset.X.columns
-    for column in IDENTITY_COLUMNS:
-        assert column not in dataset.X.columns
+def test_X_never_contains_hero_id(dataset: ModelReadyDataset) -> None:
+    assert "hero_id" not in dataset.X.columns
+    assert "hero_id" not in dataset.context.columns
+    assert dataset.y.name != "hero_id"
 
 
 def test_y_is_exactly_radiant_win(dataset: ModelReadyDataset) -> None:

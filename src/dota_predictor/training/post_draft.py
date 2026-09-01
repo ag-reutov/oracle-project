@@ -44,6 +44,8 @@ from dota_predictor.training.evaluation import (
 from dota_predictor.training.feature_sets import (
     ELO_ONLY_FEATURE_COLUMNS,
     ELO_PLUS_DRAFT_COMPARISON_COLUMNS,
+    POST_DRAFT_BLOCK_ABLATION_SPECS,
+    BlockAblationSpec,
 )
 from dota_predictor.training.logistic_model import (
     LogisticRegressionConfig,
@@ -53,8 +55,10 @@ from dota_predictor.training.split import ChronologicalSplit
 
 __all__ = [
     "PostDraftBenchmarkReport",
+    "PostDraftBlockAblationReport",
     "build_post_draft_model_ready_dataset",
     "run_post_draft_benchmark",
+    "run_post_draft_block_ablation",
 ]
 
 
@@ -144,9 +148,11 @@ def run_post_draft_benchmark(
     elo_formula = EloOnlyProbabilityBaseline()
     elo_formula.fit(split.train.X, split.train.y)
 
-    elo_c, elo_reg = _select_regularization(split, ELO_ONLY_FEATURE_COLUMNS)
+    elo_c, elo_reg = _select_regularization(
+        split.train, split.validation, ELO_ONLY_FEATURE_COLUMNS
+    )
     draft_c, draft_reg = _select_regularization(
-        split, ELO_PLUS_DRAFT_COMPARISON_COLUMNS
+        split.train, split.validation, ELO_PLUS_DRAFT_COMPARISON_COLUMNS
     )
     elo_reg = elo_reg.assign(model="logistic_elo_only")
     draft_reg = draft_reg.assign(model="logistic_elo_plus_draft_comparison")
@@ -213,5 +219,76 @@ def run_post_draft_benchmark(
         validation_evaluations=validation_evaluations,
         coefficients=standardized_coefficients(logistic_draft),
         n_draft_comparison_features=len(DRAFT_COMPARISON_METRIC_COLUMNS),
+        test_evaluations=test_evaluations,
+    )
+
+
+@dataclass
+class PostDraftBlockAblationReport:
+    """Predefined draft-block combinations on one chronological split."""
+
+    preprocessing_spec: object
+    selected_C: dict[str, float]
+    regularization_comparison: pd.DataFrame
+    validation_evaluations: dict[str, ModelEvaluation]
+    n_features: dict[str, int]
+    specs: tuple[BlockAblationSpec, ...]
+    test_evaluations: dict[str, ModelEvaluation] = field(default_factory=dict)
+
+
+def run_post_draft_block_ablation(
+    split: ChronologicalSplit,
+    *,
+    include_test_evaluation: bool = True,
+) -> PostDraftBlockAblationReport:
+    """Compare Elo plus each predefined draft-comparison block.
+
+    Uses the same chronological split, TRAIN-only ``PreprocessingSpec``,
+    and per-spec validation ``C`` selection as ``run_post_draft_benchmark``.
+    Feature columns are subsets of the already-assembled post-draft
+    matrix; history is not recomputed.
+    """
+    from dota_predictor.training.preprocessing import PreprocessingSpec
+
+    preprocessing_spec = PreprocessingSpec()
+    specs = POST_DRAFT_BLOCK_ABLATION_SPECS
+
+    selected_c: dict[str, float] = {}
+    reg_frames: list[pd.DataFrame] = []
+    validation_evaluations: dict[str, ModelEvaluation] = {}
+    fitted: dict[str, object] = {}
+    n_features = {spec.name: len(spec.feature_columns) for spec in specs}
+
+    for spec in specs:
+        c, reg = _select_regularization(
+            split.train, split.validation, spec.feature_columns
+        )
+        selected_c[spec.name] = c
+        reg_frames.append(reg.assign(model=spec.name, label=spec.label))
+        config = LogisticRegressionConfig(C=c, preprocessing=preprocessing_spec)
+        model = _fit_logistic(
+            split.train, spec.feature_columns, config=config
+        )
+        fitted[spec.name] = model
+        validation_evaluations[spec.name] = evaluate_predictor(
+            spec.name, split.validation, model
+        )
+
+    regularization_comparison = pd.concat(reg_frames, ignore_index=True)
+
+    test_evaluations: dict[str, ModelEvaluation] = {}
+    if include_test_evaluation:
+        test_evaluations = {
+            spec.name: evaluate_predictor(spec.name, split.test, fitted[spec.name])
+            for spec in specs
+        }
+
+    return PostDraftBlockAblationReport(
+        preprocessing_spec=preprocessing_spec,
+        selected_C=selected_c,
+        regularization_comparison=regularization_comparison,
+        validation_evaluations=validation_evaluations,
+        n_features=n_features,
+        specs=specs,
         test_evaluations=test_evaluations,
     )

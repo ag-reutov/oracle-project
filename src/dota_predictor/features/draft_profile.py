@@ -54,8 +54,11 @@ from dota_predictor.features.team_hero import team_hero_sql
 
 __all__ = [
     "DRAFT_PROFILE_COLUMNS",
+    "DRAFT_PROFILE_HERO_META_METRIC_COLUMNS",
     "DRAFT_PROFILE_IDENTITY_COLUMNS",
     "DRAFT_PROFILE_METRIC_COLUMNS",
+    "DRAFT_PROFILE_PLAYER_METRIC_COLUMNS",
+    "DRAFT_PROFILE_TEAM_METRIC_COLUMNS",
     "MATCH_ID_COLUMN",
     "DraftProfile",
     "build_draft_profile",
@@ -74,7 +77,7 @@ DRAFT_PROFILE_IDENTITY_COLUMNS: tuple[str, ...] = (
     "team_id",
 )
 
-_PLAYER_METRICS: tuple[str, ...] = (
+DRAFT_PROFILE_PLAYER_METRIC_COLUMNS: tuple[str, ...] = (
     "mean_player_prior_games_on_hero",
     "min_player_prior_games_on_hero",
     "mean_player_recent_90d_games_on_hero",
@@ -84,7 +87,7 @@ _PLAYER_METRICS: tuple[str, ...] = (
     "players_with_zero_recent_90d_games_on_hero",
 )
 
-_TEAM_METRICS: tuple[str, ...] = (
+DRAFT_PROFILE_TEAM_METRIC_COLUMNS: tuple[str, ...] = (
     "mean_team_prior_games_with_hero",
     "min_team_prior_games_with_hero",
     "mean_team_recent_90d_games_with_hero",
@@ -94,7 +97,7 @@ _TEAM_METRICS: tuple[str, ...] = (
     "heroes_not_played_by_team_recent_90d",
 )
 
-_HERO_META_METRICS: tuple[str, ...] = (
+DRAFT_PROFILE_HERO_META_METRIC_COLUMNS: tuple[str, ...] = (
     "mean_same_version_contest_rate",
     "min_same_version_contest_rate",
     "mean_recent_90d_contest_rate",
@@ -106,7 +109,9 @@ _HERO_META_METRICS: tuple[str, ...] = (
 )
 
 DRAFT_PROFILE_METRIC_COLUMNS: tuple[str, ...] = (
-    _PLAYER_METRICS + _TEAM_METRICS + _HERO_META_METRICS
+    DRAFT_PROFILE_PLAYER_METRIC_COLUMNS
+    + DRAFT_PROFILE_TEAM_METRIC_COLUMNS
+    + DRAFT_PROFILE_HERO_META_METRIC_COLUMNS
 )
 
 DRAFT_PROFILE_COLUMNS: tuple[str, ...] = (

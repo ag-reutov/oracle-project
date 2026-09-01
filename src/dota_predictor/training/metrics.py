@@ -20,6 +20,7 @@ __all__ = [
     "calibration_bins",
     "evaluate_probabilities",
     "expected_calibration_error",
+    "per_sample_log_loss",
 ]
 
 
@@ -111,6 +112,20 @@ def expected_calibration_error(
     ).abs()
     weights = table.loc[valid, "count"] / total
     return float((abs_diff * weights).sum())
+
+
+def per_sample_log_loss(
+    y_true: np.ndarray | pd.Series, y_prob: np.ndarray | pd.Series
+) -> np.ndarray:
+    """Binary log loss for each row. Mean of this equals ``log_loss``.
+
+    Clips probabilities away from {0, 1} with the same epsilon as
+    ``evaluate_probabilities``. Used for paired deltas on a shared
+    match set (spec minus Elo; negative means the spec is better).
+    """
+    y = np.asarray(y_true, dtype=int)
+    p = np.clip(np.asarray(y_prob, dtype=float), 1e-15, 1.0 - 1e-15)
+    return -(y * np.log(p) + (1 - y) * np.log(1.0 - p))
 
 
 def evaluate_probabilities(

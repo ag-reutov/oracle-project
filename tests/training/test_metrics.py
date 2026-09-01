@@ -10,6 +10,7 @@ from dota_predictor.training.metrics import (
     calibration_bins,
     evaluate_probabilities,
     expected_calibration_error,
+    per_sample_log_loss,
 )
 
 
@@ -83,3 +84,10 @@ def test_accuracy_at_threshold() -> None:
     y = np.array([0, 1, 1, 0])
     p = np.array([0.4, 0.6, 0.8, 0.2])
     assert accuracy_at_threshold(y, p, threshold=0.5) == 1.0
+
+
+def test_per_sample_log_loss_mean_matches_evaluate_probabilities() -> None:
+    y = np.array([0, 1, 1, 0])
+    p = np.array([0.2, 0.8, 0.6, 0.3])
+    metrics = evaluate_probabilities(y, p)
+    assert per_sample_log_loss(y, p).mean() == pytest.approx(metrics.log_loss)

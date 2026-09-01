@@ -104,7 +104,8 @@ def _fit_logistic(
 
 
 def _select_regularization(
-    split: ChronologicalSplit,
+    train: DatasetPartition,
+    validation: DatasetPartition,
     feature_columns: tuple[str, ...],
 ) -> tuple[float, pd.DataFrame]:
     rows: list[dict[str, object]] = []
@@ -113,13 +114,13 @@ def _select_regularization(
 
     for c in REGULARIZATION_CANDIDATES:
         model = _fit_logistic(
-            split.train,
+            train,
             feature_columns,
             config=LogisticRegressionConfig(C=c),
         )
         metrics = evaluate_predictor(
             f"logistic_regression_C={c}",
-            split.validation,
+            validation,
             model,
         ).metrics
         rows.append({"C": c, "validation_log_loss": metrics.log_loss})
@@ -167,7 +168,7 @@ def run_step4b_benchmark(
 
     # --- bounded regularization selection on validation ---
     selected_c, regularization_comparison = _select_regularization(
-        split, ALL_FEATURE_COLUMNS
+        split.train, split.validation, ALL_FEATURE_COLUMNS
     )
     logistic_config = LogisticRegressionConfig(
         C=selected_c, preprocessing=preprocessing_spec

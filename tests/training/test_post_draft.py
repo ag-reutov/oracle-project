@@ -29,10 +29,12 @@ from dota_predictor.training.feature_sets import (
     ALL_FEATURE_COLUMNS,
     ELO_ONLY_FEATURE_COLUMNS,
     ELO_PLUS_DRAFT_COMPARISON_COLUMNS,
+    POST_DRAFT_BLOCK_ABLATION_SPECS,
 )
 from dota_predictor.training.post_draft import (
     build_post_draft_model_ready_dataset,
     run_post_draft_benchmark,
+    run_post_draft_block_ablation,
 )
 from dota_predictor.training.split import SplitBoundaries, chronological_split
 
@@ -163,3 +165,42 @@ def test_post_draft_benchmark_is_deterministic(post_draft_split) -> None:
             "logistic_elo_plus_draft_comparison"
         ].metrics.log_loss
     )
+
+
+def test_block_ablation_covers_predefined_specs_on_the_same_split(
+    post_draft_split,
+) -> None:
+    report = run_post_draft_block_ablation(
+        post_draft_split, include_test_evaluation=True
+    )
+    expected_names = [spec.name for spec in POST_DRAFT_BLOCK_ABLATION_SPECS]
+    assert [spec.name for spec in report.specs] == expected_names
+    assert list(report.validation_evaluations) == expected_names
+    assert list(report.test_evaluations) == expected_names
+    assert list(report.selected_C) == expected_names
+    assert set(report.selected_C.values()) <= set(REGULARIZATION_CANDIDATES)
+    assert set(report.regularization_comparison["model"]) == set(expected_names)
+    assert report.n_features["logistic_elo_only"] == len(ELO_ONLY_FEATURE_COLUMNS)
+    assert report.n_features["logistic_elo_plus_all_three"] == len(
+        ELO_PLUS_DRAFT_COMPARISON_COLUMNS
+    )
+    for spec in POST_DRAFT_BLOCK_ABLATION_SPECS:
+        assert set(spec.feature_columns).issubset(post_draft_split.train.X.columns)
+
+
+def test_block_ablation_is_deterministic(post_draft_split) -> None:
+    first = run_post_draft_block_ablation(
+        post_draft_split, include_test_evaluation=False
+    )
+    second = run_post_draft_block_ablation(
+        post_draft_split, include_test_evaluation=False
+    )
+    assert first.selected_C == second.selected_C
+    pd.testing.assert_frame_equal(
+        first.regularization_comparison, second.regularization_comparison
+    )
+    for name in first.validation_evaluations:
+        assert (
+            first.validation_evaluations[name].metrics.log_loss
+            == second.validation_evaluations[name].metrics.log_loss
+        )
