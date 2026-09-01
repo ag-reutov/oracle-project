@@ -41,6 +41,7 @@ __all__ = [
     "HEROES_COLUMN_AVAILABILITY",
     "MATCHES_COLUMN_AVAILABILITY",
     "MATCH_PLAYERS_COLUMN_AVAILABILITY",
+    "PLAYER_MATCH_COLUMN_AVAILABILITY",
     "PROVENANCE_COLUMNS",
     "STAGE_ALLOWED_AVAILABILITY",
     "FeatureAvailabilityError",
@@ -150,6 +151,24 @@ MATCH_PLAYERS_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "hero_id": InformationAvailability.DRAFT,
 }
 
+# Derived player-match fact (`features.player_match.player_match_sql`):
+# match_players joined to matches for series/patch/won. Not a Parquet
+# file and not registered by `connect()`. `won` is POST_MATCH relative
+# to the row's own match; historical aggregations of past `won` are a
+# later layer's concern.
+PLAYER_MATCH_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    "match_id": InformationAvailability.PRE_DRAFT,
+    "player_id": InformationAvailability.PRE_DRAFT,
+    "start_time": InformationAvailability.PRE_DRAFT,
+    "game_version_id": InformationAvailability.PRE_DRAFT,
+    "series_id": InformationAvailability.PRE_DRAFT,
+    "team_id": InformationAvailability.PRE_DRAFT,
+    "side": InformationAvailability.PRE_DRAFT,
+    "hero_id": InformationAvailability.DRAFT,
+    "won": InformationAvailability.POST_MATCH,
+    "slot_in_side": InformationAvailability.PRE_DRAFT,
+}
+
 # Column availability for the optional `heroes` reference view. This is
 # static catalog metadata (id -> display name). It does not reveal which
 # hero a player chose in a match: `match_players.hero_id` and
@@ -173,6 +192,7 @@ _VIEW_COLUMN_AVAILABILITY: dict[str, dict[str, InformationAvailability]] = {
     "matches": MATCHES_COLUMN_AVAILABILITY,
     "draft_events": DRAFT_EVENTS_COLUMN_AVAILABILITY,
     "match_players": MATCH_PLAYERS_COLUMN_AVAILABILITY,
+    "player_match": PLAYER_MATCH_COLUMN_AVAILABILITY,
     "heroes": HEROES_COLUMN_AVAILABILITY,
     "game_versions": GAME_VERSIONS_COLUMN_AVAILABILITY,
 }

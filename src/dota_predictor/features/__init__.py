@@ -57,6 +57,17 @@ from dota_predictor.features.player_hero import (
     build_player_hero,
     player_hero_sql,
 )
+from dota_predictor.features.player_match import (
+    PLAYER_MATCH_COLUMNS,
+    PLAYER_STATE_COLUMNS,
+    PLAYER_STATE_METRIC_COLUMNS,
+    PlayerMatch,
+    PlayerState,
+    build_player_match,
+    build_player_state,
+    player_match_sql,
+    player_state_sql,
+)
 from dota_predictor.features.pre_draft_snapshot import (
     FEATURE_COLUMNS,
     IDENTITY_COLUMNS,
@@ -97,7 +108,9 @@ from dota_predictor.features.team_hero import (
 )
 from dota_predictor.features.temporal import (
     HISTORICAL_START_TIME_SQL_CONDITION,
+    STRICT_PRIOR_RANGE_SQL,
     is_historical,
+    strict_prior_window_sql,
 )
 
 __all__ = [
@@ -125,11 +138,15 @@ __all__ = [
     "PLAYER_HERO_IDENTITY_COLUMNS",
     "PLAYER_HERO_METRIC_COLUMNS",
     "PLAYER_HISTORY_FEATURE_COLUMNS",
+    "PLAYER_MATCH_COLUMNS",
+    "PLAYER_STATE_COLUMNS",
+    "PLAYER_STATE_METRIC_COLUMNS",
     "PRE_DRAFT_SNAPSHOT_SQL",
     "RADIANT_TEAM_ELO_COLUMN",
     "RECENT_WINDOW_DAYS",
     "ROSTER_CONTINUITY_FEATURE_COLUMNS",
     "SNAPSHOT_COLUMNS",
+    "STRICT_PRIOR_RANGE_SQL",
     "TARGET_COLUMN",
     "TEAM_ELO_DELTA_COLUMN",
     "TEAM_ELO_FEATURE_COLUMNS",
@@ -147,6 +164,8 @@ __all__ = [
     "HeroMetaState",
     "InvalidTeamIdError",
     "PlayerHeroState",
+    "PlayerMatch",
+    "PlayerState",
     "PreDraftSnapshot",
     "ReferenceStoreConfig",
     "SnapshotStage",
@@ -157,6 +176,8 @@ __all__ = [
     "build_draft_profile",
     "build_hero_meta",
     "build_player_hero",
+    "build_player_match",
+    "build_player_state",
     "build_pre_draft_snapshot",
     "build_team_hero",
     "columns_allowed_for_stage",
@@ -173,9 +194,12 @@ __all__ = [
     "load_feature_store_config",
     "load_reference_store_config",
     "player_hero_sql",
+    "player_match_sql",
+    "player_state_sql",
     "rank_hero_meta",
     "rank_team_elo_state",
     "register_reference_views",
+    "strict_prior_window_sql",
     "team_elo_trajectories",
     "team_hero_sql",
 ]

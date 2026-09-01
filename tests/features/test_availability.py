@@ -15,6 +15,7 @@ from dota_predictor.features.availability import (
     HEROES_COLUMN_AVAILABILITY,
     MATCH_PLAYERS_COLUMN_AVAILABILITY,
     MATCHES_COLUMN_AVAILABILITY,
+    PLAYER_MATCH_COLUMN_AVAILABILITY,
     PROVENANCE_COLUMNS,
     FeatureAvailabilityError,
     SnapshotStage,
@@ -246,3 +247,20 @@ def test_matches_game_version_id_remains_pre_draft() -> None:
         MATCHES_COLUMN_AVAILABILITY["game_version_id"]
         == InformationAvailability.PRE_DRAFT
     )
+
+
+def test_player_match_won_is_post_match_not_a_pre_or_post_draft_feature() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert PLAYER_MATCH_COLUMN_AVAILABILITY["won"] == InformationAvailability.POST_MATCH
+    assert PLAYER_MATCH_COLUMN_AVAILABILITY["hero_id"] == InformationAvailability.DRAFT
+    pre_draft = columns_allowed_for_stage("player_match", SnapshotStage.PRE_DRAFT)
+    assert "won" not in pre_draft
+    assert "hero_id" not in pre_draft
+    post_draft = columns_allowed_for_stage("player_match", SnapshotStage.POST_DRAFT)
+    assert "hero_id" in post_draft
+    assert "won" not in post_draft
+    with pytest.raises(FeatureAvailabilityError, match="won"):
+        assert_columns_allowed_for_stage(
+            "player_match", SnapshotStage.POST_DRAFT, ["player_id", "won"]
+        )
