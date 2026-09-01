@@ -7,9 +7,11 @@ import pytest
 
 from dota_predictor.training.metrics import (
     accuracy_at_threshold,
+    bootstrap_mean_ci,
     calibration_bins,
     evaluate_probabilities,
     expected_calibration_error,
+    per_sample_brier,
     per_sample_log_loss,
 )
 
@@ -91,3 +93,23 @@ def test_per_sample_log_loss_mean_matches_evaluate_probabilities() -> None:
     p = np.array([0.2, 0.8, 0.6, 0.3])
     metrics = evaluate_probabilities(y, p)
     assert per_sample_log_loss(y, p).mean() == pytest.approx(metrics.log_loss)
+
+
+def test_per_sample_brier_mean_matches_evaluate_probabilities() -> None:
+    y = np.array([0, 1, 1, 0])
+    p = np.array([0.2, 0.8, 0.6, 0.3])
+    metrics = evaluate_probabilities(y, p)
+    assert per_sample_brier(y, p).mean() == pytest.approx(metrics.brier_score)
+
+
+def test_bootstrap_mean_ci_is_degenerate_for_constant_values() -> None:
+    lo, hi = bootstrap_mean_ci(np.array([0.25, 0.25, 0.25]), n_resamples=200)
+    assert lo == pytest.approx(0.25)
+    assert hi == pytest.approx(0.25)
+
+
+def test_bootstrap_mean_ci_contains_sample_mean() -> None:
+    values = np.array([-0.04, -0.01, 0.02, -0.03, 0.01, 0.00, -0.02])
+    lo, hi = bootstrap_mean_ci(values, n_resamples=2000, random_state=0)
+    assert lo <= float(values.mean()) <= hi
+    assert lo < hi

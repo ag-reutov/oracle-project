@@ -17,9 +17,11 @@ __all__ = [
     "CalibrationBin",
     "EvaluationMetrics",
     "accuracy_at_threshold",
+    "bootstrap_mean_ci",
     "calibration_bins",
     "evaluate_probabilities",
     "expected_calibration_error",
+    "per_sample_brier",
     "per_sample_log_loss",
 ]
 
@@ -126,6 +128,42 @@ def per_sample_log_loss(
     y = np.asarray(y_true, dtype=int)
     p = np.clip(np.asarray(y_prob, dtype=float), 1e-15, 1.0 - 1e-15)
     return -(y * np.log(p) + (1 - y) * np.log(1.0 - p))
+
+
+def per_sample_brier(
+    y_true: np.ndarray | pd.Series, y_prob: np.ndarray | pd.Series
+) -> np.ndarray:
+    """Binary Brier score for each row. Mean of this equals ``brier_score``."""
+    y = np.asarray(y_true, dtype=float)
+    p = np.clip(np.asarray(y_prob, dtype=float), 1e-15, 1.0 - 1e-15)
+    return (p - y) ** 2
+
+
+def bootstrap_mean_ci(
+    values: np.ndarray | pd.Series,
+    *,
+    n_resamples: int = 10_000,
+    confidence: float = 0.95,
+    random_state: int = 0,
+) -> tuple[float, float]:
+    """Percentile bootstrap CI for the mean, resampling rows with replacement.
+
+    Match-level paired deltas use this so the interval is over matches,
+    not over an assumed parametric SE.
+    """
+    sample = np.asarray(values, dtype=float)
+    if sample.size == 0:
+        return float("nan"), float("nan")
+    if n_resamples < 1:
+        raise ValueError("n_resamples must be >= 1")
+    if not (0.0 < confidence < 1.0):
+        raise ValueError("confidence must be in (0, 1)")
+    rng = np.random.default_rng(random_state)
+    draws = rng.choice(sample, size=(n_resamples, sample.size), replace=True)
+    means = draws.mean(axis=1)
+    alpha = (1.0 - confidence) / 2.0
+    lo, hi = np.quantile(means, [alpha, 1.0 - alpha])
+    return float(lo), float(hi)
 
 
 def evaluate_probabilities(

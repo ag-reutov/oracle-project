@@ -28,9 +28,13 @@ from dota_predictor.training.slice8_player_hero_gating import (
 )
 from dota_predictor.training.slice9_frozen_holdout import (
     FROZEN_DEVELOPMENT_END,
+    FROZEN_HOLDOUT_EVALUATION_FILENAME,
+    FrozenHoldoutAlreadyEvaluatedError,
     FrozenHoldoutEmptyError,
     assert_development_frame_excludes_holdout,
+    chronology_bins,
     development_end_from_slice8_frame,
+    evaluate_frozen_holdout,
     holdout_mask,
     inventory_holdout,
     record_frozen_holdout_protocol,
@@ -73,7 +77,11 @@ def _sequential_store(tmp_path: Path, n: int = 24, *, start: int = 0):
 
 
 def _development_and_holdout_store(
-    tmp_path: Path, *, n_development: int = 24, n_holdout: int = 6
+    tmp_path: Path,
+    *,
+    n_development: int = 24,
+    n_holdout: int = 6,
+    holdout_league_id: int = 1,
 ):
     matches = []
     players = []
@@ -100,6 +108,7 @@ def _development_and_holdout_store(
                 dire_team_id=2 * i + 2,
                 radiant_win=(i % 2 == 0),
                 game_version_id=170 + (i // 8),
+                league_id=holdout_league_id if i >= n_development else 1,
             )
         )
         players.extend(
@@ -290,3 +299,112 @@ def test_frozen_candidate_is_not_a_production_feature_column_change() -> None:
     extra = set(SLICE9_CANDIDATE_SPEC.feature_columns) - set(FEATURE_COLUMNS)
     assert extra == set(ELO_PLUS_PLAYER_HERO_COLUMNS) - set(FEATURE_COLUMNS)
     assert extra.isdisjoint(SLICE8_INTERACTION_COLUMNS)
+
+
+def test_chronology_bins_are_equal_count_and_ignore_outcomes() -> None:
+    times = pd.Series(
+        [T0 + timedelta(hours=i) for i in range(6)],
+        name="start_time",
+    )
+    bins = chronology_bins(times)
+    assert list(bins) == ["early", "early", "middle", "middle", "late", "late"]
+
+
+def test_evaluate_frozen_holdout_scores_once_without_using_holdout_for_c(
+    tmp_path: Path,
+) -> None:
+    n_development = 18
+    n_holdout = 6
+    development_end = T0 + timedelta(days=n_development - 1)
+    config = WalkForwardConfig(n_blocks=3)
+    output_dir = tmp_path / "eval"
+    with _development_and_holdout_store(
+        tmp_path,
+        n_development=n_development,
+        n_holdout=n_holdout,
+        holdout_league_id=19719,
+    ) as store:
+        report = evaluate_frozen_holdout(
+            store,
+            config=config,
+            development_end=development_end,
+            expected_holdout_n=n_holdout,
+            expected_holdout_league_id=19719,
+            output_dir=output_dir,
+        )
+        with pytest.raises(FrozenHoldoutAlreadyEvaluatedError, match="already evaluated"):
+            evaluate_frozen_holdout(
+                store,
+                config=config,
+                development_end=development_end,
+                expected_holdout_n=n_holdout,
+                expected_holdout_league_id=19719,
+                output_dir=output_dir,
+            )
+
+    assert report.protocol.evaluated is True
+    assert report.protocol.candidate_spec == SLICE9_CANDIDATE_SPEC
+    assert set(report.protocol.candidate_spec.feature_columns).isdisjoint(
+        SLICE8_INTERACTION_COLUMNS
+    )
+    assert report.protocol.regularization_candidates == REGULARIZATION_CANDIDATES
+    assert report.candidate_metrics.n_samples == n_holdout
+    assert report.reference_metrics.n_samples == n_holdout
+    assert len(report.predictions) == n_holdout
+    assert report.paired_delta_log_loss == pytest.approx(
+        report.mean_paired_log_loss_diff
+    )
+    assert report.n_candidate_better_log_loss == int(
+        (report.predictions["delta_log_loss"] < 0).sum()
+    )
+    assert report.bootstrap_delta_log_loss_ci95[0] <= report.paired_delta_log_loss
+    assert report.paired_delta_log_loss <= report.bootstrap_delta_log_loss_ci95[1]
+    for spec_name, c in report.selected_C.items():
+        assert spec_name in {
+            "logistic_elo_only",
+            "logistic_elo_plus_player_hero",
+        }
+        assert c in REGULARIZATION_CANDIDATES
+    holdout_ids = set(report.predictions["match_id"])
+    train_ids = set(report.split.train.context["match_id"])
+    val_ids = set(report.split.validation.context["match_id"])
+    assert holdout_ids.isdisjoint(train_ids)
+    assert holdout_ids.isdisjoint(val_ids)
+    assert set(report.predictions["league_id"]) == {19719}
+    assert (output_dir / FROZEN_HOLDOUT_EVALUATION_FILENAME).is_file()
+    assert (output_dir / "predictions.parquet").is_file()
+    assert report.chronology["n"].sum() == n_holdout
+    assert report.winner_side["n"].sum() == n_holdout
+    assert report.career_evidence["n"].sum() == n_holdout
+
+
+def test_evaluate_refuses_wrong_holdout_league(tmp_path: Path) -> None:
+    development_end = T0 + timedelta(days=17)
+    config = WalkForwardConfig(n_blocks=3)
+    with _development_and_holdout_store(
+        tmp_path, n_development=18, n_holdout=6, holdout_league_id=2
+    ) as store, pytest.raises(TrainingDatasetError, match="holdout leagues"):
+        evaluate_frozen_holdout(
+            store,
+            config=config,
+            development_end=development_end,
+            expected_holdout_n=6,
+            expected_holdout_league_id=19719,
+        )
+
+
+def test_already_evaluated_lock_is_checked_before_refit(tmp_path: Path) -> None:
+    output_dir = tmp_path / "eval"
+    output_dir.mkdir()
+    (output_dir / FROZEN_HOLDOUT_EVALUATION_FILENAME).write_text(
+        '{"evaluated": true}\n', encoding="utf-8"
+    )
+    with _development_and_holdout_store(
+        tmp_path
+    ) as store, pytest.raises(FrozenHoldoutAlreadyEvaluatedError):
+        evaluate_frozen_holdout(
+            store,
+            config=WalkForwardConfig(n_blocks=3),
+            development_end=T0 + timedelta(days=23),
+            output_dir=output_dir,
+        )
