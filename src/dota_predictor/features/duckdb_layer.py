@@ -105,7 +105,10 @@ def _match_players_view_sql(*, match_players_path: Path, matches_view: str) -> s
             mp.slot_in_side,
             mp.player_id,
             mp.team_id,
-            mp.hero_id
+            mp.hero_id,
+            mp.position,
+            mp.lane,
+            mp.role
         FROM read_parquet({quoted}) AS mp
         JOIN {matches_view} AS m USING (match_id)
     """

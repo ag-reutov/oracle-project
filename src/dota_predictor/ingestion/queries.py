@@ -30,7 +30,7 @@ radiantTeamId
 direTeamId
 radiantTeam { id name tag }
 direTeam { id name tag }
-players { steamAccountId isRadiant playerSlot heroId }
+players { steamAccountId isRadiant playerSlot heroId position lane role }
 pickBans {
   isPick
   heroId
@@ -64,6 +64,21 @@ MATCH_BY_ID_QUERY = f"""
 query MatchByIdIngest($id: Long!) {{
   match(id: $id) {{
     {MATCH_SELECTION}
+  }}
+}}
+"""
+
+# Lightweight fetch for observed match-player parse labels. Used by the
+# position backfill so existing raw payloads are not replaced wholesale.
+MATCH_PLAYER_POSITION_SELECTION = """
+id
+players { steamAccountId isRadiant playerSlot heroId position lane role }
+"""
+
+MATCH_PLAYER_POSITIONS_QUERY = f"""
+query MatchPlayerPositions($id: Long!) {{
+  match(id: $id) {{
+    {MATCH_PLAYER_POSITION_SELECTION}
   }}
 }}
 """

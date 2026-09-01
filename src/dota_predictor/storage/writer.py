@@ -86,13 +86,30 @@ def write_canonical_match(engine: Engine, match: CanonicalMatch) -> None:
             "slot_in_side": slot,
             "player_id": player_id,
             "hero_id": hero_id,
+            "position": position,
+            "lane": lane,
+            "role": role,
         }
-        for side, player_ids, hero_ids in (
-            (Side.RADIANT, match.radiant_player_ids, match.radiant_hero_ids),
-            (Side.DIRE, match.dire_player_ids, match.dire_hero_ids),
+        for side, player_ids, hero_ids, positions, lanes, roles in (
+            (
+                Side.RADIANT,
+                match.radiant_player_ids,
+                match.radiant_hero_ids,
+                match.radiant_positions,
+                match.radiant_lanes,
+                match.radiant_roles,
+            ),
+            (
+                Side.DIRE,
+                match.dire_player_ids,
+                match.dire_hero_ids,
+                match.dire_positions,
+                match.dire_lanes,
+                match.dire_roles,
+            ),
         )
-        for slot, (player_id, hero_id) in enumerate(
-            zip(player_ids, hero_ids, strict=True)
+        for slot, (player_id, hero_id, position, lane, role) in enumerate(
+            zip(player_ids, hero_ids, positions, lanes, roles, strict=True)
         )
     ]
 

@@ -264,3 +264,45 @@ def test_player_match_won_is_post_match_not_a_pre_or_post_draft_feature() -> Non
         assert_columns_allowed_for_stage(
             "player_match", SnapshotStage.POST_DRAFT, ["player_id", "won"]
         )
+
+
+def test_observed_position_lane_role_are_post_match_not_current_features() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    for view, availability in (
+        ("match_players", MATCH_PLAYERS_COLUMN_AVAILABILITY),
+        ("player_match", PLAYER_MATCH_COLUMN_AVAILABILITY),
+    ):
+        for column in ("position", "lane", "role"):
+            assert availability[column] == InformationAvailability.POST_MATCH
+            pre_draft = columns_allowed_for_stage(view, SnapshotStage.PRE_DRAFT)
+            post_draft = columns_allowed_for_stage(view, SnapshotStage.POST_DRAFT)
+            assert column not in pre_draft
+            assert column not in post_draft
+            with pytest.raises(FeatureAvailabilityError, match=column):
+                assert_columns_allowed_for_stage(
+                    view, SnapshotStage.PRE_DRAFT, ["match_id", column]
+                )
+            with pytest.raises(FeatureAvailabilityError, match=column):
+                assert_columns_allowed_for_stage(
+                    view, SnapshotStage.POST_DRAFT, [column]
+                )
+
+
+def test_slot_in_side_remains_pre_draft_and_is_not_position() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert (
+        MATCH_PLAYERS_COLUMN_AVAILABILITY["slot_in_side"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    assert (
+        PLAYER_MATCH_COLUMN_AVAILABILITY["slot_in_side"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    assert "slot_in_side" in columns_allowed_for_stage(
+        "match_players", SnapshotStage.PRE_DRAFT
+    )
+    assert "position" not in columns_allowed_for_stage(
+        "match_players", SnapshotStage.PRE_DRAFT
+    )

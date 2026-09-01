@@ -50,8 +50,10 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from enum import Enum
+from typing import Any, TypeVar
 
 from dota_predictor.data.canonical_schema import (
     CanonicalMatch,
@@ -59,6 +61,9 @@ from dota_predictor.data.canonical_schema import (
     DraftAction,
     DraftEvent,
     HeroId,
+    MatchLane,
+    MatchPlayerPosition,
+    MatchPlayerRole,
     PlayerId,
     Side,
 )
@@ -168,20 +173,54 @@ def _sorted_pick_ban_rows(
     return sorted(pick_bans, key=lambda row: row["order"])
 
 
+@dataclass(frozen=True, slots=True)
+class _MappedSidePlayer:
+    player_id: PlayerId
+    hero_id: HeroId
+    position: MatchPlayerPosition | None
+    lane: MatchLane | None
+    role: MatchPlayerRole | None
+
+
+_EnumT = TypeVar("_EnumT", bound=Enum)
+
+
+def _optional_enum(
+    enum_cls: type[_EnumT], value: Any, *, context: str
+) -> _EnumT | None:
+    """Map a STRATZ enum string to `enum_cls`, preserving null and UNKNOWN.
+
+    Missing/null stays None. `UNKNOWN` is a real source value, not None.
+    Unexpected members fail closed so schema drift is visible.
+    """
+    if value is None:
+        return None
+    if isinstance(value, enum_cls):
+        return value
+    try:
+        return enum_cls(value)
+    except ValueError as exc:
+        raise CanonicalMatchError(
+            f"{context}: unsupported {enum_cls.__name__} value {value!r}"
+        ) from exc
+
+
 def _side_roster(
     players: Sequence[Mapping[str, Any]], *, is_radiant: bool
-) -> tuple[tuple[PlayerId, HeroId], ...]:
-    """Return `(player_id, hero_id)` pairs for one side in lobby-slot order.
+) -> tuple[_MappedSidePlayer, ...]:
+    """Return mapped players for one side in lobby-slot order.
 
     Order follows STRATZ `playerSlot` (canonical `slot_in_side`), not
-    draft pick order and not `pickBans.playerIndex`. `heroId` is taken
-    from the player row itself.
+    draft pick order and not `pickBans.playerIndex`. `heroId`,
+    `position`, `lane`, and `role` are taken from the player row itself.
+    `proSteamAccount` is ignored. Missing position/lane/role stay None
+    and do not fail mapping.
     """
     side_players = sorted(
         (player for player in players if player.get("isRadiant") == is_radiant),
         key=lambda player: player.get("playerSlot") or 0,
     )
-    roster: list[tuple[PlayerId, HeroId]] = []
+    roster: list[_MappedSidePlayer] = []
     for player in side_players:
         steam_account_id = player.get("steamAccountId")
         if steam_account_id is None:
@@ -195,7 +234,28 @@ def _side_roster(
             raise CanonicalMatchError(
                 f"player row: heroId must be a positive integer, got {hero_id}"
             )
-        roster.append((int(steam_account_id), int(hero_id)))
+        player_id = int(steam_account_id)
+        roster.append(
+            _MappedSidePlayer(
+                player_id=player_id,
+                hero_id=int(hero_id),
+                position=_optional_enum(
+                    MatchPlayerPosition,
+                    player.get("position"),
+                    context=f"player {player_id}",
+                ),
+                lane=_optional_enum(
+                    MatchLane,
+                    player.get("lane"),
+                    context=f"player {player_id}",
+                ),
+                role=_optional_enum(
+                    MatchPlayerRole,
+                    player.get("role"),
+                    context=f"player {player_id}",
+                ),
+            )
+        )
     return tuple(roster)
 
 
@@ -231,10 +291,16 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
     players = raw.get("players") or []
     radiant_roster = _side_roster(players, is_radiant=True)
     dire_roster = _side_roster(players, is_radiant=False)
-    radiant_player_ids = tuple(player_id for player_id, _hero_id in radiant_roster)
-    dire_player_ids = tuple(player_id for player_id, _hero_id in dire_roster)
-    radiant_hero_ids = tuple(hero_id for _player_id, hero_id in radiant_roster)
-    dire_hero_ids = tuple(hero_id for _player_id, hero_id in dire_roster)
+    radiant_player_ids = tuple(player.player_id for player in radiant_roster)
+    dire_player_ids = tuple(player.player_id for player in dire_roster)
+    radiant_hero_ids = tuple(player.hero_id for player in radiant_roster)
+    dire_hero_ids = tuple(player.hero_id for player in dire_roster)
+    radiant_positions = tuple(player.position for player in radiant_roster)
+    dire_positions = tuple(player.position for player in dire_roster)
+    radiant_lanes = tuple(player.lane for player in radiant_roster)
+    dire_lanes = tuple(player.lane for player in dire_roster)
+    radiant_roles = tuple(player.role for player in radiant_roster)
+    dire_roles = tuple(player.role for player in dire_roster)
 
     pick_bans = raw.get("pickBans") or []
     draft_events = tuple(
@@ -265,6 +331,12 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
         dire_player_ids=dire_player_ids,
         radiant_hero_ids=radiant_hero_ids,
         dire_hero_ids=dire_hero_ids,
+        radiant_positions=radiant_positions,
+        dire_positions=dire_positions,
+        radiant_lanes=radiant_lanes,
+        dire_lanes=dire_lanes,
+        radiant_roles=radiant_roles,
+        dire_roles=dire_roles,
         draft_events=draft_events,
         radiant_win=radiant_win,
         duration_seconds=duration_seconds,

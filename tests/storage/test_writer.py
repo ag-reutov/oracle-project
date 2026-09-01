@@ -9,9 +9,17 @@ Covers the two properties this revision specifically required:
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from helpers import build_canonical_match, requires_test_database, seed_ingestion_league
 
-from dota_predictor.data.canonical_schema import DraftAction, Side
+from dota_predictor.data.canonical_schema import (
+    DraftAction,
+    MatchLane,
+    MatchPlayerPosition,
+    MatchPlayerRole,
+    Side,
+)
 from dota_predictor.data.stratz_mapping import CANONICAL_MAPPER_VERSION
 from dota_predictor.storage.schema import (
     DRAFT_EVENTS,
@@ -90,6 +98,9 @@ def test_write_canonical_match_round_trip(engine):
         dire_heroes = tuple(r.hero_id for r in player_rows if r.side == Side.DIRE)
         assert radiant_heroes == match.radiant_hero_ids
         assert dire_heroes == match.dire_hero_ids
+        assert all(row.position is None for row in player_rows)
+        assert all(row.lane is None for row in player_rows)
+        assert all(row.role is None for row in player_rows)
 
         draft_rows = conn.execute(
             DRAFT_EVENTS.select()
@@ -101,6 +112,57 @@ def test_write_canonical_match_round_trip(engine):
             assert row.action == event.action
             assert row.side == event.side
             assert row.hero_id == event.hero_id
+
+
+def test_write_canonical_match_round_trips_observed_position_metadata(engine):
+    with engine.begin() as conn:
+        seed_ingestion_league(conn, league_id=16)
+
+    positions = (
+        MatchPlayerPosition.POSITION_1,
+        MatchPlayerPosition.POSITION_2,
+        MatchPlayerPosition.POSITION_3,
+        MatchPlayerPosition.POSITION_4,
+        MatchPlayerPosition.UNKNOWN,
+    )
+    lanes = (
+        MatchLane.SAFE_LANE,
+        MatchLane.MID_LANE,
+        MatchLane.OFF_LANE,
+        MatchLane.OFF_LANE,
+        None,
+    )
+    roles = (
+        MatchPlayerRole.CORE,
+        MatchPlayerRole.CORE,
+        MatchPlayerRole.CORE,
+        MatchPlayerRole.LIGHT_SUPPORT,
+        MatchPlayerRole.HARD_SUPPORT,
+    )
+    match = replace(
+        build_canonical_match(match_id=1010, league_id=16, num_bans=4),
+        radiant_positions=positions,
+        radiant_lanes=lanes,
+        radiant_roles=roles,
+    )
+    write_canonical_match(engine, match)
+
+    with engine.connect() as conn:
+        radiant_rows = conn.execute(
+            MATCH_PLAYERS.select()
+            .where(MATCH_PLAYERS.c.match_id == 1010, MATCH_PLAYERS.c.side == Side.RADIANT)
+            .order_by(MATCH_PLAYERS.c.slot_in_side)
+        ).all()
+        dire_rows = conn.execute(
+            MATCH_PLAYERS.select().where(
+                MATCH_PLAYERS.c.match_id == 1010, MATCH_PLAYERS.c.side == Side.DIRE
+            )
+        ).all()
+    assert tuple(row.position for row in radiant_rows) == positions
+    assert tuple(row.lane for row in radiant_rows) == lanes
+    assert tuple(row.role for row in radiant_rows) == roles
+    assert all(row.position is None for row in dire_rows)
+
 
 
 def test_write_canonical_match_is_upsert_for_matches_row(engine):

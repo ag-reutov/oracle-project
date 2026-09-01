@@ -70,7 +70,13 @@ from __future__ import annotations
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 
-from dota_predictor.data.canonical_schema import DraftAction, Side
+from dota_predictor.data.canonical_schema import (
+    DraftAction,
+    MatchLane,
+    MatchPlayerPosition,
+    MatchPlayerRole,
+    Side,
+)
 
 __all__ = [
     "DRAFT_EVENTS",
@@ -126,6 +132,24 @@ _SIDE_TYPE = sa.Enum(
 _DRAFT_ACTION_TYPE = sa.Enum(
     DraftAction,
     name="draft_action",
+    native_enum=False,
+    values_callable=lambda enum_cls: [member.value for member in enum_cls],
+)
+_POSITION_TYPE = sa.Enum(
+    MatchPlayerPosition,
+    name="match_player_position",
+    native_enum=False,
+    values_callable=lambda enum_cls: [member.value for member in enum_cls],
+)
+_LANE_TYPE = sa.Enum(
+    MatchLane,
+    name="match_lane",
+    native_enum=False,
+    values_callable=lambda enum_cls: [member.value for member in enum_cls],
+)
+_ROLE_TYPE = sa.Enum(
+    MatchPlayerRole,
+    name="match_player_role",
     native_enum=False,
     values_callable=lambda enum_cls: [member.value for member in enum_cls],
 )
@@ -295,6 +319,12 @@ MATCH_PLAYERS = sa.Table(
     # Aligned with `slot_in_side` (lobby order), not draft pick order and
     # not Dota position 1-5.
     sa.Column("hero_id", sa.Integer, nullable=False),
+    # Observed STRATZ match-player parse labels. NULL = source omitted
+    # the field; UNKNOWN is stored when STRATZ returns UNKNOWN. Never
+    # inferred from slot_in_side. POST_MATCH relative to this match.
+    sa.Column("position", _POSITION_TYPE, nullable=True),
+    sa.Column("lane", _LANE_TYPE, nullable=True),
+    sa.Column("role", _ROLE_TYPE, nullable=True),
     sa.CheckConstraint(
         "slot_in_side BETWEEN 0 AND 4", name="slot_in_side_valid_range"
     ),

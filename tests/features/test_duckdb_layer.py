@@ -109,6 +109,9 @@ MATCH_PLAYERS_COLUMNS = [
     "player_id",
     "team_id",
     "hero_id",
+    "position",
+    "lane",
+    "role",
 ]
 
 
@@ -160,7 +163,7 @@ def _expected_match_player_rows() -> list[tuple]:
     return sorted(expected)
 
 
-def test_match_players_has_exactly_seven_columns_in_contract_order(
+def test_match_players_has_exactly_ten_columns_in_contract_order(
     feature_store_config: FeatureStoreConfig,
 ) -> None:
     with connect(feature_store_config) as store:

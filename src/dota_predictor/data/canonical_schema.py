@@ -39,6 +39,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 __all__ = [
+    "EXPLICIT_DOTA_POSITIONS",
     "FIELD_INFORMATION_AVAILABILITY",
     "CanonicalMatch",
     "CanonicalMatchError",
@@ -48,6 +49,9 @@ __all__ = [
     "InformationAvailability",
     "LeagueId",
     "MatchId",
+    "MatchLane",
+    "MatchPlayerPosition",
+    "MatchPlayerRole",
     "PlayerId",
     "SeriesId",
     "Side",
@@ -114,6 +118,80 @@ class DraftAction(str, Enum):
     BAN = "BAN"
 
 
+class MatchPlayerPosition(str, Enum):
+    """STRATZ `MatchPlayerPositionType` on a match player object.
+
+    `POSITION_1`–`POSITION_5` are the Dota positions. `UNKNOWN` is an
+    explicit STRATZ value, distinct from a missing/null field.
+    `FILTERED` and `ALL` are members of the same GraphQL enum (typically
+    query sentinels); they are preserved if STRATZ returns them on a
+    player row and are never coerced into a 1–5 position.
+    """
+
+    POSITION_1 = "POSITION_1"
+    POSITION_2 = "POSITION_2"
+    POSITION_3 = "POSITION_3"
+    POSITION_4 = "POSITION_4"
+    POSITION_5 = "POSITION_5"
+    UNKNOWN = "UNKNOWN"
+    FILTERED = "FILTERED"
+    ALL = "ALL"
+
+
+class MatchLane(str, Enum):
+    """STRATZ `MatchLaneType` on a match player object."""
+
+    ROAMING = "ROAMING"
+    SAFE_LANE = "SAFE_LANE"
+    MID_LANE = "MID_LANE"
+    OFF_LANE = "OFF_LANE"
+    JUNGLE = "JUNGLE"
+    UNKNOWN = "UNKNOWN"
+
+
+class MatchPlayerRole(str, Enum):
+    """STRATZ `MatchPlayerRoleType` on a match player object."""
+
+    CORE = "CORE"
+    LIGHT_SUPPORT = "LIGHT_SUPPORT"
+    HARD_SUPPORT = "HARD_SUPPORT"
+    UNKNOWN = "UNKNOWN"
+
+
+# Dota 1–5 only. `UNKNOWN` / `FILTERED` / `ALL` / NULL are not positions.
+EXPLICIT_DOTA_POSITIONS: frozenset[MatchPlayerPosition] = frozenset(
+    {
+        MatchPlayerPosition.POSITION_1,
+        MatchPlayerPosition.POSITION_2,
+        MatchPlayerPosition.POSITION_3,
+        MatchPlayerPosition.POSITION_4,
+        MatchPlayerPosition.POSITION_5,
+    }
+)
+
+_UNSET_SIDE_POSITIONS: tuple[
+    MatchPlayerPosition | None,
+    MatchPlayerPosition | None,
+    MatchPlayerPosition | None,
+    MatchPlayerPosition | None,
+    MatchPlayerPosition | None,
+] = (None, None, None, None, None)
+_UNSET_SIDE_LANES: tuple[
+    MatchLane | None,
+    MatchLane | None,
+    MatchLane | None,
+    MatchLane | None,
+    MatchLane | None,
+] = (None, None, None, None, None)
+_UNSET_SIDE_ROLES: tuple[
+    MatchPlayerRole | None,
+    MatchPlayerRole | None,
+    MatchPlayerRole | None,
+    MatchPlayerRole | None,
+    MatchPlayerRole | None,
+] = (None, None, None, None, None)
+
+
 # Documentation-as-code: which `CanonicalMatch` field maps to which
 # information-availability class. This is not enforced at construction time
 # -- `CanonicalMatch` legitimately stores POST_MATCH/DRAFT fields alongside
@@ -143,6 +221,16 @@ FIELD_INFORMATION_AVAILABILITY: dict[str, InformationAvailability] = {
     "draft_events": InformationAvailability.DRAFT,
     "radiant_win": InformationAvailability.POST_MATCH,
     "duration_seconds": InformationAvailability.POST_MATCH,
+    # Observed STRATZ replay-parse labels on the player object for THIS
+    # match. They must not be used as PRE_DRAFT/POST_DRAFT features of
+    # the same match. Historical rows may contribute to later state only
+    # when `H.start_time < M.start_time`.
+    "radiant_positions": InformationAvailability.POST_MATCH,
+    "radiant_lanes": InformationAvailability.POST_MATCH,
+    "radiant_roles": InformationAvailability.POST_MATCH,
+    "dire_positions": InformationAvailability.POST_MATCH,
+    "dire_lanes": InformationAvailability.POST_MATCH,
+    "dire_roles": InformationAvailability.POST_MATCH,
 }
 
 
@@ -256,12 +344,58 @@ class CanonicalMatch:
     # not draft pick order and not lobby slot. `slot_in_side` is lobby
     # order and is not Dota position 1-5.
     radiant_hero_ids: tuple[HeroId, HeroId, HeroId, HeroId, HeroId]
+    # Observed STRATZ `players[].position` / `lane` / `role` for this
+    # match, aligned with `radiant_player_ids` by `slot_in_side`.
+    # POST_MATCH parse labels. Missing and `UNKNOWN` are stored as-is
+    # and are never inferred from `slot_in_side`, lane, role, or farm.
+    radiant_positions: tuple[
+        MatchPlayerPosition | None,
+        MatchPlayerPosition | None,
+        MatchPlayerPosition | None,
+        MatchPlayerPosition | None,
+        MatchPlayerPosition | None,
+    ] = _UNSET_SIDE_POSITIONS
+    radiant_lanes: tuple[
+        MatchLane | None,
+        MatchLane | None,
+        MatchLane | None,
+        MatchLane | None,
+        MatchLane | None,
+    ] = _UNSET_SIDE_LANES
+    radiant_roles: tuple[
+        MatchPlayerRole | None,
+        MatchPlayerRole | None,
+        MatchPlayerRole | None,
+        MatchPlayerRole | None,
+        MatchPlayerRole | None,
+    ] = _UNSET_SIDE_ROLES
 
     # --- Dire (PRE_DRAFT) ---
     dire_team_id: TeamId
     dire_team_name_observed: str | None = None
     dire_player_ids: tuple[PlayerId, PlayerId, PlayerId, PlayerId, PlayerId]
     dire_hero_ids: tuple[HeroId, HeroId, HeroId, HeroId, HeroId]
+    dire_positions: tuple[
+        MatchPlayerPosition | None,
+        MatchPlayerPosition | None,
+        MatchPlayerPosition | None,
+        MatchPlayerPosition | None,
+        MatchPlayerPosition | None,
+    ] = _UNSET_SIDE_POSITIONS
+    dire_lanes: tuple[
+        MatchLane | None,
+        MatchLane | None,
+        MatchLane | None,
+        MatchLane | None,
+        MatchLane | None,
+    ] = _UNSET_SIDE_LANES
+    dire_roles: tuple[
+        MatchPlayerRole | None,
+        MatchPlayerRole | None,
+        MatchPlayerRole | None,
+        MatchPlayerRole | None,
+        MatchPlayerRole | None,
+    ] = _UNSET_SIDE_ROLES
 
     # --- Draft (DRAFT) ---
     draft_events: tuple[DraftEvent, ...]
@@ -302,6 +436,18 @@ class CanonicalMatch:
         self._validate_draft_events()
         self._validate_side_heroes("radiant", self.radiant_hero_ids)
         self._validate_side_heroes("dire", self.dire_hero_ids)
+        self._validate_side_enum_tuple(
+            "radiant_positions", self.radiant_positions, MatchPlayerPosition
+        )
+        self._validate_side_enum_tuple(
+            "dire_positions", self.dire_positions, MatchPlayerPosition
+        )
+        self._validate_side_enum_tuple("radiant_lanes", self.radiant_lanes, MatchLane)
+        self._validate_side_enum_tuple("dire_lanes", self.dire_lanes, MatchLane)
+        self._validate_side_enum_tuple(
+            "radiant_roles", self.radiant_roles, MatchPlayerRole
+        )
+        self._validate_side_enum_tuple("dire_roles", self.dire_roles, MatchPlayerRole)
 
         if self.duration_seconds <= 0:
             raise CanonicalMatchError(
@@ -322,6 +468,26 @@ class CanonicalMatch:
             raise CanonicalMatchError(
                 f"{side_name}_player_ids contains duplicate player ids"
             )
+
+    @staticmethod
+    def _validate_side_enum_tuple(
+        field_name: str,
+        values: tuple[object, ...],
+        enum_cls: type[Enum],
+    ) -> None:
+        # Length must match the five lobby slots. Duplicate, missing, and
+        # UNKNOWN values are allowed: they are observed-source anomalies,
+        # not canonicalization failures, and must not be repaired here.
+        if len(values) != 5:
+            raise CanonicalMatchError(
+                f"{field_name} must contain exactly 5 entries, got {len(values)}"
+            )
+        for value in values:
+            if value is not None and not isinstance(value, enum_cls):
+                raise CanonicalMatchError(
+                    f"{field_name} entry must be {enum_cls.__name__} or None, "
+                    f"got {value!r}"
+                )
 
     def _validate_side_heroes(self, side_name: str, hero_ids: tuple[HeroId, ...]) -> None:
         if len(hero_ids) != 5:

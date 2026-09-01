@@ -29,16 +29,22 @@ Windows
 
 History is keyed by `player_id`. Changing `team_id` does not reset it.
 `slot_in_side` is lobby order and is never a window partition, Dota
-position 1-5, a lane, or a role.
+position 1-5, a lane, or a role. Observed `position`/`lane`/`role` are
+fact columns only; they are not window partitions and are not used to
+build `prior_*` metrics.
 
 Availability
 ------------
 Fact columns inherit the match/match_players classification:
 identity and roster PRE_DRAFT, `hero_id` DRAFT, `won` POST_MATCH
-(relative to the match that produced the row). Aggregating historical
-`won` over strictly earlier matches is valid historical state for the
-current match. The current row's `won` is a fact about that match and
-is never mixed into `prior_*` / `version_prior_*` metrics.
+(relative to the match that produced the row). Observed `position` /
+`lane` / `role` are POST_MATCH parse labels of that row's match and
+must not be selected as PRE_DRAFT or POST_DRAFT features of the same
+match. Aggregating historical `won` over strictly earlier matches is
+valid historical state for the current match. The current row's `won`
+is a fact about that match and is never mixed into `prior_*` /
+`version_prior_*` metrics. This layer does not yet compute
+position-dependent historical metrics.
 
 NULL semantics
 --------------
@@ -96,6 +102,9 @@ PLAYER_MATCH_COLUMNS: tuple[str, ...] = (
     "hero_id",
     "won",
     "slot_in_side",
+    "position",
+    "lane",
+    "role",
 )
 
 PLAYER_STATE_METRIC_COLUMNS: tuple[str, ...] = (
@@ -139,6 +148,8 @@ def player_match_sql() -> str:
     One row per `(match_id, player_id)` from `match_players` joined to
     `matches`. `won` is that player's side winning, never inferred from
     draft order. `slot_in_side` is lobby order, not Dota position 1-5.
+    Observed `position`/`lane`/`role` are POST_MATCH parse labels of
+    this row's match.
     """
     return f"""
 SELECT
@@ -154,7 +165,10 @@ SELECT
         WHEN mp.side = 'RADIANT' THEN m.radiant_win
         ELSE NOT m.radiant_win
     END AS won,
-    mp.slot_in_side
+    mp.slot_in_side,
+    mp.position,
+    mp.lane,
+    mp.role
 FROM {MATCH_PLAYERS_VIEW} mp
 JOIN {MATCHES_VIEW} m ON m.match_id = mp.match_id
 """
@@ -195,6 +209,9 @@ windowed AS (
         hero_id,
         won,
         slot_in_side,
+        position,
+        lane,
+        role,
         COALESCE(COUNT(*) OVER w_player, 0)::BIGINT AS prior_games,
         COALESCE(SUM(CASE WHEN won THEN 1 ELSE 0 END) OVER w_player, 0)::BIGINT
             AS prior_wins,
@@ -222,6 +239,9 @@ SELECT
     w.hero_id,
     w.won,
     w.slot_in_side,
+    w.position,
+    w.lane,
+    w.role,
     w.prior_games,
     w.prior_wins,
     {win_rate} AS prior_win_rate,

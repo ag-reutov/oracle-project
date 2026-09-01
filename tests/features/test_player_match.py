@@ -152,13 +152,31 @@ def test_state_sql_never_orders_history_by_match_id() -> None:
     assert "ORDER BY start_time, match_id" not in sql
 
 
-def test_state_sql_does_not_partition_by_slot_or_encode_position() -> None:
+def test_state_sql_does_not_partition_by_slot_or_observed_position() -> None:
     sql = player_state_sql()
     for clause in sql.split("PARTITION BY")[1:]:
-        assert "slot_in_side" not in clause.split("ORDER BY")[0]
+        partition = clause.split("ORDER BY")[0]
+        for forbidden in ("slot_in_side", "position", "lane", "role"):
+            assert forbidden not in partition
     lowered = sql.lower()
-    for forbidden in ("position", "lane", "role", "elo", "synergy", "counter"):
+    for forbidden in ("elo", "synergy", "counter", "prior_position", "modal_position"):
         assert forbidden not in lowered
+
+
+def test_player_match_sql_exposes_observed_position_separately_from_slot() -> None:
+    sql = player_match_sql()
+    assert "mp.slot_in_side" in sql
+    assert "mp.position" in sql
+    assert "mp.lane" in sql
+    assert "mp.role" in sql
+
+
+def test_observed_position_is_not_a_training_or_pre_draft_feature() -> None:
+    for column in ("position", "lane", "role"):
+        assert column not in FEATURE_COLUMNS
+        assert column not in SNAPSHOT_COLUMNS
+        assert column not in ALL_FEATURE_COLUMNS
+        assert column not in PLAYER_STATE_METRIC_COLUMNS
 
 
 def test_player_state_is_not_part_of_training_or_pre_draft_snapshot() -> None:
@@ -170,7 +188,7 @@ def test_player_state_is_not_part_of_training_or_pre_draft_snapshot() -> None:
 
 
 def test_schema_versions_unchanged_by_this_layer() -> None:
-    assert ANALYTICAL_SCHEMA_VERSION == 2
+    assert ANALYTICAL_SCHEMA_VERSION == 3
     assert REFERENCE_SCHEMA_VERSION == 1
 
 
@@ -206,6 +224,9 @@ def test_player_match_grain_is_one_row_per_match_player(tmp_path: Path) -> None:
     assert p1["hero_id"] == 1
     assert bool(p1["won"]) is True
     assert p1["slot_in_side"] == 0
+    assert pd.isna(p1["position"])
+    assert pd.isna(p1["lane"])
+    assert pd.isna(p1["role"])
     p6 = _row(frame, M1, P6)
     assert p6["team_id"] == TEAM_B
     assert bool(p6["won"]) is False
@@ -553,3 +574,55 @@ def test_match_id_is_not_a_time_proxy(tmp_path: Path) -> None:
     assert late_id < early_id
     assert p1["prior_games"] == 1
     assert p1["previous_match_start_time"] == T0
+
+
+def test_current_match_position_is_fact_only_history_stays_strict_prior(
+    tmp_path: Path,
+) -> None:
+    """Observed position on match M is not a current-match feature.
+
+    It is stored on the fact row. `prior_*` still uses only
+    `H.start_time < M.start_time` and does not partition or score by
+    position.
+    """
+    matches, players, drafts = _tables(
+        [
+            {
+                "match_id": M1,
+                "start_time": T0,
+                "radiant_win": True,
+                "game_version_id": VERSION_A,
+            },
+            {
+                "match_id": M2,
+                "start_time": T1,
+                "radiant_win": False,
+                "game_version_id": VERSION_A,
+            },
+        ]
+    )
+    for player in players:
+        if player["match_id"] == M1 and player["player_id"] == P1:
+            player["position"] = "POSITION_5"
+            player["lane"] = "SAFE_LANE"
+            player["role"] = "HARD_SUPPORT"
+        if player["match_id"] == M2 and player["player_id"] == P1:
+            player["position"] = "POSITION_1"
+            player["lane"] = "SAFE_LANE"
+            player["role"] = "CORE"
+
+    frame = player_state_frame(
+        tmp_path, matches=matches, players=players, drafts=drafts
+    )
+    m1 = _row(frame, M1, P1)
+    m2 = _row(frame, M2, P1)
+    assert m1["position"] == "POSITION_5"
+    assert m2["position"] == "POSITION_1"
+    assert int(m1["slot_in_side"]) == 0
+    assert int(m2["slot_in_side"]) == 0
+    assert m1["position"] != f"POSITION_{int(m1['slot_in_side']) + 1}"
+    assert m2["prior_games"] == 1
+    assert m2["prior_wins"] == 1
+    assert "prior_position" not in frame.columns
+    assert list(frame.columns) == list(PLAYER_STATE_COLUMNS)
+

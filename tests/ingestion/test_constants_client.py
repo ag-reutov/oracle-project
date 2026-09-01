@@ -17,7 +17,11 @@ from dota_predictor.ingestion.client import (
 )
 from dota_predictor.ingestion.config import IngestionConfig
 from dota_predictor.ingestion.errors import StratzPermanentError
-from dota_predictor.ingestion.queries import GAME_VERSIONS_QUERY, HEROES_QUERY
+from dota_predictor.ingestion.queries import (
+    GAME_VERSIONS_QUERY,
+    HEROES_QUERY,
+    MATCH_PLAYER_POSITIONS_QUERY,
+)
 
 HEROES_PAYLOAD = {
     "data": {
@@ -139,3 +143,39 @@ def test_fetch_game_versions_uses_game_versions_query(
     assert captured["query"] == GAME_VERSIONS_QUERY
     assert captured["variables"] == {}
     assert [row["id"] for row in rows] == [173, 175]
+
+
+def test_fetch_match_player_positions_uses_lightweight_query(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def _fake_fetch(
+        self: StratzClient, query: str, variables: dict[str, Any]
+    ) -> dict[str, Any]:
+        captured["query"] = query
+        captured["variables"] = variables
+        return {
+            "data": {
+                "match": {
+                    "id": 1,
+                    "players": [
+                        {
+                            "steamAccountId": 11,
+                            "position": "POSITION_1",
+                            "lane": "SAFE_LANE",
+                            "role": "CORE",
+                        }
+                    ],
+                }
+            }
+        }
+
+    monkeypatch.setattr(StratzClient, "_fetch_with_retry", _fake_fetch)
+    with StratzClient(IngestionConfig(stratz_api_token="test")) as client:
+        match = client.fetch_match_player_positions(1)
+
+    assert captured["query"] == MATCH_PLAYER_POSITIONS_QUERY
+    assert captured["variables"] == {"id": 1}
+    assert match is not None
+    assert match["players"][0]["position"] == "POSITION_1"

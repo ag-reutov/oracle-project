@@ -149,6 +149,13 @@ MATCH_PLAYERS_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "player_id": InformationAvailability.PRE_DRAFT,
     "team_id": InformationAvailability.PRE_DRAFT,
     "hero_id": InformationAvailability.DRAFT,
+    # Observed STRATZ replay-parse labels for THIS match. Historical
+    # rows may later contribute to state for a future match M only when
+    # `H.start_time < M.start_time`. They are never PRE_DRAFT or
+    # POST_DRAFT features of the same match.
+    "position": InformationAvailability.POST_MATCH,
+    "lane": InformationAvailability.POST_MATCH,
+    "role": InformationAvailability.POST_MATCH,
 }
 
 # Derived player-match fact (`features.player_match.player_match_sql`):
@@ -167,6 +174,9 @@ PLAYER_MATCH_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "hero_id": InformationAvailability.DRAFT,
     "won": InformationAvailability.POST_MATCH,
     "slot_in_side": InformationAvailability.PRE_DRAFT,
+    "position": InformationAvailability.POST_MATCH,
+    "lane": InformationAvailability.POST_MATCH,
+    "role": InformationAvailability.POST_MATCH,
 }
 
 # Column availability for the optional `heroes` reference view. This is

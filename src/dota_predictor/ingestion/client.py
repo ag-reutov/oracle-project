@@ -21,6 +21,7 @@ from dota_predictor.ingestion.queries import (
     HEROES_QUERY,
     LEAGUE_MATCHES_QUERY,
     MATCH_BY_ID_QUERY,
+    MATCH_PLAYER_POSITIONS_QUERY,
     TEAM_LEAGUE_MATCH_IDS_QUERY,
 )
 
@@ -141,14 +142,21 @@ def _retry_after_seconds(headers: dict[str, str], default: float = 1.0) -> float
         reset = headers.get("ratelimit-reset") or headers.get("RateLimit-Reset")
         if reset is not None:
             try:
-                return max(float(reset), 0.25)
+                return _bounded_retry_wait(float(reset))
             except ValueError:
                 pass
         return default
     try:
-        return max(float(retry_after), 0.25)
+        return _bounded_retry_wait(float(retry_after))
     except ValueError:
         return default
+
+
+def _bounded_retry_wait(value: float, *, cap: float = 30.0) -> float:
+    """Cap 429 waits so a unix-timestamp RateLimit-Reset cannot sleep forever."""
+    if value > 10_000:
+        value = value - time.time()
+    return min(max(value, 0.25), cap)
 
 
 class StratzClient:
@@ -266,6 +274,17 @@ class StratzClient:
 
     def fetch_match(self, match_id: int) -> dict[str, Any] | None:
         payload = self._fetch_with_retry(MATCH_BY_ID_QUERY, {"id": match_id})
+        return parse_match_query_payload(payload)
+
+    def fetch_match_player_positions(self, match_id: int) -> dict[str, Any] | None:
+        """Fetch only match-player identity plus position/lane/role.
+
+        Does not replace a stored raw payload by itself. Callers must
+        merge the three parse fields onto existing player objects.
+        """
+        payload = self._fetch_with_retry(
+            MATCH_PLAYER_POSITIONS_QUERY, {"id": match_id}
+        )
         return parse_match_query_payload(payload)
 
     def fetch_team_league_match_ids_page(

@@ -16,7 +16,14 @@ from pathlib import Path
 
 import pytest
 
-from dota_predictor.data.canonical_schema import CanonicalMatchError, DraftAction, Side
+from dota_predictor.data.canonical_schema import (
+    CanonicalMatchError,
+    DraftAction,
+    MatchLane,
+    MatchPlayerPosition,
+    MatchPlayerRole,
+    Side,
+)
 from dota_predictor.data.stratz_mapping import (
     canonical_match_from_stratz,
     draft_event_from_stratz_pick_ban,
@@ -48,15 +55,29 @@ def _pick_ban_row(
 
 
 def _player_row(
-    *, is_radiant: bool, player_slot: int, steam_account_id: int, hero_id: int
+    *,
+    is_radiant: bool,
+    player_slot: int,
+    steam_account_id: int,
+    hero_id: int,
+    position: str | None = None,
+    lane: str | None = None,
+    role: str | None = None,
 ) -> dict:
-    return {
+    row = {
         "isRadiant": is_radiant,
         "playerSlot": player_slot,
         "steamAccount": {"id": steam_account_id},
         "heroId": hero_id,
         "steamAccountId": steam_account_id,
     }
+    if position is not None:
+        row["position"] = position
+    if lane is not None:
+        row["lane"] = lane
+    if role is not None:
+        row["role"] = role
+    return row
 
 
 RADIANT_IDS = [898754153, 137129583, 129958758, 157475523, 94296097]
@@ -384,3 +405,62 @@ def test_paired_matches_confirm_radiant_dire_side_swap_not_inverted() -> None:
                 else not canonical.radiant_win
             )
             assert player["isVictory"] == expected_victory
+
+
+def test_missing_position_fields_map_to_none_and_do_not_fail() -> None:
+    match = canonical_match_from_stratz(build_raw_match())
+    assert match.radiant_positions == (None, None, None, None, None)
+    assert match.dire_lanes == (None, None, None, None, None)
+    assert match.radiant_roles == (None, None, None, None, None)
+
+
+def test_maps_match_level_position_lane_role_from_player_objects() -> None:
+    raw = build_raw_match()
+    radiant = [player for player in raw["players"] if player["isRadiant"]]
+    labels = [
+        ("POSITION_1", "SAFE_LANE", "CORE"),
+        ("POSITION_2", "MID_LANE", "CORE"),
+        ("POSITION_3", "OFF_LANE", "CORE"),
+        ("POSITION_4", "OFF_LANE", "LIGHT_SUPPORT"),
+        ("POSITION_5", "SAFE_LANE", "HARD_SUPPORT"),
+    ]
+    for player, (position, lane, role) in zip(radiant, labels, strict=True):
+        player["position"] = position
+        player["lane"] = lane
+        player["role"] = role
+    match = canonical_match_from_stratz(raw)
+    assert match.radiant_positions == (
+        MatchPlayerPosition.POSITION_1,
+        MatchPlayerPosition.POSITION_2,
+        MatchPlayerPosition.POSITION_3,
+        MatchPlayerPosition.POSITION_4,
+        MatchPlayerPosition.POSITION_5,
+    )
+    assert match.radiant_lanes[1] is MatchLane.MID_LANE
+    assert match.radiant_roles[-1] is MatchPlayerRole.HARD_SUPPORT
+
+
+def test_unknown_position_is_preserved_not_guessed_from_slot() -> None:
+    raw = build_raw_match()
+    raw["players"][0]["position"] = "UNKNOWN"
+    raw["players"][0]["playerSlot"] = 0
+    match = canonical_match_from_stratz(raw)
+    assert match.radiant_positions[0] is MatchPlayerPosition.UNKNOWN
+
+
+def test_pro_steam_account_position_is_ignored() -> None:
+    raw = build_raw_match()
+    raw["players"][0]["proSteamAccount"] = {
+        "position": "POSITION_5",
+        "teamId": 999,
+    }
+    match = canonical_match_from_stratz(raw)
+    assert match.radiant_positions[0] is None
+
+
+def test_unsupported_position_value_fails_closed() -> None:
+    raw = build_raw_match()
+    raw["players"][0]["position"] = "CARRY"
+    with pytest.raises(CanonicalMatchError, match="MatchPlayerPosition"):
+        canonical_match_from_stratz(raw)
+

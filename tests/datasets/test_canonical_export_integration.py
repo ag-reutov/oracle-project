@@ -93,6 +93,10 @@ def test_build_canonical_dataset_end_to_end(engine, tmp_path: Path) -> None:
         25,
     }
     assert all(row["hero_id"] is not None for row in match_b_players)
+    assert all(row["position"] is None for row in match_b_players)
+    assert "position" in match_players_table.column_names
+    assert "lane" in match_players_table.column_names
+    assert "role" in match_players_table.column_names
     assert len({row["hero_id"] for row in match_b_players if row["side"] == "RADIANT"}) == 5
 
     rows_by_id = {row["match_id"]: row for row in matches_table.to_pylist()}

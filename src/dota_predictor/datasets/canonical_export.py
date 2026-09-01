@@ -18,8 +18,10 @@ analytical Parquet datasets:
   long-form `match_players.parquet` table.
 * `match_players.parquet` -- one row per player per match (exactly 10
   rows per canonical match). Carries `player_id`, `hero_id`, `side`,
-  `slot_in_side` (lobby order, not Dota position 1-5), and `team_id`
-  derived from the parent match's radiant/dire team ids.
+  `slot_in_side` (lobby order, not Dota position 1-5), `team_id`
+  derived from the parent match's radiant/dire team ids, and observed
+  STRATZ parse labels `position` / `lane` / `role` (POST_MATCH relative
+  to that row's match; NULL and UNKNOWN are preserved).
 * `draft_events.parquet` -- the normalized long representation of
   `draft_events`, one row per pick/ban, preserved verbatim. Draft length
   is **not** fixed across matches: real canonical data contains 10-, 23-,
@@ -105,10 +107,10 @@ __all__ = [
     "ANALYTICAL_SCHEMA_VERSION",
     "DRAFT_EVENTS_FILENAME",
     "DRAFT_EVENTS_SCHEMA",
-    "MATCH_PLAYERS_FILENAME",
-    "MATCH_PLAYERS_SCHEMA",
     "MATCHES_FILENAME",
     "MATCHES_SCHEMA",
+    "MATCH_PLAYERS_FILENAME",
+    "MATCH_PLAYERS_SCHEMA",
     "CanonicalExportError",
     "DatasetBuildResult",
     "DatasetTransformError",
@@ -127,7 +129,9 @@ __all__ = [
 # v1: matches.parquet + draft_events.parquet.
 # v2: adds match_players.parquet (long-form player/hero rows). matches.parquet
 #     column set is unchanged from v1.
-ANALYTICAL_SCHEMA_VERSION = 2
+# v3: adds observed STRATZ `position` / `lane` / `role` on
+#     match_players.parquet. matches.parquet is unchanged.
+ANALYTICAL_SCHEMA_VERSION = 3
 
 MATCHES_FILENAME = "matches.parquet"
 MATCH_PLAYERS_FILENAME = "match_players.parquet"
@@ -195,6 +199,9 @@ MATCH_PLAYERS_SCHEMA = pa.schema(
         pa.field("slot_in_side", pa.int16(), nullable=False),
         pa.field("player_id", pa.int64(), nullable=False),
         pa.field("hero_id", pa.int32(), nullable=False),
+        pa.field("position", pa.string(), nullable=True),
+        pa.field("lane", pa.string(), nullable=True),
+        pa.field("role", pa.string(), nullable=True),
     ]
 )
 
@@ -240,6 +247,13 @@ def _enum_value(value: Any) -> str:
     if isinstance(value, Enum):
         return value.value
     return str(value)
+
+
+def _optional_enum_value(value: Any) -> str | None:
+    """Like `_enum_value`, but NULL stays NULL."""
+    if value is None:
+        return None
+    return _enum_value(value)
 
 
 def _pivot_player_slots(
@@ -384,7 +398,9 @@ def build_match_players_table(
     One row per canonical player. `team_id` is taken from the parent
     `matches` row (`radiant_team_id` / `dire_team_id` according to
     `side`), never from raw STRATZ player objects. `slot_in_side` is
-    lobby order and is not rewritten as a Dota position.
+    lobby order and is not rewritten as a Dota position. Observed
+    `position` / `lane` / `role` are copied as nullable strings;
+    missing keys become NULL and are never inferred.
     """
     teams_by_match: dict[int, dict[str, int]] = {}
     for row in match_rows:
@@ -420,6 +436,9 @@ def build_match_players_table(
                 "slot_in_side": int(row["slot_in_side"]),
                 "player_id": int(row["player_id"]),
                 "hero_id": int(hero_id),
+                "position": _optional_enum_value(row.get("position")),
+                "lane": _optional_enum_value(row.get("lane")),
+                "role": _optional_enum_value(row.get("role")),
             }
         )
 
@@ -511,7 +530,9 @@ def validate_match_players_table(
     10 rows per match, 5 per side, non-null ids, unique players, unique
     heroes per side, `team_id` derived from the parent match side, and
     per-side hero set equal to the successful PICK set. Does not treat
-    `slot_in_side` as Dota position 1-5.
+    `slot_in_side` as Dota position 1-5. Observed `position`/`lane`/
+    `role` may be null or UNKNOWN; duplicate/missing 1–5 assignments
+    are not repaired here.
     """
     match_ids = match_players_table.column("match_id").to_pylist()
     sides = match_players_table.column("side").to_pylist()

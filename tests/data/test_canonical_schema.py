@@ -19,6 +19,9 @@ from dota_predictor.data.canonical_schema import (
     DraftAction,
     DraftEvent,
     InformationAvailability,
+    MatchLane,
+    MatchPlayerPosition,
+    MatchPlayerRole,
     Side,
 )
 
@@ -124,6 +127,12 @@ def test_draft_order_is_preserved_not_resorted() -> None:
         ("draft_events", InformationAvailability.DRAFT),
         ("radiant_win", InformationAvailability.POST_MATCH),
         ("duration_seconds", InformationAvailability.POST_MATCH),
+        ("radiant_positions", InformationAvailability.POST_MATCH),
+        ("radiant_lanes", InformationAvailability.POST_MATCH),
+        ("radiant_roles", InformationAvailability.POST_MATCH),
+        ("dire_positions", InformationAvailability.POST_MATCH),
+        ("dire_lanes", InformationAvailability.POST_MATCH),
+        ("dire_roles", InformationAvailability.POST_MATCH),
     ],
 )
 def test_information_availability_classification(
@@ -338,3 +347,77 @@ def test_final_hero_ids_derived_from_draft_events_in_pick_order() -> None:
     assert match.dire_final_hero_ids == expected_dire
     assert len(match.radiant_final_hero_ids) == 5
     assert len(match.dire_final_hero_ids) == 5
+
+
+UNIQUE_POSITIONS = (
+    MatchPlayerPosition.POSITION_1,
+    MatchPlayerPosition.POSITION_2,
+    MatchPlayerPosition.POSITION_3,
+    MatchPlayerPosition.POSITION_4,
+    MatchPlayerPosition.POSITION_5,
+)
+UNIQUE_LANES = (
+    MatchLane.SAFE_LANE,
+    MatchLane.MID_LANE,
+    MatchLane.OFF_LANE,
+    MatchLane.OFF_LANE,
+    MatchLane.SAFE_LANE,
+)
+UNIQUE_ROLES = (
+    MatchPlayerRole.CORE,
+    MatchPlayerRole.CORE,
+    MatchPlayerRole.CORE,
+    MatchPlayerRole.LIGHT_SUPPORT,
+    MatchPlayerRole.HARD_SUPPORT,
+)
+
+
+def test_missing_position_metadata_does_not_fail_canonicalization() -> None:
+    match = make_match()
+    assert match.radiant_positions == (None, None, None, None, None)
+    assert match.dire_lanes == (None, None, None, None, None)
+    assert match.radiant_roles == (None, None, None, None, None)
+
+
+def test_unknown_position_is_preserved_and_not_coerced() -> None:
+    positions = (
+        MatchPlayerPosition.POSITION_1,
+        MatchPlayerPosition.UNKNOWN,
+        MatchPlayerPosition.POSITION_3,
+        MatchPlayerPosition.POSITION_4,
+        MatchPlayerPosition.POSITION_5,
+    )
+    match = make_match(radiant_positions=positions)
+    assert match.radiant_positions[1] is MatchPlayerPosition.UNKNOWN
+    assert match.radiant_positions[1] is not None
+
+
+def test_unique_explicit_1_to_5_assignment_is_valid() -> None:
+    match = make_match(
+        radiant_positions=UNIQUE_POSITIONS,
+        radiant_lanes=UNIQUE_LANES,
+        radiant_roles=UNIQUE_ROLES,
+        dire_positions=UNIQUE_POSITIONS,
+        dire_lanes=UNIQUE_LANES,
+        dire_roles=UNIQUE_ROLES,
+    )
+    assert match.radiant_positions == UNIQUE_POSITIONS
+    assert match.dire_positions == UNIQUE_POSITIONS
+
+
+def test_duplicate_and_missing_positions_are_not_repaired() -> None:
+    duplicates = (
+        MatchPlayerPosition.POSITION_1,
+        MatchPlayerPosition.POSITION_1,
+        MatchPlayerPosition.POSITION_3,
+        None,
+        MatchPlayerPosition.UNKNOWN,
+    )
+    match = make_match(radiant_positions=duplicates, dire_positions=duplicates)
+    assert match.radiant_positions == duplicates
+    assert match.dire_positions.count(MatchPlayerPosition.POSITION_1) == 2
+
+
+def test_rejects_wrong_position_tuple_length() -> None:
+    with pytest.raises(CanonicalMatchError, match="exactly 5 entries"):
+        make_match(radiant_positions=(MatchPlayerPosition.POSITION_1,))
