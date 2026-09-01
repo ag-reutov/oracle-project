@@ -839,6 +839,11 @@ def run_slice8_player_hero_gating_benchmark(
     assert_slice7_slice8_identity(
         assembly.slice7, assembly, config=resolved
     )
+    from dota_predictor.training.slice9_frozen_holdout import (
+        assert_development_frame_excludes_holdout,
+    )
+
+    assert_development_frame_excludes_holdout(assembly.dataset.context)
     folds = resolve_walk_forward_folds(assembly.dataset, config=resolved)
     preprocessing_spec = PreprocessingSpec()
     spec_by_name = {spec.name: spec for spec in SLICE8_META_PLAYER_HERO_SPECS}

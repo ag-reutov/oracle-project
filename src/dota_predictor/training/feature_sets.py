@@ -65,6 +65,11 @@ __all__ = [
     "SLICE8_ROLE_CONTEXT_MAIN_COLUMNS",
     "SLICE8_ROLE_INTERACTION_COLUMNS",
     "SLICE8_STATIC_SPECS",
+    "SLICE9_CANDIDATE_SPEC",
+    "SLICE9_CANDIDATE_SPEC_NAME",
+    "SLICE9_FROZEN_SPECS",
+    "SLICE9_REFERENCE_SPEC",
+    "SLICE9_REFERENCE_SPEC_NAME",
     "TEAM_HERO_COMPARISON_COLUMNS",
     "BlockAblationSpec",
     "slice8_interaction_column",
@@ -389,4 +394,24 @@ SLICE8_META_PLAYER_HERO_SPECS: tuple[BlockAblationSpec, ...] = (
         label="Fold-selected Career gate",
         feature_columns=ELO_PLUS_PLAYER_HERO_COLUMNS,
     ),
+)
+
+
+# Slice 9 frozen candidate. Elo + unconditional Career Player × Hero,
+# already named in Slices 7/8. No new columns, gates, or interactions.
+SLICE9_REFERENCE_SPEC_NAME = "logistic_elo_only"
+SLICE9_CANDIDATE_SPEC_NAME = SLICE8_CAREER_SPEC_NAME
+SLICE9_REFERENCE_SPEC = BlockAblationSpec(
+    name=SLICE9_REFERENCE_SPEC_NAME,
+    label="Elo only",
+    feature_columns=ELO_ONLY_FEATURE_COLUMNS,
+)
+SLICE9_CANDIDATE_SPEC = BlockAblationSpec(
+    name=SLICE9_CANDIDATE_SPEC_NAME,
+    label="Elo + career Player × Hero",
+    feature_columns=ELO_PLUS_PLAYER_HERO_COLUMNS,
+)
+SLICE9_FROZEN_SPECS: tuple[BlockAblationSpec, ...] = (
+    SLICE9_REFERENCE_SPEC,
+    SLICE9_CANDIDATE_SPEC,
 )

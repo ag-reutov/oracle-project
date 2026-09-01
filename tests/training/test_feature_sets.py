@@ -42,6 +42,11 @@ from dota_predictor.training.feature_sets import (
     SLICE8_CONTEXT_COLUMNS,
     SLICE8_INTERACTION_COLUMNS,
     SLICE8_META_PLAYER_HERO_SPECS,
+    SLICE9_CANDIDATE_SPEC,
+    SLICE9_CANDIDATE_SPEC_NAME,
+    SLICE9_FROZEN_SPECS,
+    SLICE9_REFERENCE_SPEC,
+    SLICE9_REFERENCE_SPEC_NAME,
     TEAM_HERO_COMPARISON_COLUMNS,
 )
 
@@ -263,6 +268,30 @@ def test_slice8_specs_are_named_blocks_not_in_production_or_slice7() -> None:
             assert column not in spec.feature_columns
     existing_names = [spec.name for spec in POST_DRAFT_BLOCK_ABLATION_SPECS]
     assert existing_names == [
+        "logistic_elo_only",
+        "logistic_elo_plus_player_hero",
+        "logistic_elo_plus_team_hero",
+        "logistic_elo_plus_hero_meta",
+        "logistic_elo_plus_player_and_team_hero",
+        "logistic_elo_plus_all_three",
+    ]
+
+
+def test_slice9_frozen_specs_are_unconditional_elo_plus_career() -> None:
+    assert SLICE9_REFERENCE_SPEC_NAME == "logistic_elo_only"
+    assert SLICE9_CANDIDATE_SPEC_NAME == "logistic_elo_plus_player_hero"
+    assert SLICE9_REFERENCE_SPEC.feature_columns == ELO_ONLY_FEATURE_COLUMNS
+    assert SLICE9_CANDIDATE_SPEC.feature_columns == ELO_PLUS_PLAYER_HERO_COLUMNS
+    assert SLICE9_FROZEN_SPECS == (SLICE9_REFERENCE_SPEC, SLICE9_CANDIDATE_SPEC)
+    extra = set(SLICE9_CANDIDATE_SPEC.feature_columns) - set(
+        ELO_ONLY_FEATURE_COLUMNS
+    )
+    assert extra.isdisjoint(FEATURE_COLUMNS)
+    assert extra.isdisjoint(ALL_FEATURE_COLUMNS)
+    assert extra.isdisjoint(SLICE8_CONTEXT_COLUMNS)
+    assert extra.isdisjoint(SLICE8_INTERACTION_COLUMNS)
+    assert not any("win_rate" in column for column in extra)
+    assert [spec.name for spec in POST_DRAFT_BLOCK_ABLATION_SPECS] == [
         "logistic_elo_only",
         "logistic_elo_plus_player_hero",
         "logistic_elo_plus_team_hero",
