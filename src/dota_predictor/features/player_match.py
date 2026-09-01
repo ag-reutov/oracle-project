@@ -43,8 +43,8 @@ must not be selected as PRE_DRAFT or POST_DRAFT features of the same
 match. Aggregating historical `won` over strictly earlier matches is
 valid historical state for the current match. The current row's `won`
 is a fact about that match and is never mixed into `prior_*` /
-`version_prior_*` metrics. This layer does not yet compute
-position-dependent historical metrics.
+`version_prior_*` metrics. Position-dependent historical metrics live in
+`features.player_position` and also use only strictly earlier matches.
 
 NULL semantics
 --------------

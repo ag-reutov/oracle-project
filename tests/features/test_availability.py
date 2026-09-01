@@ -16,6 +16,7 @@ from dota_predictor.features.availability import (
     MATCH_PLAYERS_COLUMN_AVAILABILITY,
     MATCHES_COLUMN_AVAILABILITY,
     PLAYER_MATCH_COLUMN_AVAILABILITY,
+    PLAYER_POSITION_STATE_COLUMN_AVAILABILITY,
     PROVENANCE_COLUMNS,
     FeatureAvailabilityError,
     SnapshotStage,
@@ -272,6 +273,7 @@ def test_observed_position_lane_role_are_post_match_not_current_features() -> No
     for view, availability in (
         ("match_players", MATCH_PLAYERS_COLUMN_AVAILABILITY),
         ("player_match", PLAYER_MATCH_COLUMN_AVAILABILITY),
+        ("player_position_state", PLAYER_POSITION_STATE_COLUMN_AVAILABILITY),
     ):
         for column in ("position", "lane", "role"):
             assert availability[column] == InformationAvailability.POST_MATCH
@@ -306,3 +308,30 @@ def test_slot_in_side_remains_pre_draft_and_is_not_position() -> None:
     assert "position" not in columns_allowed_for_stage(
         "match_players", SnapshotStage.PRE_DRAFT
     )
+
+
+def test_historical_position_metrics_are_pre_draft_current_position_is_not() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert (
+        PLAYER_POSITION_STATE_COLUMN_AVAILABILITY["position"]
+        == InformationAvailability.POST_MATCH
+    )
+    assert (
+        PLAYER_POSITION_STATE_COLUMN_AVAILABILITY["prior_games_position_1"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    pre_draft = columns_allowed_for_stage(
+        "player_position_state", SnapshotStage.PRE_DRAFT
+    )
+    assert "prior_games_position_1" in pre_draft
+    assert "historical_modal_position" in pre_draft
+    assert "recent_position_stability" in pre_draft
+    assert "position" not in pre_draft
+    assert "won" not in pre_draft
+    with pytest.raises(FeatureAvailabilityError, match="position"):
+        assert_columns_allowed_for_stage(
+            "player_position_state",
+            SnapshotStage.PRE_DRAFT,
+            ["player_id", "position"],
+        )

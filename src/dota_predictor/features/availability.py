@@ -34,6 +34,7 @@ from collections.abc import Iterable
 from enum import Enum
 
 from dota_predictor.data.canonical_schema import InformationAvailability
+from dota_predictor.features.player_position import PLAYER_POSITION_STATE_METRIC_COLUMNS
 
 __all__ = [
     "DRAFT_EVENTS_COLUMN_AVAILABILITY",
@@ -42,6 +43,7 @@ __all__ = [
     "MATCHES_COLUMN_AVAILABILITY",
     "MATCH_PLAYERS_COLUMN_AVAILABILITY",
     "PLAYER_MATCH_COLUMN_AVAILABILITY",
+    "PLAYER_POSITION_STATE_COLUMN_AVAILABILITY",
     "PROVENANCE_COLUMNS",
     "STAGE_ALLOWED_AVAILABILITY",
     "FeatureAvailabilityError",
@@ -179,6 +181,20 @@ PLAYER_MATCH_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "role": InformationAvailability.POST_MATCH,
 }
 
+# Derived player × position historical state. Current-row `position` /
+# `lane` / `role` remain POST_MATCH parse labels. Aggregates over
+# strictly earlier explicit positions are PRE_DRAFT historical state for
+# the current match and must not be confused with expected current
+# position. They are not training features until a later slice selects
+# them into a snapshot.
+PLAYER_POSITION_STATE_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    **PLAYER_MATCH_COLUMN_AVAILABILITY,
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in PLAYER_POSITION_STATE_METRIC_COLUMNS
+    },
+}
+
 # Column availability for the optional `heroes` reference view. This is
 # static catalog metadata (id -> display name). It does not reveal which
 # hero a player chose in a match: `match_players.hero_id` and
@@ -203,6 +219,7 @@ _VIEW_COLUMN_AVAILABILITY: dict[str, dict[str, InformationAvailability]] = {
     "draft_events": DRAFT_EVENTS_COLUMN_AVAILABILITY,
     "match_players": MATCH_PLAYERS_COLUMN_AVAILABILITY,
     "player_match": PLAYER_MATCH_COLUMN_AVAILABILITY,
+    "player_position_state": PLAYER_POSITION_STATE_COLUMN_AVAILABILITY,
     "heroes": HEROES_COLUMN_AVAILABILITY,
     "game_versions": GAME_VERSIONS_COLUMN_AVAILABILITY,
 }
