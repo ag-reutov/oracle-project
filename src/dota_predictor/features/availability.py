@@ -35,6 +35,7 @@ from enum import Enum
 
 from dota_predictor.data.canonical_schema import InformationAvailability
 from dota_predictor.features.expected_position import EXPECTED_POSITION_EVIDENCE_COLUMNS
+from dota_predictor.features.hero_state import HERO_STATE_METRIC_COLUMNS
 from dota_predictor.features.player_position import PLAYER_POSITION_STATE_METRIC_COLUMNS
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "EXPECTED_POSITION_COLUMN_AVAILABILITY",
     "GAME_VERSIONS_COLUMN_AVAILABILITY",
     "HEROES_COLUMN_AVAILABILITY",
+    "HERO_STATE_COLUMN_AVAILABILITY",
     "MATCHES_COLUMN_AVAILABILITY",
     "MATCH_PLAYERS_COLUMN_AVAILABILITY",
     "PLAYER_MATCH_COLUMN_AVAILABILITY",
@@ -215,6 +217,23 @@ EXPECTED_POSITION_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "observed_position": InformationAvailability.POST_MATCH,
 }
 
+# Expanding hero meta state (Slice 5). Catalog `hero_id` is PRE_DRAFT
+# identity of the hero being described, not the current match's pick.
+# Aggregates over strictly earlier drafts/results/observed positions are
+# PRE_DRAFT historical state for the current match. This relation does
+# not expose the current match result or current observed positions.
+HERO_STATE_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    "match_id": InformationAvailability.PRE_DRAFT,
+    "start_time": InformationAvailability.PRE_DRAFT,
+    "game_version_id": InformationAvailability.PRE_DRAFT,
+    "hero_id": InformationAvailability.PRE_DRAFT,
+    "hero_name": InformationAvailability.PRE_DRAFT,
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in HERO_STATE_METRIC_COLUMNS
+    },
+}
+
 # Column availability for the optional `heroes` reference view. This is
 # static catalog metadata (id -> display name). It does not reveal which
 # hero a player chose in a match: `match_players.hero_id` and
@@ -241,6 +260,7 @@ _VIEW_COLUMN_AVAILABILITY: dict[str, dict[str, InformationAvailability]] = {
     "player_match": PLAYER_MATCH_COLUMN_AVAILABILITY,
     "player_position_state": PLAYER_POSITION_STATE_COLUMN_AVAILABILITY,
     "expected_position": EXPECTED_POSITION_COLUMN_AVAILABILITY,
+    "hero_state": HERO_STATE_COLUMN_AVAILABILITY,
     "heroes": HEROES_COLUMN_AVAILABILITY,
     "game_versions": GAME_VERSIONS_COLUMN_AVAILABILITY,
 }

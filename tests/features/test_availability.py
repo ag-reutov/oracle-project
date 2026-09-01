@@ -13,6 +13,7 @@ from dota_predictor.features.availability import (
     DRAFT_EVENTS_COLUMN_AVAILABILITY,
     EXPECTED_POSITION_COLUMN_AVAILABILITY,
     GAME_VERSIONS_COLUMN_AVAILABILITY,
+    HERO_STATE_COLUMN_AVAILABILITY,
     HEROES_COLUMN_AVAILABILITY,
     MATCH_PLAYERS_COLUMN_AVAILABILITY,
     MATCHES_COLUMN_AVAILABILITY,
@@ -24,6 +25,7 @@ from dota_predictor.features.availability import (
     assert_columns_allowed_for_stage,
     columns_allowed_for_stage,
 )
+from dota_predictor.features.hero_state import HERO_STATE_METRIC_COLUMNS
 
 POST_MATCH_MATCHES_COLUMNS = {"radiant_win", "duration_seconds"}
 DRAFT_ONLY_COLUMNS = {"sequence", "action", "side", "hero_id", "was_successful"}
@@ -361,3 +363,46 @@ def test_expected_position_is_pre_draft_observed_position_is_not() -> None:
             SnapshotStage.PRE_DRAFT,
             ["player_id", "observed_position"],
         )
+
+
+def test_hero_state_metrics_are_pre_draft_and_do_not_expose_current_outcome() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert (
+        HERO_STATE_COLUMN_AVAILABILITY["hero_id"] == InformationAvailability.PRE_DRAFT
+    )
+    assert (
+        HERO_STATE_COLUMN_AVAILABILITY["hero_prior_matches"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    assert (
+        HERO_STATE_COLUMN_AVAILABILITY["hero_position_1_share"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    for column in (
+        "radiant_win",
+        "won",
+        "position",
+        "observed_position",
+        "expected_position",
+    ):
+        assert column not in HERO_STATE_COLUMN_AVAILABILITY
+
+    pre_draft = columns_allowed_for_stage("hero_state", SnapshotStage.PRE_DRAFT)
+    post_draft = columns_allowed_for_stage("hero_state", SnapshotStage.POST_DRAFT)
+    for column in HERO_STATE_METRIC_COLUMNS:
+        assert column in pre_draft
+        assert column in post_draft
+        assert (
+            HERO_STATE_COLUMN_AVAILABILITY[column]
+            == InformationAvailability.PRE_DRAFT
+        )
+    assert "hero_id" in pre_draft
+    assert "hero_name" in pre_draft
+
+    # Existing current-match restrictions are not loosened.
+    assert MATCH_PLAYERS_COLUMN_AVAILABILITY["hero_id"] == InformationAvailability.DRAFT
+    assert (
+        MATCH_PLAYERS_COLUMN_AVAILABILITY["position"]
+        == InformationAvailability.POST_MATCH
+    )
