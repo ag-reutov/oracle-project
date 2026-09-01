@@ -280,6 +280,24 @@ def _game_versions_registered(store: FeatureDuckDBConnection) -> bool:
     return GAME_VERSIONS_VIEW in tables
 
 
+def _count_zeros(series: pd.Series) -> int:
+    """Observed zeros only; NULL is not treated as zero history."""
+    return int((series == 0).sum())
+
+
+def _side_mean(
+    players: pd.DataFrame, *, value_column: str, side: str
+) -> pd.DataFrame:
+    name = f"{side.lower()}_mean_{value_column}"
+    return (
+        players.loc[players["side"] == side]
+        .groupby(MATCH_ID_COLUMN, sort=False)[value_column]
+        .mean()
+        .rename(name)
+        .reset_index()
+    )
+
+
 def _match_diagnostics(players: pd.DataFrame) -> pd.DataFrame:
     """Match-grain summaries of Slice 6 state for conditional evaluation."""
     grouped = players.groupby(MATCH_ID_COLUMN, sort=False)
@@ -295,7 +313,28 @@ def _match_diagnostics(players: pd.DataFrame) -> pd.DataFrame:
             "player_hero_recent_role_compatibility",
             "mean",
         ),
+        mean_player_share_at_expected_position=(
+            "player_hero_share_at_expected_position",
+            "mean",
+        ),
+        mean_hero_meta_share_at_expected_position=(
+            "hero_meta_share_at_expected_position",
+            "mean",
+        ),
+        n_zero_same_version_players=(
+            "player_hero_same_version_matches",
+            _count_zeros,
+        ),
     ).reset_index()
+    radiant_career = _side_mean(
+        players, value_column="prior_games_on_hero", side="RADIANT"
+    )
+    dire_career = _side_mean(
+        players, value_column="prior_games_on_hero", side="DIRE"
+    )
+    frame = frame.merge(radiant_career, on=MATCH_ID_COLUMN, how="left").merge(
+        dire_career, on=MATCH_ID_COLUMN, how="left"
+    )
     frame["career_sample_bucket"] = [
         assign_career_sample_bucket(value)
         for value in frame["mean_prior_games_on_hero"].fillna(0.0)

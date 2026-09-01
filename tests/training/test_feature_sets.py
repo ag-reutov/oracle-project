@@ -39,6 +39,9 @@ from dota_predictor.training.feature_sets import (
     PLAYER_HERO_COMPARISON_COLUMNS,
     POST_DRAFT_BLOCK_ABLATION_SPECS,
     SLICE7_META_PLAYER_HERO_SPECS,
+    SLICE8_CONTEXT_COLUMNS,
+    SLICE8_INTERACTION_COLUMNS,
+    SLICE8_META_PLAYER_HERO_SPECS,
     TEAM_HERO_COMPARISON_COLUMNS,
 )
 
@@ -226,3 +229,44 @@ def test_slice7_specs_are_named_blocks_not_in_production_or_existing_ablation() 
         assert column not in ALL_FEATURE_COLUMNS
         for spec in POST_DRAFT_BLOCK_ABLATION_SPECS:
             assert column not in spec.feature_columns
+
+
+def test_slice8_specs_are_named_blocks_not_in_production_or_slice7() -> None:
+    by_name = {spec.name: spec for spec in SLICE8_META_PLAYER_HERO_SPECS}
+    assert list(by_name) == [
+        "logistic_elo_only",
+        "logistic_elo_plus_player_hero",
+        "logistic_elo_plus_career_evidence_interaction",
+        "logistic_elo_plus_career_role_interaction",
+        "logistic_elo_plus_career_patch_interaction",
+        "logistic_elo_plus_career_full_gating",
+        "logistic_elo_plus_player_hero_fold_gate",
+    ]
+    assert by_name["logistic_elo_plus_player_hero"].feature_columns == (
+        ELO_PLUS_PLAYER_HERO_COLUMNS
+    )
+    assert by_name["logistic_elo_plus_player_hero_fold_gate"].feature_columns == (
+        ELO_PLUS_PLAYER_HERO_COLUMNS
+    )
+    extra_columns = set(SLICE8_CONTEXT_COLUMNS) | set(SLICE8_INTERACTION_COLUMNS)
+    for spec in SLICE8_META_PLAYER_HERO_SPECS:
+        assert not any("win_rate" in column for column in spec.feature_columns)
+        extra = set(spec.feature_columns) - set(ELO_ONLY_FEATURE_COLUMNS)
+        assert extra.isdisjoint(FEATURE_COLUMNS)
+        assert extra.isdisjoint(ALL_FEATURE_COLUMNS)
+    for column in extra_columns:
+        assert column not in FEATURE_COLUMNS
+        assert column not in ALL_FEATURE_COLUMNS
+        for spec in POST_DRAFT_BLOCK_ABLATION_SPECS:
+            assert column not in spec.feature_columns
+        for spec in SLICE7_META_PLAYER_HERO_SPECS:
+            assert column not in spec.feature_columns
+    existing_names = [spec.name for spec in POST_DRAFT_BLOCK_ABLATION_SPECS]
+    assert existing_names == [
+        "logistic_elo_only",
+        "logistic_elo_plus_player_hero",
+        "logistic_elo_plus_team_hero",
+        "logistic_elo_plus_hero_meta",
+        "logistic_elo_plus_player_and_team_hero",
+        "logistic_elo_plus_all_three",
+    ]

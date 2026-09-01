@@ -51,8 +51,23 @@ __all__ = [
     "POST_DRAFT_BLOCK_ABLATION_SPECS",
     "SLICE7_CAREER_SPEC_NAME",
     "SLICE7_META_PLAYER_HERO_SPECS",
+    "SLICE8_CAREER_EVIDENCE_INTERACTION_COLUMNS",
+    "SLICE8_CAREER_EVIDENCE_MAIN_COLUMNS",
+    "SLICE8_CAREER_SPEC_NAME",
+    "SLICE8_CONTEXT_COLUMNS",
+    "SLICE8_FULL_CONTEXT_COLUMNS",
+    "SLICE8_GATE_SPEC_NAME",
+    "SLICE8_INTERACTION_COLUMNS",
+    "SLICE8_META_PLAYER_HERO_SPECS",
+    "SLICE8_PATCH_CONTEXT_MAIN_COLUMNS",
+    "SLICE8_PATCH_INTERACTION_COLUMNS",
+    "SLICE8_RAW_COUNT_CONTEXT_COLUMNS",
+    "SLICE8_ROLE_CONTEXT_MAIN_COLUMNS",
+    "SLICE8_ROLE_INTERACTION_COLUMNS",
+    "SLICE8_STATIC_SPECS",
     "TEAM_HERO_COMPARISON_COLUMNS",
     "BlockAblationSpec",
+    "slice8_interaction_column",
 ]
 
 
@@ -226,5 +241,152 @@ SLICE7_META_PLAYER_HERO_SPECS: tuple[BlockAblationSpec, ...] = (
         name="logistic_elo_plus_career_role",
         label="Elo + career Player × Hero + role",
         feature_columns=ELO_PLUS_CAREER_ROLE_COLUMNS,
+    ),
+)
+
+
+# Slice 8 evaluation specs. Continuous/contextual gating of Career
+# Player × Hero on top of Elo. Not production FEATURE_COLUMNS, not a
+# replacement for Slice 7 or POST_DRAFT_BLOCK_ABLATION_SPECS.
+SLICE8_CAREER_SPEC_NAME = SLICE7_CAREER_SPEC_NAME
+SLICE8_GATE_SPEC_NAME = "logistic_elo_plus_player_hero_fold_gate"
+
+SLICE8_RADIANT_MEAN_CAREER_GAMES = "slice8_radiant_mean_career_games"
+SLICE8_DIRE_MEAN_CAREER_GAMES = "slice8_dire_mean_career_games"
+SLICE8_MATCH_MEAN_CAREER_GAMES = "slice8_match_mean_career_games"
+SLICE8_MIN_CAREER_GAMES = "slice8_min_career_games"
+SLICE8_LOG1P_RADIANT_MEAN_CAREER_GAMES = "slice8_log1p_radiant_mean_career_games"
+SLICE8_LOG1P_DIRE_MEAN_CAREER_GAMES = "slice8_log1p_dire_mean_career_games"
+SLICE8_LOG1P_MATCH_MEAN_CAREER_GAMES = "slice8_log1p_match_mean_career_games"
+SLICE8_LOG1P_MIN_CAREER_GAMES = "slice8_log1p_min_career_games"
+SLICE8_MATCH_MEAN_SAME_VERSION_GAMES = "slice8_match_mean_same_version_games"
+SLICE8_LOG1P_MATCH_MEAN_SAME_VERSION_GAMES = (
+    "slice8_log1p_match_mean_same_version_games"
+)
+SLICE8_MATCH_ZERO_SAME_VERSION_PLAYERS = "slice8_match_zero_same_version_players"
+SLICE8_MATCH_MEAN_ROLE_COMPATIBILITY = "slice8_match_mean_role_compatibility"
+SLICE8_MATCH_MEAN_PLAYER_SHARE = (
+    "slice8_match_mean_player_share_at_expected_position"
+)
+SLICE8_MATCH_MEAN_HERO_META_SHARE = (
+    "slice8_match_mean_hero_meta_share_at_expected_position"
+)
+
+
+def slice8_interaction_column(signal: str, context: str) -> str:
+    """Name for one Career-signal × context product column."""
+    return f"{signal}__x__{context}"
+
+
+SLICE8_RAW_COUNT_CONTEXT_COLUMNS: tuple[str, ...] = (
+    SLICE8_RADIANT_MEAN_CAREER_GAMES,
+    SLICE8_DIRE_MEAN_CAREER_GAMES,
+    SLICE8_MATCH_MEAN_CAREER_GAMES,
+    SLICE8_MIN_CAREER_GAMES,
+    SLICE8_MATCH_MEAN_SAME_VERSION_GAMES,
+)
+SLICE8_CAREER_EVIDENCE_MAIN_COLUMNS: tuple[str, ...] = (
+    SLICE8_LOG1P_RADIANT_MEAN_CAREER_GAMES,
+    SLICE8_LOG1P_DIRE_MEAN_CAREER_GAMES,
+    SLICE8_LOG1P_MATCH_MEAN_CAREER_GAMES,
+    SLICE8_LOG1P_MIN_CAREER_GAMES,
+)
+SLICE8_ROLE_CONTEXT_MAIN_COLUMNS: tuple[str, ...] = (
+    SLICE8_MATCH_MEAN_ROLE_COMPATIBILITY,
+    SLICE8_MATCH_MEAN_PLAYER_SHARE,
+    SLICE8_MATCH_MEAN_HERO_META_SHARE,
+)
+SLICE8_PATCH_CONTEXT_MAIN_COLUMNS: tuple[str, ...] = (
+    SLICE8_LOG1P_MATCH_MEAN_SAME_VERSION_GAMES,
+    SLICE8_MATCH_ZERO_SAME_VERSION_PLAYERS,
+)
+SLICE8_CONTEXT_COLUMNS: tuple[str, ...] = (
+    *SLICE8_RAW_COUNT_CONTEXT_COLUMNS,
+    *SLICE8_CAREER_EVIDENCE_MAIN_COLUMNS,
+    *SLICE8_ROLE_CONTEXT_MAIN_COLUMNS,
+    *SLICE8_PATCH_CONTEXT_MAIN_COLUMNS,
+)
+SLICE8_CAREER_EVIDENCE_INTERACTION_COLUMNS: tuple[str, ...] = tuple(
+    slice8_interaction_column(column, SLICE8_LOG1P_MATCH_MEAN_CAREER_GAMES)
+    for column in PLAYER_HERO_COMPARISON_COLUMNS
+)
+SLICE8_ROLE_INTERACTION_COLUMNS: tuple[str, ...] = tuple(
+    slice8_interaction_column(column, SLICE8_MATCH_MEAN_ROLE_COMPATIBILITY)
+    for column in PLAYER_HERO_COMPARISON_COLUMNS
+)
+SLICE8_PATCH_INTERACTION_COLUMNS: tuple[str, ...] = tuple(
+    slice8_interaction_column(column, SLICE8_LOG1P_MATCH_MEAN_SAME_VERSION_GAMES)
+    for column in PLAYER_HERO_COMPARISON_COLUMNS
+)
+SLICE8_INTERACTION_COLUMNS: tuple[str, ...] = (
+    SLICE8_CAREER_EVIDENCE_INTERACTION_COLUMNS
+    + SLICE8_ROLE_INTERACTION_COLUMNS
+    + SLICE8_PATCH_INTERACTION_COLUMNS
+)
+SLICE8_FULL_CONTEXT_COLUMNS: tuple[str, ...] = (
+    SLICE8_CAREER_EVIDENCE_MAIN_COLUMNS
+    + SLICE8_ROLE_CONTEXT_MAIN_COLUMNS
+    + SLICE8_PATCH_CONTEXT_MAIN_COLUMNS
+    + SLICE8_INTERACTION_COLUMNS
+)
+
+ELO_PLUS_CAREER_EVIDENCE_INTERACTION_COLUMNS: tuple[str, ...] = (
+    ELO_PLUS_PLAYER_HERO_COLUMNS
+    + SLICE8_CAREER_EVIDENCE_MAIN_COLUMNS
+    + SLICE8_CAREER_EVIDENCE_INTERACTION_COLUMNS
+)
+ELO_PLUS_CAREER_ROLE_INTERACTION_COLUMNS: tuple[str, ...] = (
+    ELO_PLUS_PLAYER_HERO_COLUMNS
+    + SLICE8_ROLE_CONTEXT_MAIN_COLUMNS
+    + SLICE8_ROLE_INTERACTION_COLUMNS
+)
+ELO_PLUS_CAREER_PATCH_INTERACTION_COLUMNS: tuple[str, ...] = (
+    ELO_PLUS_PLAYER_HERO_COLUMNS
+    + SLICE8_PATCH_CONTEXT_MAIN_COLUMNS
+    + SLICE8_PATCH_INTERACTION_COLUMNS
+)
+ELO_PLUS_CAREER_FULL_GATING_COLUMNS: tuple[str, ...] = (
+    ELO_PLUS_PLAYER_HERO_COLUMNS + SLICE8_FULL_CONTEXT_COLUMNS
+)
+
+SLICE8_STATIC_SPECS: tuple[BlockAblationSpec, ...] = (
+    BlockAblationSpec(
+        name="logistic_elo_only",
+        label="Elo only",
+        feature_columns=ELO_ONLY_FEATURE_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_player_hero",
+        label="Elo + career Player × Hero",
+        feature_columns=ELO_PLUS_PLAYER_HERO_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_career_evidence_interaction",
+        label="Career + career-evidence interaction",
+        feature_columns=ELO_PLUS_CAREER_EVIDENCE_INTERACTION_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_career_role_interaction",
+        label="Career + role-context interaction",
+        feature_columns=ELO_PLUS_CAREER_ROLE_INTERACTION_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_career_patch_interaction",
+        label="Career + patch-local interaction",
+        feature_columns=ELO_PLUS_CAREER_PATCH_INTERACTION_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_career_full_gating",
+        label="Career + full gated context",
+        feature_columns=ELO_PLUS_CAREER_FULL_GATING_COLUMNS,
+    ),
+)
+
+SLICE8_META_PLAYER_HERO_SPECS: tuple[BlockAblationSpec, ...] = (
+    *SLICE8_STATIC_SPECS,
+    BlockAblationSpec(
+        name=SLICE8_GATE_SPEC_NAME,
+        label="Fold-selected Career gate",
+        feature_columns=ELO_PLUS_PLAYER_HERO_COLUMNS,
     ),
 )
