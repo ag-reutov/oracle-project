@@ -20,6 +20,8 @@ describe("Match terminal", () => {
     const match = getMatchById(8462011001)!;
     render(<MatchTerminal match={match} />);
 
+    expect(screen.getByText("Model win probability")).toBeInTheDocument();
+    expect(screen.queryByText("Odds")).not.toBeInTheDocument();
     expect(screen.getAllByText("47.2%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("52.8%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("2.12").length).toBeGreaterThan(0);
@@ -28,12 +30,16 @@ describe("Match terminal", () => {
 
   it("shows how the prediction moved through the draft", () => {
     const match = getMatchById(8462011001)!;
-    render(<MatchTerminal match={match} />);
+    const { container } = render(<MatchTerminal match={match} />);
 
+    expect(screen.getByText("PROBABILITY MOVEMENT")).toBeInTheDocument();
+    expect(container.querySelector("svg")).not.toBeNull();
     expect(screen.getAllByText("44.1%").length).toBeGreaterThan(0);
+    expect(screen.getByText("Pick 10")).toBeInTheDocument();
     expect(screen.getAllByText("+1.7").length).toBeGreaterThan(0);
     expect(screen.getAllByText("−2.3").length).toBeGreaterThan(0);
     expect(screen.getAllByText("+3.7").length).toBeGreaterThan(0);
+    expect(screen.getByText("Selected model checkpoints")).toBeInTheDocument();
     expect(
       screen.getByText("Why Team Falcons moved +3.7"),
     ).toBeInTheDocument();
@@ -68,5 +74,8 @@ describe("Draft board rendering", () => {
     expect(screen.getAllByLabelText("Empty pick")).toHaveLength(10);
     expect(screen.getByText("16:00 UTC")).toBeInTheDocument();
     expect(screen.getByText("Pre-game view")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Selected model checkpoints"),
+    ).not.toBeInTheDocument();
   });
 });

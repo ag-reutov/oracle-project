@@ -10,7 +10,10 @@ export function MatchTerminal({ match }: { match: Match }) {
     <article>
       <MatchHeader match={match} />
       <div className="mt-4 border-t border-line pt-3">
-        <ProbabilityHistory history={match.probabilityHistory} />
+        <ProbabilityHistory
+          history={match.probabilityHistory}
+          draft={match.draft}
+        />
       </div>
       <div className="mt-4 grid gap-6 border-t border-line pt-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <ModelSignals match={match} />

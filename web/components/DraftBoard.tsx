@@ -6,7 +6,7 @@ function Slot({ pick }: { pick: DraftPick | null }) {
     return (
       <li
         aria-label="Empty pick"
-        className="flex h-6 items-center font-mono text-[12px] text-dim"
+        className="flex h-7 items-center font-mono text-[13px] text-dim"
       >
         ?
       </li>
@@ -14,11 +14,11 @@ function Slot({ pick }: { pick: DraftPick | null }) {
   }
 
   return (
-    <li className="flex h-6 items-center gap-2">
-      <span className="w-4 font-mono text-[10px] text-dim">
+    <li className="flex h-7 items-center gap-2">
+      <span className="w-4 font-mono text-[11px] text-dim">
         {String(pick.order).padStart(2, "0")}
       </span>
-      <span className="truncate text-[12px] text-foreground">{pick.heroName}</span>
+      <span className="truncate text-[13px] text-foreground">{pick.heroName}</span>
     </li>
   );
 }

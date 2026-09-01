@@ -97,7 +97,7 @@ export const mockMatches: Match[] = [
       { label: "Pre-game", radiantProbability: 0.441 },
       { label: "Pick 2", radiantProbability: 0.458 },
       { label: "Pick 4", radiantProbability: 0.435 },
-      { label: "Pick 6", radiantProbability: 0.472 },
+      { label: "Pick 10", radiantProbability: 0.472 },
     ],
     signals: [
       {

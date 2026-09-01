@@ -51,7 +51,7 @@ export function ProbabilityDisplay({
 
   return (
     <div>
-      <div className="grid grid-cols-2 items-end gap-4 md:grid-cols-[1fr_auto_1fr]">
+      <div className="grid grid-cols-2 items-end gap-4">
         <div>
           <p className="text-[12px] tracking-[0.12em] text-muted uppercase">
             {radiant.name}
@@ -60,9 +60,6 @@ export function ProbabilityDisplay({
             {formatPercent(prediction.radiantProbability)}
           </p>
         </div>
-        <p className="hidden pb-1.5 text-center text-[10px] tracking-[0.24em] text-dim uppercase md:block">
-          Model
-        </p>
         <div className="text-right">
           <p className="text-[12px] tracking-[0.12em] text-muted uppercase">
             {dire.name}
@@ -72,19 +69,18 @@ export function ProbabilityDisplay({
           </p>
         </div>
       </div>
-      <div className="mt-2.5 flex h-px w-full overflow-hidden bg-fill">
-        <div className="bg-foreground/80" style={{ width: radiantWidth }} />
-        <div className="flex-1 bg-foreground/20" />
+      <div className="relative mt-2.5 flex h-px items-center overflow-visible bg-fill">
+        <div className="h-px bg-foreground/80" style={{ width: radiantWidth }} />
+        <p className="absolute left-1/2 -translate-x-1/2 bg-background px-2 text-[10px] tracking-[0.16em] text-dim uppercase">
+          Model win probability
+        </p>
       </div>
-      <div className="mt-2 grid grid-cols-2 items-baseline gap-4 font-mono text-[15px] text-foreground md:grid-cols-[1fr_auto_1fr]">
+      <div className="mt-2 grid grid-cols-2 items-baseline gap-4 font-mono text-[15px] text-foreground">
         <p>
           <span className="mr-2 text-[10px] tracking-[0.14em] text-dim uppercase">
             Fair
           </span>
           {formatOdds(prediction.fairOddsRadiant)}
-        </p>
-        <p className="hidden text-[10px] tracking-[0.16em] text-dim uppercase md:block">
-          Odds
         </p>
         <p className="text-right">
           <span className="mr-2 text-[10px] tracking-[0.14em] text-dim uppercase">
