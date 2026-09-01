@@ -103,6 +103,7 @@ STRATZ_ID_MAP: dict[str, tuple[int, str, str, bool, str | None]] = {
     "DreamLeague Season 29": (19696, "DreamLeague Season 29", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
     "BLAST SLAM VII": (19101, "BLAST SLAM VII", "PROFESSIONAL", False, "STRATZ league(id) null but match leagueId likely 19101; ingest blocked until API exposes league."),
     "Esports World Cup 2026": (19785, "Esports World Cup 2026", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
+    "The International 2026": (19719, "The International 2026", "INTERNATIONAL", True, "STRATZ league(id) null; ingest via match(id) after ID discovery."),
 }
 
 COVERED_BY: dict[str, str] = {
@@ -148,6 +149,7 @@ MATCH_ID_FETCH_LEAGUE_IDS = {
     19435,
     19543,
     19696,
+    19719,
     19785,
 }
 

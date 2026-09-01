@@ -412,11 +412,18 @@ leagues:
     fetch_mode: match_ids
     notes: "Liquipedia: Esports World Cup 2026 (2026). STRATZ league(id) null at verification; pending ingest."
 
+  - league_id: 19719
+    name: "The International 2026"
+    stratz_tier: "INTERNATIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    fetch_mode: match_ids
+    notes: "Liquipedia: The International 2026 (2026). STRATZ league(id) null; ingest via match(id) after ID discovery."
+
   # --- Liquipedia events without STRATZ league_id (add to STRATZ_ID_MAP) ---
   # PENDING: 2025 T2 Asian Champions League 2025
   # PENDING: 2026 T1 PGL Wallachia Season 9
   # PENDING: 2026 T1 BLAST SLAM IX
-  # PENDING: 2026 T1 The International 2026
 
   # --- Qualifiers (Liquipedia; excluded from ingestion) ---
 
