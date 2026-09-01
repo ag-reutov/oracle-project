@@ -10,6 +10,13 @@ wheels/
 # Virtual environments
 .venv/
 
+# Frontend
+web/node_modules/
+web/.next/
+web/out/
+web/coverage/
+web/*.tsbuildinfo
+
 # Environment
 .env
 
