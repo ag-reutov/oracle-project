@@ -269,8 +269,14 @@ def run_post_draft_walk_forward(
     dataset: ModelReadyDataset,
     *,
     config: WalkForwardConfig | None = None,
+    specs: tuple[BlockAblationSpec, ...] | None = None,
 ) -> WalkForwardReport:
-    """Walk-forward the six predefined Elo + draft-block specs.
+    """Walk-forward named Elo + feature-block specs.
+
+    Default specs are the six predefined post-draft blocks. Callers may
+    pass another spec tuple that still includes ``logistic_elo_only``.
+    Fold boundaries depend only on ``start_time`` and ``config``; they
+    do not depend on which columns are scored.
 
     Same ``PreprocessingSpec`` and per-spec validation ``C`` selection
     as ``run_post_draft_block_ablation``, repeated inside each fold.
@@ -280,7 +286,7 @@ def run_post_draft_walk_forward(
     from dota_predictor.training.preprocessing import PreprocessingSpec
 
     resolved = config if config is not None else DEFAULT_WALK_FORWARD_CONFIG
-    specs = POST_DRAFT_BLOCK_ABLATION_SPECS
+    specs = POST_DRAFT_BLOCK_ABLATION_SPECS if specs is None else specs
     spec_by_name = {spec.name: spec for spec in specs}
     if ELO_BLOCK_SPEC_NAME not in spec_by_name:
         raise ValueError(

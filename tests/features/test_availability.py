@@ -17,6 +17,8 @@ from dota_predictor.features.availability import (
     HEROES_COLUMN_AVAILABILITY,
     MATCH_PLAYERS_COLUMN_AVAILABILITY,
     MATCHES_COLUMN_AVAILABILITY,
+    PLAYER_HERO_META_COLUMN_AVAILABILITY,
+    PLAYER_HERO_POSITION_COLUMN_AVAILABILITY,
     PLAYER_MATCH_COLUMN_AVAILABILITY,
     PLAYER_POSITION_STATE_COLUMN_AVAILABILITY,
     PROVENANCE_COLUMNS,
@@ -26,6 +28,7 @@ from dota_predictor.features.availability import (
     columns_allowed_for_stage,
 )
 from dota_predictor.features.hero_state import HERO_STATE_METRIC_COLUMNS
+from dota_predictor.features.player_hero_meta import PLAYER_HERO_META_METRIC_COLUMNS
 
 POST_MATCH_MATCHES_COLUMNS = {"radiant_win", "duration_seconds"}
 DRAFT_ONLY_COLUMNS = {"sequence", "action", "side", "hero_id", "was_successful"}
@@ -365,6 +368,46 @@ def test_expected_position_is_pre_draft_observed_position_is_not() -> None:
         )
 
 
+def test_player_hero_position_metrics_are_draft_not_pre_draft() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert (
+        PLAYER_HERO_POSITION_COLUMN_AVAILABILITY["expected_position"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    assert (
+        PLAYER_HERO_POSITION_COLUMN_AVAILABILITY["hero_id"]
+        == InformationAvailability.DRAFT
+    )
+    assert (
+        PLAYER_HERO_POSITION_COLUMN_AVAILABILITY["prior_games_on_hero_at_expected_position"]
+        == InformationAvailability.DRAFT
+    )
+    assert (
+        PLAYER_HERO_POSITION_COLUMN_AVAILABILITY["observed_position"]
+        == InformationAvailability.POST_MATCH
+    )
+    pre_draft = columns_allowed_for_stage(
+        "player_hero_position", SnapshotStage.PRE_DRAFT
+    )
+    post_draft = columns_allowed_for_stage(
+        "player_hero_position", SnapshotStage.POST_DRAFT
+    )
+    assert "expected_position" in pre_draft
+    assert "hero_id" not in pre_draft
+    assert "prior_games_on_hero" not in pre_draft
+    assert "observed_position" not in pre_draft
+    assert "hero_id" in post_draft
+    assert "prior_games_on_hero_at_expected_position" in post_draft
+    assert "observed_position" not in post_draft
+    with pytest.raises(FeatureAvailabilityError, match="observed_position"):
+        assert_columns_allowed_for_stage(
+            "player_hero_position",
+            SnapshotStage.POST_DRAFT,
+            ["player_id", "hero_id", "observed_position"],
+        )
+
+
 def test_hero_state_metrics_are_pre_draft_and_do_not_expose_current_outcome() -> None:
     from dota_predictor.data.canonical_schema import InformationAvailability
 
@@ -406,3 +449,65 @@ def test_hero_state_metrics_are_pre_draft_and_do_not_expose_current_outcome() ->
         MATCH_PLAYERS_COLUMN_AVAILABILITY["position"]
         == InformationAvailability.POST_MATCH
     )
+    assert (
+        PLAYER_HERO_POSITION_COLUMN_AVAILABILITY["hero_id"]
+        == InformationAvailability.DRAFT
+    )
+
+
+def test_player_hero_meta_metrics_are_draft_not_pre_draft() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert (
+        PLAYER_HERO_META_COLUMN_AVAILABILITY["expected_position"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    assert PLAYER_HERO_META_COLUMN_AVAILABILITY["hero_id"] == InformationAvailability.DRAFT
+    assert (
+        PLAYER_HERO_META_COLUMN_AVAILABILITY["prior_games_on_hero"]
+        == InformationAvailability.DRAFT
+    )
+    assert (
+        PLAYER_HERO_META_COLUMN_AVAILABILITY["player_hero_recent_role_compatibility"]
+        == InformationAvailability.DRAFT
+    )
+    assert (
+        PLAYER_HERO_META_COLUMN_AVAILABILITY["hero_recent_50_contest_rate"]
+        == InformationAvailability.DRAFT
+    )
+    assert (
+        PLAYER_HERO_META_COLUMN_AVAILABILITY["observed_position"]
+        == InformationAvailability.POST_MATCH
+    )
+    pre_draft = columns_allowed_for_stage("player_hero_meta", SnapshotStage.PRE_DRAFT)
+    post_draft = columns_allowed_for_stage("player_hero_meta", SnapshotStage.POST_DRAFT)
+    assert "expected_position" in pre_draft
+    assert "hero_id" not in pre_draft
+    assert "prior_games_on_hero" not in pre_draft
+    assert "player_hero_recent_20_matches" not in pre_draft
+    assert "observed_position" not in pre_draft
+    assert "hero_id" in post_draft
+    assert "player_hero_recent_role_compatibility" in post_draft
+    assert "hero_position_share_at_expected_position" in post_draft
+    assert "observed_position" not in post_draft
+    with pytest.raises(FeatureAvailabilityError, match="observed_position"):
+        assert_columns_allowed_for_stage(
+            "player_hero_meta",
+            SnapshotStage.POST_DRAFT,
+            ["player_id", "hero_id", "observed_position"],
+        )
+    # Slice 5's own view is still PRE_DRAFT; Slice 6 does not loosen it.
+    assert (
+        HERO_STATE_COLUMN_AVAILABILITY["hero_recent_50_contest_rate"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    assert MATCH_PLAYERS_COLUMN_AVAILABILITY["hero_id"] == InformationAvailability.DRAFT
+    assert (
+        MATCH_PLAYERS_COLUMN_AVAILABILITY["position"]
+        == InformationAvailability.POST_MATCH
+    )
+    for column in PLAYER_HERO_META_METRIC_COLUMNS:
+        assert (
+            PLAYER_HERO_META_COLUMN_AVAILABILITY[column]
+            == InformationAvailability.DRAFT
+        )

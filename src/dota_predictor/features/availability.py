@@ -36,6 +36,10 @@ from enum import Enum
 from dota_predictor.data.canonical_schema import InformationAvailability
 from dota_predictor.features.expected_position import EXPECTED_POSITION_EVIDENCE_COLUMNS
 from dota_predictor.features.hero_state import HERO_STATE_METRIC_COLUMNS
+from dota_predictor.features.player_hero_meta import PLAYER_HERO_META_METRIC_COLUMNS
+from dota_predictor.features.player_hero_position import (
+    PLAYER_HERO_POSITION_METRIC_COLUMNS,
+)
 from dota_predictor.features.player_position import PLAYER_POSITION_STATE_METRIC_COLUMNS
 
 __all__ = [
@@ -46,6 +50,8 @@ __all__ = [
     "HERO_STATE_COLUMN_AVAILABILITY",
     "MATCHES_COLUMN_AVAILABILITY",
     "MATCH_PLAYERS_COLUMN_AVAILABILITY",
+    "PLAYER_HERO_META_COLUMN_AVAILABILITY",
+    "PLAYER_HERO_POSITION_COLUMN_AVAILABILITY",
     "PLAYER_MATCH_COLUMN_AVAILABILITY",
     "PLAYER_POSITION_STATE_COLUMN_AVAILABILITY",
     "PROVENANCE_COLUMNS",
@@ -217,6 +223,30 @@ EXPECTED_POSITION_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "observed_position": InformationAvailability.POST_MATCH,
 }
 
+# Player × Hero × expected-position state. Current `hero_id` is the DRAFT
+# lookup key. Historical Player × Hero metrics (unconditioned and at
+# expected position) are therefore DRAFT: they are only knowable once the
+# current hero is known. `expected_position` itself is PRE_DRAFT.
+# `observed_position` remains POST_MATCH evaluation-only.
+PLAYER_HERO_POSITION_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    "match_id": InformationAvailability.PRE_DRAFT,
+    "player_id": InformationAvailability.PRE_DRAFT,
+    "start_time": InformationAvailability.PRE_DRAFT,
+    "game_version_id": InformationAvailability.PRE_DRAFT,
+    "team_id": InformationAvailability.PRE_DRAFT,
+    "side": InformationAvailability.PRE_DRAFT,
+    "hero_id": InformationAvailability.DRAFT,
+    "hero_name": InformationAvailability.DRAFT,
+    "slot_in_side": InformationAvailability.PRE_DRAFT,
+    "expected_position": InformationAvailability.PRE_DRAFT,
+    "expected_position_method": InformationAvailability.PRE_DRAFT,
+    **{
+        column: InformationAvailability.DRAFT
+        for column in PLAYER_HERO_POSITION_METRIC_COLUMNS
+    },
+    "observed_position": InformationAvailability.POST_MATCH,
+}
+
 # Expanding hero meta state (Slice 5). Catalog `hero_id` is PRE_DRAFT
 # identity of the hero being described, not the current match's pick.
 # Aggregates over strictly earlier drafts/results/observed positions are
@@ -232,6 +262,31 @@ HERO_STATE_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
         column: InformationAvailability.PRE_DRAFT
         for column in HERO_STATE_METRIC_COLUMNS
     },
+}
+
+# Meta-relevant Player × Hero state (Slice 6). Historical Player × Hero
+# aggregates, Slice 5 hero meta, and Slice 3 expected_position are each
+# PRE_DRAFT *as ingredients*. The Slice 6 row is keyed by the current
+# drafted hero, so those joined metrics are DRAFT on this relation.
+# `expected_position` itself remains PRE_DRAFT. `observed_position`
+# remains POST_MATCH. Existing Slice 0–5 availability maps are unchanged.
+PLAYER_HERO_META_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    "match_id": InformationAvailability.PRE_DRAFT,
+    "player_id": InformationAvailability.PRE_DRAFT,
+    "start_time": InformationAvailability.PRE_DRAFT,
+    "game_version_id": InformationAvailability.PRE_DRAFT,
+    "team_id": InformationAvailability.PRE_DRAFT,
+    "side": InformationAvailability.PRE_DRAFT,
+    "hero_id": InformationAvailability.DRAFT,
+    "hero_name": InformationAvailability.DRAFT,
+    "slot_in_side": InformationAvailability.PRE_DRAFT,
+    "expected_position": InformationAvailability.PRE_DRAFT,
+    "expected_position_method": InformationAvailability.PRE_DRAFT,
+    **{
+        column: InformationAvailability.DRAFT
+        for column in PLAYER_HERO_META_METRIC_COLUMNS
+    },
+    "observed_position": InformationAvailability.POST_MATCH,
 }
 
 # Column availability for the optional `heroes` reference view. This is
@@ -260,7 +315,9 @@ _VIEW_COLUMN_AVAILABILITY: dict[str, dict[str, InformationAvailability]] = {
     "player_match": PLAYER_MATCH_COLUMN_AVAILABILITY,
     "player_position_state": PLAYER_POSITION_STATE_COLUMN_AVAILABILITY,
     "expected_position": EXPECTED_POSITION_COLUMN_AVAILABILITY,
+    "player_hero_position": PLAYER_HERO_POSITION_COLUMN_AVAILABILITY,
     "hero_state": HERO_STATE_COLUMN_AVAILABILITY,
+    "player_hero_meta": PLAYER_HERO_META_COLUMN_AVAILABILITY,
     "heroes": HEROES_COLUMN_AVAILABILITY,
     "game_versions": GAME_VERSIONS_COLUMN_AVAILABILITY,
 }

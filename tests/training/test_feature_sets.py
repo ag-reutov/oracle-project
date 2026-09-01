@@ -9,6 +9,13 @@ from dota_predictor.features.draft_profile import (
     DRAFT_PROFILE_PLAYER_METRIC_COLUMNS,
     DRAFT_PROFILE_TEAM_METRIC_COLUMNS,
 )
+from dota_predictor.features.player_hero_meta_comparison import (
+    SLICE7_COMPARISON_COLUMNS,
+    SLICE7_RECENT20_RATE_DIFF_COLUMNS,
+    SLICE7_ROLE_DIFF_COLUMNS,
+    SLICE7_SAME_VERSION_COUNT_DIFF_COLUMNS,
+    SLICE7_SAME_VERSION_RATE_DIFF_COLUMNS,
+)
 from dota_predictor.features.pre_draft_snapshot import (
     FEATURE_COLUMNS,
     PLAYER_HISTORY_FEATURE_COLUMNS,
@@ -31,6 +38,7 @@ from dota_predictor.training.feature_sets import (
     HISTORICAL_WITHOUT_ELO_COLUMNS,
     PLAYER_HERO_COMPARISON_COLUMNS,
     POST_DRAFT_BLOCK_ABLATION_SPECS,
+    SLICE7_META_PLAYER_HERO_SPECS,
     TEAM_HERO_COMPARISON_COLUMNS,
 )
 
@@ -149,3 +157,72 @@ def test_block_ablation_specs_match_predefined_elo_combinations() -> None:
     )
     for spec in POST_DRAFT_BLOCK_ABLATION_SPECS:
         assert set(spec.feature_columns).issubset(ELO_PLUS_DRAFT_COMPARISON_COLUMNS)
+
+
+def test_slice7_specs_are_named_blocks_not_in_production_or_existing_ablation() -> None:
+    by_name = {spec.name: spec for spec in SLICE7_META_PLAYER_HERO_SPECS}
+    assert list(by_name) == [
+        "logistic_elo_only",
+        "logistic_elo_plus_player_hero",
+        "logistic_elo_plus_same_version_volume",
+        "logistic_elo_plus_same_version_volume_performance",
+        "logistic_elo_plus_recent20_volume",
+        "logistic_elo_plus_recent20_volume_performance",
+        "logistic_elo_plus_role_meta",
+        "logistic_elo_plus_same_version_role",
+        "logistic_elo_plus_recent20_role",
+        "logistic_elo_plus_career_role",
+    ]
+    volume = by_name["logistic_elo_plus_same_version_volume"]
+    volume_wr = by_name["logistic_elo_plus_same_version_volume_performance"]
+    recent = by_name["logistic_elo_plus_recent20_volume"]
+    recent_wr = by_name["logistic_elo_plus_recent20_volume_performance"]
+    role = by_name["logistic_elo_plus_role_meta"]
+    combined = by_name["logistic_elo_plus_same_version_role"]
+    recent_role = by_name["logistic_elo_plus_recent20_role"]
+    career_role = by_name["logistic_elo_plus_career_role"]
+
+    assert volume.feature_columns == (
+        ELO_ONLY_FEATURE_COLUMNS + SLICE7_SAME_VERSION_COUNT_DIFF_COLUMNS
+    )
+    assert not any("win_rate" in column for column in volume.feature_columns)
+    assert volume_wr.feature_columns == (
+        volume.feature_columns + SLICE7_SAME_VERSION_RATE_DIFF_COLUMNS
+    )
+    assert not any("win_rate" in column for column in recent.feature_columns)
+    assert recent_wr.feature_columns == (
+        recent.feature_columns + SLICE7_RECENT20_RATE_DIFF_COLUMNS
+    )
+    assert role.feature_columns == (
+        ELO_ONLY_FEATURE_COLUMNS + SLICE7_ROLE_DIFF_COLUMNS
+    )
+    assert set(role.feature_columns) - set(ELO_ONLY_FEATURE_COLUMNS) == set(
+        SLICE7_ROLE_DIFF_COLUMNS
+    )
+    assert combined.feature_columns == (
+        volume_wr.feature_columns + SLICE7_ROLE_DIFF_COLUMNS
+    )
+    assert recent_role.feature_columns == (
+        recent_wr.feature_columns + SLICE7_ROLE_DIFF_COLUMNS
+    )
+    assert career_role.feature_columns == (
+        ELO_PLUS_PLAYER_HERO_COLUMNS + SLICE7_ROLE_DIFF_COLUMNS
+    )
+    for spec in SLICE7_META_PLAYER_HERO_SPECS:
+        extra = set(spec.feature_columns) - set(ELO_ONLY_FEATURE_COLUMNS)
+        assert extra.isdisjoint(FEATURE_COLUMNS)
+        assert extra.isdisjoint(ALL_FEATURE_COLUMNS)
+    existing_names = [spec.name for spec in POST_DRAFT_BLOCK_ABLATION_SPECS]
+    assert existing_names == [
+        "logistic_elo_only",
+        "logistic_elo_plus_player_hero",
+        "logistic_elo_plus_team_hero",
+        "logistic_elo_plus_hero_meta",
+        "logistic_elo_plus_player_and_team_hero",
+        "logistic_elo_plus_all_three",
+    ]
+    for column in SLICE7_COMPARISON_COLUMNS:
+        assert column not in FEATURE_COLUMNS
+        assert column not in ALL_FEATURE_COLUMNS
+        for spec in POST_DRAFT_BLOCK_ABLATION_SPECS:
+            assert column not in spec.feature_columns

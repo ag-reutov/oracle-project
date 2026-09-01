@@ -20,6 +20,13 @@ from dota_predictor.features.draft_profile import (
     DRAFT_PROFILE_PLAYER_METRIC_COLUMNS,
     DRAFT_PROFILE_TEAM_METRIC_COLUMNS,
 )
+from dota_predictor.features.player_hero_meta_comparison import (
+    SLICE7_RECENT20_COUNT_DIFF_COLUMNS,
+    SLICE7_RECENT20_RATE_DIFF_COLUMNS,
+    SLICE7_ROLE_DIFF_COLUMNS,
+    SLICE7_SAME_VERSION_COUNT_DIFF_COLUMNS,
+    SLICE7_SAME_VERSION_RATE_DIFF_COLUMNS,
+)
 from dota_predictor.features.pre_draft_snapshot import (
     FEATURE_COLUMNS,
     PLAYER_HISTORY_FEATURE_COLUMNS,
@@ -42,6 +49,8 @@ __all__ = [
     "HISTORICAL_WITHOUT_ELO_COLUMNS",
     "PLAYER_HERO_COMPARISON_COLUMNS",
     "POST_DRAFT_BLOCK_ABLATION_SPECS",
+    "SLICE7_CAREER_SPEC_NAME",
+    "SLICE7_META_PLAYER_HERO_SPECS",
     "TEAM_HERO_COMPARISON_COLUMNS",
     "BlockAblationSpec",
 ]
@@ -134,5 +143,88 @@ POST_DRAFT_BLOCK_ABLATION_SPECS: tuple[BlockAblationSpec, ...] = (
         name="logistic_elo_plus_all_three",
         label="Elo + all three",
         feature_columns=ELO_PLUS_ALL_THREE_COLUMNS,
+    ),
+)
+
+
+# Slice 7 evaluation specs. Named blocks on top of Elo. Not production
+# FEATURE_COLUMNS and not a replacement for POST_DRAFT_BLOCK_ABLATION_SPECS.
+SLICE7_CAREER_SPEC_NAME = "logistic_elo_plus_player_hero"
+
+ELO_PLUS_SAME_VERSION_VOLUME_COLUMNS: tuple[str, ...] = (
+    ELO_ONLY_FEATURE_COLUMNS + SLICE7_SAME_VERSION_COUNT_DIFF_COLUMNS
+)
+ELO_PLUS_SAME_VERSION_VOLUME_PERFORMANCE_COLUMNS: tuple[str, ...] = (
+    ELO_PLUS_SAME_VERSION_VOLUME_COLUMNS + SLICE7_SAME_VERSION_RATE_DIFF_COLUMNS
+)
+ELO_PLUS_RECENT20_VOLUME_COLUMNS: tuple[str, ...] = (
+    ELO_ONLY_FEATURE_COLUMNS + SLICE7_RECENT20_COUNT_DIFF_COLUMNS
+)
+ELO_PLUS_RECENT20_VOLUME_PERFORMANCE_COLUMNS: tuple[str, ...] = (
+    ELO_PLUS_RECENT20_VOLUME_COLUMNS + SLICE7_RECENT20_RATE_DIFF_COLUMNS
+)
+ELO_PLUS_ROLE_META_COLUMNS: tuple[str, ...] = (
+    ELO_ONLY_FEATURE_COLUMNS + SLICE7_ROLE_DIFF_COLUMNS
+)
+ELO_PLUS_SAME_VERSION_ROLE_COLUMNS: tuple[str, ...] = (
+    ELO_PLUS_SAME_VERSION_VOLUME_PERFORMANCE_COLUMNS + SLICE7_ROLE_DIFF_COLUMNS
+)
+ELO_PLUS_RECENT20_ROLE_COLUMNS: tuple[str, ...] = (
+    ELO_PLUS_RECENT20_VOLUME_PERFORMANCE_COLUMNS + SLICE7_ROLE_DIFF_COLUMNS
+)
+ELO_PLUS_CAREER_ROLE_COLUMNS: tuple[str, ...] = (
+    ELO_PLUS_PLAYER_HERO_COLUMNS + SLICE7_ROLE_DIFF_COLUMNS
+)
+
+SLICE7_META_PLAYER_HERO_SPECS: tuple[BlockAblationSpec, ...] = (
+    BlockAblationSpec(
+        name="logistic_elo_only",
+        label="Elo only",
+        feature_columns=ELO_ONLY_FEATURE_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_player_hero",
+        label="Elo + career Player × Hero",
+        feature_columns=ELO_PLUS_PLAYER_HERO_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_same_version_volume",
+        label="Elo + same-version volume",
+        feature_columns=ELO_PLUS_SAME_VERSION_VOLUME_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_same_version_volume_performance",
+        label="Elo + same-version volume + WR",
+        feature_columns=ELO_PLUS_SAME_VERSION_VOLUME_PERFORMANCE_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_recent20_volume",
+        label="Elo + recent-20 volume",
+        feature_columns=ELO_PLUS_RECENT20_VOLUME_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_recent20_volume_performance",
+        label="Elo + recent-20 volume + WR",
+        feature_columns=ELO_PLUS_RECENT20_VOLUME_PERFORMANCE_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_role_meta",
+        label="Elo + role/meta block",
+        feature_columns=ELO_PLUS_ROLE_META_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_same_version_role",
+        label="Elo + same-version + role",
+        feature_columns=ELO_PLUS_SAME_VERSION_ROLE_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_recent20_role",
+        label="Elo + recent-20 + role",
+        feature_columns=ELO_PLUS_RECENT20_ROLE_COLUMNS,
+    ),
+    BlockAblationSpec(
+        name="logistic_elo_plus_career_role",
+        label="Elo + career Player × Hero + role",
+        feature_columns=ELO_PLUS_CAREER_ROLE_COLUMNS,
     ),
 )
