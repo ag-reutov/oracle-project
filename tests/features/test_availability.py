@@ -17,6 +17,7 @@ from dota_predictor.features.availability import (
     HEROES_COLUMN_AVAILABILITY,
     MATCH_PLAYERS_COLUMN_AVAILABILITY,
     MATCHES_COLUMN_AVAILABILITY,
+    PLAYER_HERO_ELO_COLUMN_AVAILABILITY,
     PLAYER_HERO_META_COLUMN_AVAILABILITY,
     PLAYER_HERO_POSITION_COLUMN_AVAILABILITY,
     PLAYER_MATCH_COLUMN_AVAILABILITY,
@@ -28,6 +29,7 @@ from dota_predictor.features.availability import (
     columns_allowed_for_stage,
 )
 from dota_predictor.features.hero_state import HERO_STATE_METRIC_COLUMNS
+from dota_predictor.features.player_hero_elo import PLAYER_HERO_ELO_METRIC_COLUMNS
 from dota_predictor.features.player_hero_meta import PLAYER_HERO_META_METRIC_COLUMNS
 
 POST_MATCH_MATCHES_COLUMNS = {"radiant_win", "duration_seconds"}
@@ -509,5 +511,36 @@ def test_player_hero_meta_metrics_are_draft_not_pre_draft() -> None:
     for column in PLAYER_HERO_META_METRIC_COLUMNS:
         assert (
             PLAYER_HERO_META_COLUMN_AVAILABILITY[column]
+            == InformationAvailability.DRAFT
+        )
+
+
+def test_player_hero_elo_metrics_are_draft_not_pre_draft() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert PLAYER_HERO_ELO_COLUMN_AVAILABILITY["hero_id"] == InformationAvailability.DRAFT
+    assert (
+        PLAYER_HERO_ELO_COLUMN_AVAILABILITY["player_id"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    assert (
+        PLAYER_HERO_ELO_COLUMN_AVAILABILITY["prior_games_on_hero"]
+        == InformationAvailability.DRAFT
+    )
+    assert (
+        PLAYER_HERO_ELO_COLUMN_AVAILABILITY["shrunk_outcome_residual_on_hero"]
+        == InformationAvailability.DRAFT
+    )
+    pre_draft = columns_allowed_for_stage("player_hero_elo", SnapshotStage.PRE_DRAFT)
+    post_draft = columns_allowed_for_stage("player_hero_elo", SnapshotStage.POST_DRAFT)
+    assert "player_id" in pre_draft
+    assert "hero_id" not in pre_draft
+    assert "prior_games_on_hero" not in pre_draft
+    assert "mean_outcome_residual_on_hero" not in pre_draft
+    assert "hero_id" in post_draft
+    assert "shrunk_outcome_residual_on_hero" in post_draft
+    for column in PLAYER_HERO_ELO_METRIC_COLUMNS:
+        assert (
+            PLAYER_HERO_ELO_COLUMN_AVAILABILITY[column]
             == InformationAvailability.DRAFT
         )

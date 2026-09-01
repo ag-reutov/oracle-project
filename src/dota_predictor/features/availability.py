@@ -36,6 +36,7 @@ from enum import Enum
 from dota_predictor.data.canonical_schema import InformationAvailability
 from dota_predictor.features.expected_position import EXPECTED_POSITION_EVIDENCE_COLUMNS
 from dota_predictor.features.hero_state import HERO_STATE_METRIC_COLUMNS
+from dota_predictor.features.player_hero_elo import PLAYER_HERO_ELO_METRIC_COLUMNS
 from dota_predictor.features.player_hero_meta import PLAYER_HERO_META_METRIC_COLUMNS
 from dota_predictor.features.player_hero_position import (
     PLAYER_HERO_POSITION_METRIC_COLUMNS,
@@ -50,6 +51,7 @@ __all__ = [
     "HERO_STATE_COLUMN_AVAILABILITY",
     "MATCHES_COLUMN_AVAILABILITY",
     "MATCH_PLAYERS_COLUMN_AVAILABILITY",
+    "PLAYER_HERO_ELO_COLUMN_AVAILABILITY",
     "PLAYER_HERO_META_COLUMN_AVAILABILITY",
     "PLAYER_HERO_POSITION_COLUMN_AVAILABILITY",
     "PLAYER_MATCH_COLUMN_AVAILABILITY",
@@ -289,6 +291,27 @@ PLAYER_HERO_META_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "observed_position": InformationAvailability.POST_MATCH,
 }
 
+# Elo-adjusted Player × Hero (Slice 10). Current `hero_id` is the DRAFT
+# lookup key, so residual / shrinkage metrics are DRAFT even though the
+# Elo expected-win ingredient is PRE_DRAFT team state. Identity columns
+# other than the drafted hero remain PRE_DRAFT. This relation does not
+# expose the current match result. Existing Slice 0–9 maps are unchanged.
+PLAYER_HERO_ELO_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    "match_id": InformationAvailability.PRE_DRAFT,
+    "player_id": InformationAvailability.PRE_DRAFT,
+    "start_time": InformationAvailability.PRE_DRAFT,
+    "game_version_id": InformationAvailability.PRE_DRAFT,
+    "team_id": InformationAvailability.PRE_DRAFT,
+    "side": InformationAvailability.PRE_DRAFT,
+    "hero_id": InformationAvailability.DRAFT,
+    "hero_name": InformationAvailability.DRAFT,
+    "slot_in_side": InformationAvailability.PRE_DRAFT,
+    **{
+        column: InformationAvailability.DRAFT
+        for column in PLAYER_HERO_ELO_METRIC_COLUMNS
+    },
+}
+
 # Column availability for the optional `heroes` reference view. This is
 # static catalog metadata (id -> display name). It does not reveal which
 # hero a player chose in a match: `match_players.hero_id` and
@@ -318,6 +341,7 @@ _VIEW_COLUMN_AVAILABILITY: dict[str, dict[str, InformationAvailability]] = {
     "player_hero_position": PLAYER_HERO_POSITION_COLUMN_AVAILABILITY,
     "hero_state": HERO_STATE_COLUMN_AVAILABILITY,
     "player_hero_meta": PLAYER_HERO_META_COLUMN_AVAILABILITY,
+    "player_hero_elo": PLAYER_HERO_ELO_COLUMN_AVAILABILITY,
     "heroes": HEROES_COLUMN_AVAILABILITY,
     "game_versions": GAME_VERSIONS_COLUMN_AVAILABILITY,
 }

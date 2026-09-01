@@ -9,6 +9,9 @@ from dota_predictor.features.draft_profile import (
     DRAFT_PROFILE_PLAYER_METRIC_COLUMNS,
     DRAFT_PROFILE_TEAM_METRIC_COLUMNS,
 )
+from dota_predictor.features.player_hero_elo_comparison import (
+    PLAYER_HERO_ELO_COMPARISON_METRIC_COLUMNS,
+)
 from dota_predictor.features.player_hero_meta_comparison import (
     SLICE7_COMPARISON_COLUMNS,
     SLICE7_RECENT20_RATE_DIFF_COLUMNS,
@@ -299,3 +302,27 @@ def test_slice9_frozen_specs_are_unconditional_elo_plus_career() -> None:
         "logistic_elo_plus_player_and_team_hero",
         "logistic_elo_plus_all_three",
     ]
+
+
+def test_slice10_comparison_is_not_in_any_production_feature_set() -> None:
+    production = [
+        FEATURE_COLUMNS,
+        ALL_FEATURE_COLUMNS,
+        ELO_ONLY_FEATURE_COLUMNS,
+        ELO_PLUS_PLAYER_HERO_COLUMNS,
+        ELO_PLUS_TEAM_HERO_COLUMNS,
+        ELO_PLUS_HERO_META_COLUMNS,
+        ELO_PLUS_PLAYER_AND_TEAM_HERO_COLUMNS,
+        ELO_PLUS_ALL_THREE_COLUMNS,
+        PLAYER_HERO_COMPARISON_COLUMNS,
+        SLICE9_REFERENCE_SPEC.feature_columns,
+        SLICE9_CANDIDATE_SPEC.feature_columns,
+    ]
+    for spec in POST_DRAFT_BLOCK_ABLATION_SPECS:
+        production.append(spec.feature_columns)
+    for spec in SLICE7_META_PLAYER_HERO_SPECS:
+        production.append(spec.feature_columns)
+    for spec in SLICE8_META_PLAYER_HERO_SPECS:
+        production.append(spec.feature_columns)
+    for columns in production:
+        assert set(PLAYER_HERO_ELO_COMPARISON_METRIC_COLUMNS).isdisjoint(columns)
