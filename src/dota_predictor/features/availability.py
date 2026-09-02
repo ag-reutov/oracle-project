@@ -39,6 +39,13 @@ from dota_predictor.data.canonical_schema import (
 )
 from dota_predictor.features.expected_position import EXPECTED_POSITION_EVIDENCE_COLUMNS
 from dota_predictor.features.hero_state import HERO_STATE_METRIC_COLUMNS
+from dota_predictor.features.player_farming_comparison import (
+    FARMING_CAUSAL_B_COLUMN,
+    PLAYER_FARMING_COMPARISON_IDENTITY_COLUMNS,
+    PLAYER_FARMING_COMPARISON_METRIC_COLUMNS,
+    PLAYER_FARMING_STATE_FEATURE_COLUMNS,
+    PLAYER_FARMING_STATE_IDENTITY_COLUMNS,
+)
 from dota_predictor.features.player_hero_elo import PLAYER_HERO_ELO_METRIC_COLUMNS
 from dota_predictor.features.player_hero_meta import PLAYER_HERO_META_METRIC_COLUMNS
 from dota_predictor.features.player_hero_position import (
@@ -54,6 +61,8 @@ __all__ = [
     "HERO_STATE_COLUMN_AVAILABILITY",
     "MATCHES_COLUMN_AVAILABILITY",
     "MATCH_PLAYERS_COLUMN_AVAILABILITY",
+    "PLAYER_FARMING_COMPARISON_COLUMN_AVAILABILITY",
+    "PLAYER_FARMING_STATE_COLUMN_AVAILABILITY",
     "PLAYER_HERO_ELO_COLUMN_AVAILABILITY",
     "PLAYER_HERO_META_COLUMN_AVAILABILITY",
     "PLAYER_HERO_POSITION_COLUMN_AVAILABILITY",
@@ -301,6 +310,39 @@ PLAYER_HERO_META_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "observed_position": InformationAvailability.POST_MATCH,
 }
 
+# Historical player farming state (Slice 14/15). Prior shrunk B is
+# PRE_DRAFT: it is keyed by rostered `player_id` and strictly earlier
+# appearances, not the current drafted hero. Current `hero_id` remains
+# DRAFT identity if present. `farming_causal_b` uses this appearance's
+# last hits / duration / position and is POST_MATCH.
+PLAYER_FARMING_STATE_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in PLAYER_FARMING_STATE_IDENTITY_COLUMNS
+    },
+    "hero_id": InformationAvailability.DRAFT,
+    FARMING_CAUSAL_B_COLUMN: InformationAvailability.POST_MATCH,
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in PLAYER_FARMING_STATE_FEATURE_COLUMNS
+    },
+}
+
+# Match-level Radiant − Dire farming comparison (Slice 15). Side means
+# of prior farming state need only the ten rostered players, so every
+# comparison column is PRE_DRAFT. Current last hits and `hero_id` are
+# not comparison inputs.
+PLAYER_FARMING_COMPARISON_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in PLAYER_FARMING_COMPARISON_IDENTITY_COLUMNS
+    },
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in PLAYER_FARMING_COMPARISON_METRIC_COLUMNS
+    },
+}
+
 # Elo-adjusted Player × Hero (Slice 10). Current `hero_id` is the DRAFT
 # lookup key, so residual / shrinkage metrics are DRAFT even though the
 # Elo expected-win ingredient is PRE_DRAFT team state. Identity columns
@@ -352,6 +394,8 @@ _VIEW_COLUMN_AVAILABILITY: dict[str, dict[str, InformationAvailability]] = {
     "hero_state": HERO_STATE_COLUMN_AVAILABILITY,
     "player_hero_meta": PLAYER_HERO_META_COLUMN_AVAILABILITY,
     "player_hero_elo": PLAYER_HERO_ELO_COLUMN_AVAILABILITY,
+    "player_farming_state": PLAYER_FARMING_STATE_COLUMN_AVAILABILITY,
+    "player_farming_comparison": PLAYER_FARMING_COMPARISON_COLUMN_AVAILABILITY,
     "heroes": HEROES_COLUMN_AVAILABILITY,
     "game_versions": GAME_VERSIONS_COLUMN_AVAILABILITY,
 }

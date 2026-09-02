@@ -9,6 +9,10 @@ from dota_predictor.features.draft_profile import (
     DRAFT_PROFILE_PLAYER_METRIC_COLUMNS,
     DRAFT_PROFILE_TEAM_METRIC_COLUMNS,
 )
+from dota_predictor.features.player_farming_comparison import (
+    PLAYER_FARMING_COMPARISON_METRIC_COLUMNS,
+    PLAYER_FARMING_FEATURE_COLUMNS,
+)
 from dota_predictor.features.player_hero_elo_comparison import (
     PLAYER_HERO_ELO_COMPARISON_METRIC_COLUMNS,
 )
@@ -35,6 +39,7 @@ from dota_predictor.training.feature_sets import (
     ELO_PLUS_DRAFT_COMPARISON_COLUMNS,
     ELO_PLUS_HERO_META_COLUMNS,
     ELO_PLUS_PLAYER_AND_TEAM_HERO_COLUMNS,
+    ELO_PLUS_PLAYER_FARMING_COLUMNS,
     ELO_PLUS_PLAYER_HERO_COLUMNS,
     ELO_PLUS_TEAM_HERO_COLUMNS,
     HERO_META_COMPARISON_COLUMNS,
@@ -50,6 +55,10 @@ from dota_predictor.training.feature_sets import (
     SLICE9_FROZEN_SPECS,
     SLICE9_REFERENCE_SPEC,
     SLICE9_REFERENCE_SPEC_NAME,
+    SLICE15_CANDIDATE_SPEC,
+    SLICE15_CANDIDATE_SPEC_NAME,
+    SLICE15_FROZEN_SPECS,
+    SLICE15_REFERENCE_SPEC,
     TEAM_HERO_COMPARISON_COLUMNS,
 )
 
@@ -326,3 +335,35 @@ def test_slice10_comparison_is_not_in_any_production_feature_set() -> None:
         production.append(spec.feature_columns)
     for columns in production:
         assert set(PLAYER_HERO_ELO_COMPARISON_METRIC_COLUMNS).isdisjoint(columns)
+
+
+def test_slice15_farming_spec_is_elo_plus_shrunk_b_not_production() -> None:
+    assert SLICE15_REFERENCE_SPEC is SLICE9_REFERENCE_SPEC
+    assert SLICE15_CANDIDATE_SPEC_NAME == "logistic_elo_plus_player_farming"
+    assert SLICE15_CANDIDATE_SPEC.feature_columns == ELO_PLUS_PLAYER_FARMING_COLUMNS
+    assert ELO_PLUS_PLAYER_FARMING_COLUMNS == (
+        ELO_ONLY_FEATURE_COLUMNS + PLAYER_FARMING_FEATURE_COLUMNS
+    )
+    assert PLAYER_FARMING_FEATURE_COLUMNS == ("mean_farming_shrunk_b_diff",)
+    assert PLAYER_FARMING_FEATURE_COLUMNS[0] in PLAYER_FARMING_COMPARISON_METRIC_COLUMNS
+    extra = set(SLICE15_CANDIDATE_SPEC.feature_columns) - set(ELO_ONLY_FEATURE_COLUMNS)
+    assert extra == set(PLAYER_FARMING_FEATURE_COLUMNS)
+    assert extra.isdisjoint(FEATURE_COLUMNS)
+    assert extra.isdisjoint(ALL_FEATURE_COLUMNS)
+    assert extra.isdisjoint(PLAYER_HERO_COMPARISON_COLUMNS)
+    assert extra.isdisjoint(SLICE9_CANDIDATE_SPEC.feature_columns)
+    assert SLICE15_FROZEN_SPECS == (SLICE15_REFERENCE_SPEC, SLICE15_CANDIDATE_SPEC)
+    for spec in POST_DRAFT_BLOCK_ABLATION_SPECS:
+        assert extra.isdisjoint(spec.feature_columns)
+    assert [spec.name for spec in POST_DRAFT_BLOCK_ABLATION_SPECS] == [
+        "logistic_elo_only",
+        "logistic_elo_plus_player_hero",
+        "logistic_elo_plus_team_hero",
+        "logistic_elo_plus_hero_meta",
+        "logistic_elo_plus_player_and_team_hero",
+        "logistic_elo_plus_all_three",
+    ]
+    assert [spec.name for spec in SLICE9_FROZEN_SPECS] == [
+        SLICE9_REFERENCE_SPEC_NAME,
+        SLICE9_CANDIDATE_SPEC_NAME,
+    ]

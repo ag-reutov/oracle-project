@@ -17,6 +17,8 @@ from dota_predictor.features.availability import (
     HEROES_COLUMN_AVAILABILITY,
     MATCH_PLAYERS_COLUMN_AVAILABILITY,
     MATCHES_COLUMN_AVAILABILITY,
+    PLAYER_FARMING_COMPARISON_COLUMN_AVAILABILITY,
+    PLAYER_FARMING_STATE_COLUMN_AVAILABILITY,
     PLAYER_HERO_ELO_COLUMN_AVAILABILITY,
     PLAYER_HERO_META_COLUMN_AVAILABILITY,
     PLAYER_HERO_POSITION_COLUMN_AVAILABILITY,
@@ -29,6 +31,11 @@ from dota_predictor.features.availability import (
     columns_allowed_for_stage,
 )
 from dota_predictor.features.hero_state import HERO_STATE_METRIC_COLUMNS
+from dota_predictor.features.player_farming_comparison import (
+    FARMING_CAUSAL_B_COLUMN,
+    PLAYER_FARMING_COMPARISON_METRIC_COLUMNS,
+    PLAYER_FARMING_STATE_FEATURE_COLUMNS,
+)
 from dota_predictor.features.player_hero_elo import PLAYER_HERO_ELO_METRIC_COLUMNS
 from dota_predictor.features.player_hero_meta import PLAYER_HERO_META_METRIC_COLUMNS
 
@@ -544,3 +551,53 @@ def test_player_hero_elo_metrics_are_draft_not_pre_draft() -> None:
             PLAYER_HERO_ELO_COLUMN_AVAILABILITY[column]
             == InformationAvailability.DRAFT
         )
+
+
+def test_player_farming_state_is_pre_draft_except_causal_b_and_hero() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    assert (
+        PLAYER_FARMING_STATE_COLUMN_AVAILABILITY["farming_shrunk_b"]
+        == InformationAvailability.PRE_DRAFT
+    )
+    assert (
+        PLAYER_FARMING_STATE_COLUMN_AVAILABILITY[FARMING_CAUSAL_B_COLUMN]
+        == InformationAvailability.POST_MATCH
+    )
+    assert (
+        PLAYER_FARMING_STATE_COLUMN_AVAILABILITY["hero_id"]
+        == InformationAvailability.DRAFT
+    )
+    pre_draft = columns_allowed_for_stage(
+        "player_farming_state", SnapshotStage.PRE_DRAFT
+    )
+    post_draft = columns_allowed_for_stage(
+        "player_farming_state", SnapshotStage.POST_DRAFT
+    )
+    for column in PLAYER_FARMING_STATE_FEATURE_COLUMNS:
+        assert column in pre_draft
+        assert (
+            PLAYER_FARMING_STATE_COLUMN_AVAILABILITY[column]
+            == InformationAvailability.PRE_DRAFT
+        )
+    assert FARMING_CAUSAL_B_COLUMN not in pre_draft
+    assert FARMING_CAUSAL_B_COLUMN not in post_draft
+    assert "hero_id" not in pre_draft
+    assert "hero_id" in post_draft
+
+
+def test_player_farming_comparison_is_pre_draft() -> None:
+    from dota_predictor.data.canonical_schema import InformationAvailability
+
+    pre_draft = columns_allowed_for_stage(
+        "player_farming_comparison", SnapshotStage.PRE_DRAFT
+    )
+    for column in PLAYER_FARMING_COMPARISON_METRIC_COLUMNS:
+        assert (
+            PLAYER_FARMING_COMPARISON_COLUMN_AVAILABILITY[column]
+            == InformationAvailability.PRE_DRAFT
+        )
+        assert column in pre_draft
+    assert "hero_id" not in pre_draft
+    assert FARMING_CAUSAL_B_COLUMN not in pre_draft
+    assert "mean_farming_shrunk_b_diff" in pre_draft

@@ -20,6 +20,10 @@ from dota_predictor.features.draft_profile import (
     DRAFT_PROFILE_PLAYER_METRIC_COLUMNS,
     DRAFT_PROFILE_TEAM_METRIC_COLUMNS,
 )
+from dota_predictor.features.player_farming_comparison import (
+    PLAYER_FARMING_COMPARISON_METRIC_COLUMNS,
+    PLAYER_FARMING_FEATURE_COLUMNS,
+)
 from dota_predictor.features.player_hero_meta_comparison import (
     SLICE7_RECENT20_COUNT_DIFF_COLUMNS,
     SLICE7_RECENT20_RATE_DIFF_COLUMNS,
@@ -43,10 +47,13 @@ __all__ = [
     "ELO_PLUS_DRAFT_COMPARISON_COLUMNS",
     "ELO_PLUS_HERO_META_COLUMNS",
     "ELO_PLUS_PLAYER_AND_TEAM_HERO_COLUMNS",
+    "ELO_PLUS_PLAYER_FARMING_COLUMNS",
     "ELO_PLUS_PLAYER_HERO_COLUMNS",
     "ELO_PLUS_TEAM_HERO_COLUMNS",
     "HERO_META_COMPARISON_COLUMNS",
     "HISTORICAL_WITHOUT_ELO_COLUMNS",
+    "PLAYER_FARMING_COMPARISON_COLUMNS",
+    "PLAYER_FARMING_FEATURE_COLUMNS",
     "PLAYER_HERO_COMPARISON_COLUMNS",
     "POST_DRAFT_BLOCK_ABLATION_SPECS",
     "SLICE7_CAREER_SPEC_NAME",
@@ -70,6 +77,11 @@ __all__ = [
     "SLICE9_FROZEN_SPECS",
     "SLICE9_REFERENCE_SPEC",
     "SLICE9_REFERENCE_SPEC_NAME",
+    "SLICE15_CANDIDATE_SPEC",
+    "SLICE15_CANDIDATE_SPEC_NAME",
+    "SLICE15_FROZEN_SPECS",
+    "SLICE15_REFERENCE_SPEC",
+    "SLICE15_REFERENCE_SPEC_NAME",
     "TEAM_HERO_COMPARISON_COLUMNS",
     "BlockAblationSpec",
     "slice8_interaction_column",
@@ -270,9 +282,7 @@ SLICE8_LOG1P_MATCH_MEAN_SAME_VERSION_GAMES = (
 )
 SLICE8_MATCH_ZERO_SAME_VERSION_PLAYERS = "slice8_match_zero_same_version_players"
 SLICE8_MATCH_MEAN_ROLE_COMPATIBILITY = "slice8_match_mean_role_compatibility"
-SLICE8_MATCH_MEAN_PLAYER_SHARE = (
-    "slice8_match_mean_player_share_at_expected_position"
-)
+SLICE8_MATCH_MEAN_PLAYER_SHARE = "slice8_match_mean_player_share_at_expected_position"
 SLICE8_MATCH_MEAN_HERO_META_SHARE = (
     "slice8_match_mean_hero_meta_share_at_expected_position"
 )
@@ -414,4 +424,27 @@ SLICE9_CANDIDATE_SPEC = BlockAblationSpec(
 SLICE9_FROZEN_SPECS: tuple[BlockAblationSpec, ...] = (
     SLICE9_REFERENCE_SPEC,
     SLICE9_CANDIDATE_SPEC,
+)
+
+
+# Slice 15 evaluation spec. Elo + pre-draft farming comparison of frozen
+# Slice 14 shrunk causal B. Not production FEATURE_COLUMNS and not a
+# replacement for Slice 9.
+PLAYER_FARMING_COMPARISON_COLUMNS: tuple[str, ...] = (
+    PLAYER_FARMING_COMPARISON_METRIC_COLUMNS
+)
+ELO_PLUS_PLAYER_FARMING_COLUMNS: tuple[str, ...] = (
+    ELO_ONLY_FEATURE_COLUMNS + PLAYER_FARMING_FEATURE_COLUMNS
+)
+SLICE15_REFERENCE_SPEC_NAME = SLICE9_REFERENCE_SPEC_NAME
+SLICE15_CANDIDATE_SPEC_NAME = "logistic_elo_plus_player_farming"
+SLICE15_REFERENCE_SPEC = SLICE9_REFERENCE_SPEC
+SLICE15_CANDIDATE_SPEC = BlockAblationSpec(
+    name=SLICE15_CANDIDATE_SPEC_NAME,
+    label="Elo + player farming",
+    feature_columns=ELO_PLUS_PLAYER_FARMING_COLUMNS,
+)
+SLICE15_FROZEN_SPECS: tuple[BlockAblationSpec, ...] = (
+    SLICE15_REFERENCE_SPEC,
+    SLICE15_CANDIDATE_SPEC,
 )
