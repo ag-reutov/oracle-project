@@ -30,7 +30,27 @@ radiantTeamId
 direTeamId
 radiantTeam { id name tag }
 direTeam { id name tag }
-players { steamAccountId isRadiant playerSlot heroId position lane role }
+players {
+  steamAccountId
+  isRadiant
+  playerSlot
+  heroId
+  position
+  lane
+  role
+  kills
+  deaths
+  assists
+  goldPerMinute
+  experiencePerMinute
+  numLastHits
+  numDenies
+  networth
+  heroDamage
+  towerDamage
+  heroHealing
+  level
+}
 pickBans {
   isPick
   heroId
@@ -79,6 +99,40 @@ MATCH_PLAYER_POSITIONS_QUERY = f"""
 query MatchPlayerPositions($id: Long!) {{
   match(id: $id) {{
     {MATCH_PLAYER_POSITION_SELECTION}
+  }}
+}}
+"""
+
+# Lightweight fetch for observed post-match box-score scalars. Used by
+# the performance backfill so existing raw payloads are not replaced
+# wholesale. Does not request `stats.*` time-series, IMP, award, or
+# heroAverage.
+MATCH_PLAYER_PERFORMANCE_SELECTION = """
+id
+players {
+  steamAccountId
+  isRadiant
+  playerSlot
+  heroId
+  kills
+  deaths
+  assists
+  goldPerMinute
+  experiencePerMinute
+  numLastHits
+  numDenies
+  networth
+  heroDamage
+  towerDamage
+  heroHealing
+  level
+}
+"""
+
+MATCH_PLAYER_PERFORMANCE_QUERY = f"""
+query MatchPlayerPerformance($id: Long!) {{
+  match(id: $id) {{
+    {MATCH_PLAYER_PERFORMANCE_SELECTION}
   }}
 }}
 """

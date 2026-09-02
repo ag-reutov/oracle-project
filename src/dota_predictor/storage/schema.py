@@ -325,9 +325,23 @@ MATCH_PLAYERS = sa.Table(
     sa.Column("position", _POSITION_TYPE, nullable=True),
     sa.Column("lane", _LANE_TYPE, nullable=True),
     sa.Column("role", _ROLE_TYPE, nullable=True),
-    sa.CheckConstraint(
-        "slot_in_side BETWEEN 0 AND 4", name="slot_in_side_valid_range"
-    ),
+    # Observed STRATZ post-match box-score scalars. NULL = source
+    # omitted the field; 0 is stored when STRATZ returns 0. Never
+    # coerced, ratioed, or treated as a feature. POST_MATCH relative
+    # to this match.
+    sa.Column("kills", sa.Integer, nullable=True),
+    sa.Column("deaths", sa.Integer, nullable=True),
+    sa.Column("assists", sa.Integer, nullable=True),
+    sa.Column("gold_per_minute", sa.Integer, nullable=True),
+    sa.Column("experience_per_minute", sa.Integer, nullable=True),
+    sa.Column("num_last_hits", sa.Integer, nullable=True),
+    sa.Column("num_denies", sa.Integer, nullable=True),
+    sa.Column("networth", sa.Integer, nullable=True),
+    sa.Column("hero_damage", sa.Integer, nullable=True),
+    sa.Column("tower_damage", sa.Integer, nullable=True),
+    sa.Column("hero_healing", sa.Integer, nullable=True),
+    sa.Column("level", sa.Integer, nullable=True),
+    sa.CheckConstraint("slot_in_side BETWEEN 0 AND 4", name="slot_in_side_valid_range"),
     sa.CheckConstraint("hero_id > 0", name="hero_id_positive"),
     sa.UniqueConstraint("match_id", "player_id", name="match_players_unique_player"),
 )
@@ -373,14 +387,10 @@ LEAGUE_INGESTION_STATE = sa.Table(
     # timestamp, ...) here without another migration.
     sa.Column("cursor_state", JSONB, nullable=True),
     sa.Column("last_synced_at", sa.DateTime(timezone=True), nullable=True),
-    sa.Column(
-        "error_count", sa.Integer, nullable=False, server_default=sa.text("0")
-    ),
+    sa.Column("error_count", sa.Integer, nullable=False, server_default=sa.text("0")),
     sa.Column("last_error", sa.Text, nullable=True),
     sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-    sa.CheckConstraint(
-        f"status IN {LEAGUE_INGESTION_STATUSES!r}", name="status_valid"
-    ),
+    sa.CheckConstraint(f"status IN {LEAGUE_INGESTION_STATUSES!r}", name="status_valid"),
     sa.CheckConstraint(
         "matches_seen_count >= 0", name="matches_seen_count_non_negative"
     ),
@@ -407,9 +417,7 @@ MATCH_INGESTION_ERRORS = sa.Table(
         nullable=False,
         server_default=sa.func.now(),
     ),
-    sa.Column(
-        "resolved", sa.Boolean, nullable=False, server_default=sa.false()
-    ),
+    sa.Column("resolved", sa.Boolean, nullable=False, server_default=sa.false()),
     sa.CheckConstraint(
         f"stage IN {MATCH_INGESTION_ERROR_STAGES!r}", name="stage_valid"
     ),

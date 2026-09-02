@@ -41,6 +41,9 @@ from enum import Enum
 __all__ = [
     "EXPLICIT_DOTA_POSITIONS",
     "FIELD_INFORMATION_AVAILABILITY",
+    "MATCH_PLAYER_BOX_SCORE_COLUMNS",
+    "PLAYER_BOX_SCORE_FIELD_MAP",
+    "STRATZ_PLAYER_BOX_SCORE_FIELDS",
     "CanonicalMatch",
     "CanonicalMatchError",
     "DraftAction",
@@ -50,6 +53,7 @@ __all__ = [
     "LeagueId",
     "MatchId",
     "MatchLane",
+    "MatchPlayerBoxScore",
     "MatchPlayerPosition",
     "MatchPlayerRole",
     "PlayerId",
@@ -158,6 +162,64 @@ class MatchPlayerRole(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
+# STRATZ `MatchPlayerType` scalar name -> canonical/storage column.
+# Raw JSON keeps the STRATZ names; Postgres/Parquet use the snake_case
+# names. These are observed post-match box-score values, not features.
+PLAYER_BOX_SCORE_FIELD_MAP: tuple[tuple[str, str], ...] = (
+    ("kills", "kills"),
+    ("deaths", "deaths"),
+    ("assists", "assists"),
+    ("goldPerMinute", "gold_per_minute"),
+    ("experiencePerMinute", "experience_per_minute"),
+    ("numLastHits", "num_last_hits"),
+    ("numDenies", "num_denies"),
+    ("networth", "networth"),
+    ("heroDamage", "hero_damage"),
+    ("towerDamage", "tower_damage"),
+    ("heroHealing", "hero_healing"),
+    ("level", "level"),
+)
+STRATZ_PLAYER_BOX_SCORE_FIELDS: tuple[str, ...] = tuple(
+    stratz_name for stratz_name, _ in PLAYER_BOX_SCORE_FIELD_MAP
+)
+MATCH_PLAYER_BOX_SCORE_COLUMNS: tuple[str, ...] = tuple(
+    canonical_name for _, canonical_name in PLAYER_BOX_SCORE_FIELD_MAP
+)
+
+
+@dataclass(frozen=True, slots=True)
+class MatchPlayerBoxScore:
+    """Raw observed post-match player statistics for one lobby slot.
+
+    Null means the source omitted the field. Zero is a real observation
+    and is never rewritten as null, nor is null rewritten as zero.
+    Values are not ratios, residuals, or model features.
+    """
+
+    kills: int | None = None
+    deaths: int | None = None
+    assists: int | None = None
+    gold_per_minute: int | None = None
+    experience_per_minute: int | None = None
+    num_last_hits: int | None = None
+    num_denies: int | None = None
+    networth: int | None = None
+    hero_damage: int | None = None
+    tower_damage: int | None = None
+    hero_healing: int | None = None
+    level: int | None = None
+
+    def __post_init__(self) -> None:
+        for name in MATCH_PLAYER_BOX_SCORE_COLUMNS:
+            value = getattr(self, name)
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise CanonicalMatchError(
+                    f"MatchPlayerBoxScore.{name} must be int or None, got {value!r}"
+                )
+
+
 # Dota 1–5 only. `UNKNOWN` / `FILTERED` / `ALL` / NULL are not positions.
 EXPLICIT_DOTA_POSITIONS: frozenset[MatchPlayerPosition] = frozenset(
     {
@@ -190,6 +252,20 @@ _UNSET_SIDE_ROLES: tuple[
     MatchPlayerRole | None,
     MatchPlayerRole | None,
 ] = (None, None, None, None, None)
+_EMPTY_BOX_SCORE = MatchPlayerBoxScore()
+_UNSET_SIDE_BOX_SCORES: tuple[
+    MatchPlayerBoxScore,
+    MatchPlayerBoxScore,
+    MatchPlayerBoxScore,
+    MatchPlayerBoxScore,
+    MatchPlayerBoxScore,
+] = (
+    _EMPTY_BOX_SCORE,
+    _EMPTY_BOX_SCORE,
+    _EMPTY_BOX_SCORE,
+    _EMPTY_BOX_SCORE,
+    _EMPTY_BOX_SCORE,
+)
 
 
 # Documentation-as-code: which `CanonicalMatch` field maps to which
@@ -231,6 +307,12 @@ FIELD_INFORMATION_AVAILABILITY: dict[str, InformationAvailability] = {
     "dire_positions": InformationAvailability.POST_MATCH,
     "dire_lanes": InformationAvailability.POST_MATCH,
     "dire_roles": InformationAvailability.POST_MATCH,
+    # Observed STRATZ post-match box-score scalars for THIS match.
+    # Historical rows may contribute to later research only when
+    # `H.start_time < M.start_time`. They are never PRE_DRAFT or
+    # POST_DRAFT features of the same match.
+    "radiant_box_scores": InformationAvailability.POST_MATCH,
+    "dire_box_scores": InformationAvailability.POST_MATCH,
 }
 
 
@@ -369,6 +451,16 @@ class CanonicalMatch:
         MatchPlayerRole | None,
         MatchPlayerRole | None,
     ] = _UNSET_SIDE_ROLES
+    # Observed STRATZ post-match box-score scalars, aligned with
+    # `radiant_player_ids` by `slot_in_side`. POST_MATCH. Missing stays
+    # None; zero is preserved. Never inferred or ratioed here.
+    radiant_box_scores: tuple[
+        MatchPlayerBoxScore,
+        MatchPlayerBoxScore,
+        MatchPlayerBoxScore,
+        MatchPlayerBoxScore,
+        MatchPlayerBoxScore,
+    ] = _UNSET_SIDE_BOX_SCORES
 
     # --- Dire (PRE_DRAFT) ---
     dire_team_id: TeamId
@@ -396,6 +488,13 @@ class CanonicalMatch:
         MatchPlayerRole | None,
         MatchPlayerRole | None,
     ] = _UNSET_SIDE_ROLES
+    dire_box_scores: tuple[
+        MatchPlayerBoxScore,
+        MatchPlayerBoxScore,
+        MatchPlayerBoxScore,
+        MatchPlayerBoxScore,
+        MatchPlayerBoxScore,
+    ] = _UNSET_SIDE_BOX_SCORES
 
     # --- Draft (DRAFT) ---
     draft_events: tuple[DraftEvent, ...]
@@ -448,6 +547,8 @@ class CanonicalMatch:
             "radiant_roles", self.radiant_roles, MatchPlayerRole
         )
         self._validate_side_enum_tuple("dire_roles", self.dire_roles, MatchPlayerRole)
+        self._validate_side_box_scores("radiant_box_scores", self.radiant_box_scores)
+        self._validate_side_box_scores("dire_box_scores", self.dire_box_scores)
 
         if self.duration_seconds <= 0:
             raise CanonicalMatchError(
@@ -489,7 +590,23 @@ class CanonicalMatch:
                     f"got {value!r}"
                 )
 
-    def _validate_side_heroes(self, side_name: str, hero_ids: tuple[HeroId, ...]) -> None:
+    @staticmethod
+    def _validate_side_box_scores(
+        field_name: str, values: tuple[MatchPlayerBoxScore, ...]
+    ) -> None:
+        if len(values) != 5:
+            raise CanonicalMatchError(
+                f"{field_name} must contain exactly 5 entries, got {len(values)}"
+            )
+        for value in values:
+            if not isinstance(value, MatchPlayerBoxScore):
+                raise CanonicalMatchError(
+                    f"{field_name} entry must be MatchPlayerBoxScore, got {value!r}"
+                )
+
+    def _validate_side_heroes(
+        self, side_name: str, hero_ids: tuple[HeroId, ...]
+    ) -> None:
         if len(hero_ids) != 5:
             raise CanonicalMatchError(
                 f"{side_name}_hero_ids must contain exactly 5 heroes, got {len(hero_ids)}"

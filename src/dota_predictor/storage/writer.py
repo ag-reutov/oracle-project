@@ -16,6 +16,7 @@ docstring) -- there is nothing to update once a row exists.
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import UTC, datetime
 
 from sqlalchemy import Connection, Engine
@@ -89,8 +90,9 @@ def write_canonical_match(engine: Engine, match: CanonicalMatch) -> None:
             "position": position,
             "lane": lane,
             "role": role,
+            **asdict(box_score),
         }
-        for side, player_ids, hero_ids, positions, lanes, roles in (
+        for side, player_ids, hero_ids, positions, lanes, roles, box_scores in (
             (
                 Side.RADIANT,
                 match.radiant_player_ids,
@@ -98,6 +100,7 @@ def write_canonical_match(engine: Engine, match: CanonicalMatch) -> None:
                 match.radiant_positions,
                 match.radiant_lanes,
                 match.radiant_roles,
+                match.radiant_box_scores,
             ),
             (
                 Side.DIRE,
@@ -106,10 +109,19 @@ def write_canonical_match(engine: Engine, match: CanonicalMatch) -> None:
                 match.dire_positions,
                 match.dire_lanes,
                 match.dire_roles,
+                match.dire_box_scores,
             ),
         )
-        for slot, (player_id, hero_id, position, lane, role) in enumerate(
-            zip(player_ids, hero_ids, positions, lanes, roles, strict=True)
+        for slot, (player_id, hero_id, position, lane, role, box_score) in enumerate(
+            zip(
+                player_ids,
+                hero_ids,
+                positions,
+                lanes,
+                roles,
+                box_scores,
+                strict=True,
+            )
         )
     ]
 
@@ -131,7 +143,9 @@ def write_canonical_match(engine: Engine, match: CanonicalMatch) -> None:
             conn, set(match.radiant_player_ids) | set(match.dire_player_ids)
         )
 
-        upsert_matches = pg_insert(MATCHES).values(match_id=match.match_id, **match_values)
+        upsert_matches = pg_insert(MATCHES).values(
+            match_id=match.match_id, **match_values
+        )
         upsert_matches = upsert_matches.on_conflict_do_update(
             index_elements=[MATCHES.c.match_id],
             set_=match_values,

@@ -33,7 +33,10 @@ from __future__ import annotations
 from collections.abc import Iterable
 from enum import Enum
 
-from dota_predictor.data.canonical_schema import InformationAvailability
+from dota_predictor.data.canonical_schema import (
+    MATCH_PLAYER_BOX_SCORE_COLUMNS,
+    InformationAvailability,
+)
 from dota_predictor.features.expected_position import EXPECTED_POSITION_EVIDENCE_COLUMNS
 from dota_predictor.features.hero_state import HERO_STATE_METRIC_COLUMNS
 from dota_predictor.features.player_hero_elo import PLAYER_HERO_ELO_METRIC_COLUMNS
@@ -170,6 +173,13 @@ MATCH_PLAYERS_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
     "position": InformationAvailability.POST_MATCH,
     "lane": InformationAvailability.POST_MATCH,
     "role": InformationAvailability.POST_MATCH,
+    # Observed STRATZ post-match box-score scalars for THIS match.
+    # Same temporal rule as position/lane/role: historical only when
+    # `H.start_time < M.start_time`.
+    **{
+        column: InformationAvailability.POST_MATCH
+        for column in MATCH_PLAYER_BOX_SCORE_COLUMNS
+    },
 }
 
 # Derived player-match fact (`features.player_match.player_match_sql`):

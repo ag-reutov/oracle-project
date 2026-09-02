@@ -21,6 +21,7 @@ from dota_predictor.ingestion.queries import (
     HEROES_QUERY,
     LEAGUE_MATCHES_QUERY,
     MATCH_BY_ID_QUERY,
+    MATCH_PLAYER_PERFORMANCE_QUERY,
     MATCH_PLAYER_POSITIONS_QUERY,
     TEAM_LEAGUE_MATCH_IDS_QUERY,
 )
@@ -202,7 +203,11 @@ class StratzClient:
                 self._config.graphql_endpoint,
                 json={"query": query, "variables": variables},
             )
-        except (httpx.TimeoutException, httpx.NetworkError, httpx.TransportError) as exc:
+        except (
+            httpx.TimeoutException,
+            httpx.NetworkError,
+            httpx.TransportError,
+        ) as exc:
             raise StratzRetryableError(str(exc)) from exc
 
         self._last_request_at = time.monotonic()
@@ -282,8 +287,17 @@ class StratzClient:
         Does not replace a stored raw payload by itself. Callers must
         merge the three parse fields onto existing player objects.
         """
+        payload = self._fetch_with_retry(MATCH_PLAYER_POSITIONS_QUERY, {"id": match_id})
+        return parse_match_query_payload(payload)
+
+    def fetch_match_player_performance(self, match_id: int) -> dict[str, Any] | None:
+        """Fetch only match-player identity plus post-match box-score scalars.
+
+        Does not replace a stored raw payload by itself. Callers must
+        merge the approved scalar fields onto existing player objects.
+        """
         payload = self._fetch_with_retry(
-            MATCH_PLAYER_POSITIONS_QUERY, {"id": match_id}
+            MATCH_PLAYER_PERFORMANCE_QUERY, {"id": match_id}
         )
         return parse_match_query_payload(payload)
 

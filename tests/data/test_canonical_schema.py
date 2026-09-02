@@ -20,6 +20,7 @@ from dota_predictor.data.canonical_schema import (
     DraftEvent,
     InformationAvailability,
     MatchLane,
+    MatchPlayerBoxScore,
     MatchPlayerPosition,
     MatchPlayerRole,
     Side,
@@ -133,6 +134,8 @@ def test_draft_order_is_preserved_not_resorted() -> None:
         ("dire_positions", InformationAvailability.POST_MATCH),
         ("dire_lanes", InformationAvailability.POST_MATCH),
         ("dire_roles", InformationAvailability.POST_MATCH),
+        ("radiant_box_scores", InformationAvailability.POST_MATCH),
+        ("dire_box_scores", InformationAvailability.POST_MATCH),
     ],
 )
 def test_information_availability_classification(
@@ -421,3 +424,22 @@ def test_duplicate_and_missing_positions_are_not_repaired() -> None:
 def test_rejects_wrong_position_tuple_length() -> None:
     with pytest.raises(CanonicalMatchError, match="exactly 5 entries"):
         make_match(radiant_positions=(MatchPlayerPosition.POSITION_1,))
+
+
+def test_missing_box_scores_do_not_fail_canonicalization() -> None:
+    match = make_match()
+    assert match.radiant_box_scores[0].kills is None
+    assert match.dire_box_scores[4].networth is None
+
+
+def test_zero_box_score_is_preserved() -> None:
+    zeros = MatchPlayerBoxScore(kills=0, deaths=0, assists=0, level=1)
+    match = make_match(radiant_box_scores=(zeros,) + (MatchPlayerBoxScore(),) * 4)
+    assert match.radiant_box_scores[0].kills == 0
+    assert match.radiant_box_scores[0].deaths == 0
+    assert match.radiant_box_scores[1].kills is None
+
+
+def test_rejects_wrong_box_score_tuple_length() -> None:
+    with pytest.raises(CanonicalMatchError, match="exactly 5 entries"):
+        make_match(radiant_box_scores=(MatchPlayerBoxScore(),))

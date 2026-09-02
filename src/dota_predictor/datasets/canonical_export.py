@@ -19,9 +19,11 @@ analytical Parquet datasets:
 * `match_players.parquet` -- one row per player per match (exactly 10
   rows per canonical match). Carries `player_id`, `hero_id`, `side`,
   `slot_in_side` (lobby order, not Dota position 1-5), `team_id`
-  derived from the parent match's radiant/dire team ids, and observed
+  derived from the parent match's radiant/dire team ids, observed
   STRATZ parse labels `position` / `lane` / `role` (POST_MATCH relative
-  to that row's match; NULL and UNKNOWN are preserved).
+  to that row's match; NULL and UNKNOWN are preserved), and observed
+  STRATZ post-match box-score scalars (POST_MATCH; NULL and zero are
+  preserved, never coerced).
 * `draft_events.parquet` -- the normalized long representation of
   `draft_events`, one row per pick/ban, preserved verbatim. Draft length
   is **not** fixed across matches: real canonical data contains 10-, 23-,
@@ -101,6 +103,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from sqlalchemy import Connection, Engine, select
 
+from dota_predictor.data.canonical_schema import MATCH_PLAYER_BOX_SCORE_COLUMNS
 from dota_predictor.storage.schema import DRAFT_EVENTS, MATCH_PLAYERS, MATCHES
 
 __all__ = [
@@ -131,7 +134,9 @@ __all__ = [
 #     column set is unchanged from v1.
 # v3: adds observed STRATZ `position` / `lane` / `role` on
 #     match_players.parquet. matches.parquet is unchanged.
-ANALYTICAL_SCHEMA_VERSION = 3
+# v4: adds observed STRATZ post-match box-score scalars on
+#     match_players.parquet. matches.parquet is unchanged.
+ANALYTICAL_SCHEMA_VERSION = 4
 
 MATCHES_FILENAME = "matches.parquet"
 MATCH_PLAYERS_FILENAME = "match_players.parquet"
@@ -202,6 +207,18 @@ MATCH_PLAYERS_SCHEMA = pa.schema(
         pa.field("position", pa.string(), nullable=True),
         pa.field("lane", pa.string(), nullable=True),
         pa.field("role", pa.string(), nullable=True),
+        pa.field("kills", pa.int32(), nullable=True),
+        pa.field("deaths", pa.int32(), nullable=True),
+        pa.field("assists", pa.int32(), nullable=True),
+        pa.field("gold_per_minute", pa.int32(), nullable=True),
+        pa.field("experience_per_minute", pa.int32(), nullable=True),
+        pa.field("num_last_hits", pa.int32(), nullable=True),
+        pa.field("num_denies", pa.int32(), nullable=True),
+        pa.field("networth", pa.int32(), nullable=True),
+        pa.field("hero_damage", pa.int32(), nullable=True),
+        pa.field("tower_damage", pa.int32(), nullable=True),
+        pa.field("hero_healing", pa.int32(), nullable=True),
+        pa.field("level", pa.int32(), nullable=True),
     ]
 )
 
@@ -254,6 +271,13 @@ def _optional_enum_value(value: Any) -> str | None:
     if value is None:
         return None
     return _enum_value(value)
+
+
+def _optional_int_value(value: Any) -> int | None:
+    """Preserve NULL; keep zero as zero. Missing keys arrive as None."""
+    if value is None:
+        return None
+    return int(value)
 
 
 def _pivot_player_slots(
@@ -400,7 +424,9 @@ def build_match_players_table(
     `side`), never from raw STRATZ player objects. `slot_in_side` is
     lobby order and is not rewritten as a Dota position. Observed
     `position` / `lane` / `role` are copied as nullable strings;
-    missing keys become NULL and are never inferred.
+    missing keys become NULL and are never inferred. Observed box-score
+    scalars are copied as nullable ints; missing stays NULL and zero
+    stays zero.
     """
     teams_by_match: dict[int, dict[str, int]] = {}
     for row in match_rows:
@@ -439,6 +465,10 @@ def build_match_players_table(
                 "position": _optional_enum_value(row.get("position")),
                 "lane": _optional_enum_value(row.get("lane")),
                 "role": _optional_enum_value(row.get("role")),
+                **{
+                    column: _optional_int_value(row.get(column))
+                    for column in MATCH_PLAYER_BOX_SCORE_COLUMNS
+                },
             }
         )
 
@@ -602,13 +632,17 @@ def validate_match_players_table(
                 f"in match {match_id}"
             )
         seen_slot.add(slot_key)
-        expected_team = radiant_team[match_id] if side == "RADIANT" else dire_team[match_id]
+        expected_team = (
+            radiant_team[match_id] if side == "RADIANT" else dire_team[match_id]
+        )
         if team_id != expected_team:
             raise DatasetValidationError(
                 f"match {match_id}: match_players team_id {team_id} does not "
                 f"match {side} team {expected_team}"
             )
-        by_match_side.setdefault((match_id, side), []).append((slot, player_id, hero_id))
+        by_match_side.setdefault((match_id, side), []).append(
+            (slot, player_id, hero_id)
+        )
 
     pick_heroes: dict[tuple[int, str], set[int]] = {}
     draft_match_ids = draft_events_table.column("match_id").to_pylist()
@@ -763,9 +797,7 @@ def build_canonical_dataset(engine: Engine, output_dir: Path) -> DatasetBuildRes
 
     validate_matches_table(matches_table, expected_row_count=len(match_rows))
     validate_draft_events_table(draft_events_table, matches_table)
-    validate_match_players_table(
-        match_players_table, matches_table, draft_events_table
-    )
+    validate_match_players_table(match_players_table, matches_table, draft_events_table)
 
     write_canonical_dataset(
         output_dir,

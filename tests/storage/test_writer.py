@@ -16,6 +16,7 @@ from helpers import build_canonical_match, requires_test_database, seed_ingestio
 from dota_predictor.data.canonical_schema import (
     DraftAction,
     MatchLane,
+    MatchPlayerBoxScore,
     MatchPlayerPosition,
     MatchPlayerRole,
     Side,
@@ -48,19 +49,14 @@ def test_write_canonical_match_round_trip(engine):
         assert match_row.radiant_win == match.radiant_win
         assert match_row.duration_seconds == match.duration_seconds
         assert match_row.mapper_version == CANONICAL_MAPPER_VERSION
-        assert (
-            match_row.radiant_team_name_observed
-            == match.radiant_team_name_observed
-        )
+        assert match_row.radiant_team_name_observed == match.radiant_team_name_observed
         assert match_row.dire_team_name_observed == match.dire_team_name_observed
 
         team_ids = {
             row.team_id
             for row in conn.execute(
                 TEAMS.select().where(
-                    TEAMS.c.team_id.in_(
-                        [match.radiant_team_id, match.dire_team_id]
-                    )
+                    TEAMS.c.team_id.in_([match.radiant_team_id, match.dire_team_id])
                 )
             ).all()
         }
@@ -76,9 +72,7 @@ def test_write_canonical_match_round_trip(engine):
                 )
             ).all()
         }
-        assert player_id_rows == set(
-            match.radiant_player_ids + match.dire_player_ids
-        )
+        assert player_id_rows == set(match.radiant_player_ids + match.dire_player_ids)
 
         player_rows = conn.execute(
             MATCH_PLAYERS.select()
@@ -86,15 +80,11 @@ def test_write_canonical_match_round_trip(engine):
             .order_by(MATCH_PLAYERS.c.side, MATCH_PLAYERS.c.slot_in_side)
         ).all()
         assert len(player_rows) == 10
-        radiant_ids = tuple(
-            r.player_id for r in player_rows if r.side == Side.RADIANT
-        )
+        radiant_ids = tuple(r.player_id for r in player_rows if r.side == Side.RADIANT)
         dire_ids = tuple(r.player_id for r in player_rows if r.side == Side.DIRE)
         assert radiant_ids == match.radiant_player_ids
         assert dire_ids == match.dire_player_ids
-        radiant_heroes = tuple(
-            r.hero_id for r in player_rows if r.side == Side.RADIANT
-        )
+        radiant_heroes = tuple(r.hero_id for r in player_rows if r.side == Side.RADIANT)
         dire_heroes = tuple(r.hero_id for r in player_rows if r.side == Side.DIRE)
         assert radiant_heroes == match.radiant_hero_ids
         assert dire_heroes == match.dire_hero_ids
@@ -150,7 +140,9 @@ def test_write_canonical_match_round_trips_observed_position_metadata(engine):
     with engine.connect() as conn:
         radiant_rows = conn.execute(
             MATCH_PLAYERS.select()
-            .where(MATCH_PLAYERS.c.match_id == 1010, MATCH_PLAYERS.c.side == Side.RADIANT)
+            .where(
+                MATCH_PLAYERS.c.match_id == 1010, MATCH_PLAYERS.c.side == Side.RADIANT
+            )
             .order_by(MATCH_PLAYERS.c.slot_in_side)
         ).all()
         dire_rows = conn.execute(
@@ -163,6 +155,81 @@ def test_write_canonical_match_round_trips_observed_position_metadata(engine):
     assert tuple(row.role for row in radiant_rows) == roles
     assert all(row.position is None for row in dire_rows)
 
+
+def test_write_canonical_match_round_trips_box_score_scalars(engine):
+    with engine.begin() as conn:
+        seed_ingestion_league(conn, league_id=17)
+
+    observed = MatchPlayerBoxScore(
+        kills=0,
+        deaths=5,
+        assists=20,
+        gold_per_minute=280,
+        experience_per_minute=310,
+        num_last_hits=0,
+        num_denies=0,
+        networth=6200,
+        hero_damage=None,
+        tower_damage=0,
+        hero_healing=800,
+        level=13,
+    )
+    empty = MatchPlayerBoxScore()
+    match = replace(
+        build_canonical_match(match_id=1011, league_id=17, num_bans=4),
+        radiant_box_scores=(observed, empty, empty, empty, empty),
+    )
+    write_canonical_match(engine, match)
+
+    with engine.connect() as conn:
+        radiant_rows = conn.execute(
+            MATCH_PLAYERS.select()
+            .where(
+                MATCH_PLAYERS.c.match_id == 1011, MATCH_PLAYERS.c.side == Side.RADIANT
+            )
+            .order_by(MATCH_PLAYERS.c.slot_in_side)
+        ).all()
+        dire_rows = conn.execute(
+            MATCH_PLAYERS.select().where(
+                MATCH_PLAYERS.c.match_id == 1011, MATCH_PLAYERS.c.side == Side.DIRE
+            )
+        ).all()
+    first = radiant_rows[0]
+    assert first.kills == 0
+    assert first.deaths == 5
+    assert first.num_last_hits == 0
+    assert first.hero_damage is None
+    assert first.tower_damage == 0
+    assert first.hero_healing == 800
+    assert first.level == 13
+    assert all(row.kills is None for row in radiant_rows[1:])
+    assert all(row.kills is None for row in dire_rows)
+
+    rewritten = replace(
+        match,
+        radiant_box_scores=(
+            MatchPlayerBoxScore(kills=9, deaths=1, assists=3, level=25),
+            empty,
+            empty,
+            empty,
+            empty,
+        ),
+    )
+    write_canonical_match(engine, rewritten)
+    with engine.connect() as conn:
+        rows = conn.execute(
+            MATCH_PLAYERS.select()
+            .where(
+                MATCH_PLAYERS.c.match_id == 1011, MATCH_PLAYERS.c.side == Side.RADIANT
+            )
+            .order_by(MATCH_PLAYERS.c.slot_in_side)
+        ).all()
+        count = conn.execute(
+            MATCH_PLAYERS.select().where(MATCH_PLAYERS.c.match_id == 1011)
+        ).all()
+    assert rows[0].kills == 9
+    assert rows[0].level == 25
+    assert len(count) == 10
 
 
 def test_write_canonical_match_is_upsert_for_matches_row(engine):
@@ -180,9 +247,7 @@ def test_write_canonical_match_is_upsert_for_matches_row(engine):
     write_canonical_match(engine, match_v2)
 
     with engine.connect() as conn:
-        rows = conn.execute(
-            MATCHES.select().where(MATCHES.c.match_id == 1001)
-        ).all()
+        rows = conn.execute(MATCHES.select().where(MATCHES.c.match_id == 1001)).all()
         assert len(rows) == 1
         assert rows[0].radiant_win is False
         player_rows = conn.execute(
@@ -215,9 +280,13 @@ def test_reprocessing_with_fewer_draft_events_leaves_no_stale_rows(engine):
         draft_rows = conn.execute(
             DRAFT_EVENTS.select().where(DRAFT_EVENTS.c.match_id == 1002)
         ).all()
-        assert len(draft_rows) == 12  # 2 bans + 10 picks -- no stale rows from the first write
+        assert (
+            len(draft_rows) == 12
+        )  # 2 bans + 10 picks -- no stale rows from the first write
         max_sequence = max(row.sequence for row in draft_rows)
-        assert max_sequence == 11  # no leftover high-sequence rows from the 24-event write
+        assert (
+            max_sequence == 11
+        )  # no leftover high-sequence rows from the 24-event write
 
         ban_rows = [r for r in draft_rows if r.action == DraftAction.BAN]
         assert len(ban_rows) == 2

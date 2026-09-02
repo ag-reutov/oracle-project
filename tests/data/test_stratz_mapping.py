@@ -20,6 +20,7 @@ from dota_predictor.data.canonical_schema import (
     CanonicalMatchError,
     DraftAction,
     MatchLane,
+    MatchPlayerBoxScore,
     MatchPlayerPosition,
     MatchPlayerRole,
     Side,
@@ -464,3 +465,44 @@ def test_unsupported_position_value_fails_closed() -> None:
     with pytest.raises(CanonicalMatchError, match="MatchPlayerPosition"):
         canonical_match_from_stratz(raw)
 
+
+def test_missing_box_score_fields_map_to_none_and_do_not_fail() -> None:
+    match = canonical_match_from_stratz(build_raw_match())
+    assert match.radiant_box_scores[0] == MatchPlayerBoxScore()
+    assert match.dire_box_scores[4].kills is None
+    assert match.radiant_player_ids == tuple(RADIANT_IDS)
+    assert match.radiant_positions == (None, None, None, None, None)
+
+
+def test_maps_box_score_scalars_preserving_zero_and_null() -> None:
+    raw = build_raw_match()
+    raw["players"][0]["kills"] = 0
+    raw["players"][0]["deaths"] = 7
+    raw["players"][0]["assists"] = 12
+    raw["players"][0]["goldPerMinute"] = 250
+    raw["players"][0]["experiencePerMinute"] = 300
+    raw["players"][0]["numLastHits"] = 0
+    raw["players"][0]["numDenies"] = 0
+    raw["players"][0]["networth"] = 4500
+    raw["players"][0]["heroDamage"] = 0
+    raw["players"][0]["towerDamage"] = None
+    raw["players"][0]["heroHealing"] = 1500
+    raw["players"][0]["level"] = 12
+    match = canonical_match_from_stratz(raw)
+    score = match.radiant_box_scores[0]
+    assert score.kills == 0
+    assert score.deaths == 7
+    assert score.num_last_hits == 0
+    assert score.hero_damage == 0
+    assert score.tower_damage is None
+    assert score.hero_healing == 1500
+    assert score.gold_per_minute == 250
+    assert score.level == 12
+    assert match.dire_box_scores[0].kills is None
+
+
+def test_non_integer_box_score_fails_closed() -> None:
+    raw = build_raw_match()
+    raw["players"][0]["kills"] = 1.5
+    with pytest.raises(CanonicalMatchError, match="kills"):
+        canonical_match_from_stratz(raw)

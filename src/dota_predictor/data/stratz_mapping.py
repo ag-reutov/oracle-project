@@ -56,12 +56,14 @@ from enum import Enum
 from typing import Any, TypeVar
 
 from dota_predictor.data.canonical_schema import (
+    PLAYER_BOX_SCORE_FIELD_MAP,
     CanonicalMatch,
     CanonicalMatchError,
     DraftAction,
     DraftEvent,
     HeroId,
     MatchLane,
+    MatchPlayerBoxScore,
     MatchPlayerPosition,
     MatchPlayerRole,
     PlayerId,
@@ -82,7 +84,7 @@ __all__ = [
 # (`storage.schema.MATCHES.c.mapper_version`) so a future reprocessing job
 # can select rows with `mapper_version < CANONICAL_MAPPER_VERSION` instead
 # of reprocessing everything or nothing.
-CANONICAL_MAPPER_VERSION = 2
+CANONICAL_MAPPER_VERSION = 3
 
 
 def _require(raw: Mapping[str, Any], key: str, *, context: str) -> Any:
@@ -180,9 +182,35 @@ class _MappedSidePlayer:
     position: MatchPlayerPosition | None
     lane: MatchLane | None
     role: MatchPlayerRole | None
+    box_score: MatchPlayerBoxScore
 
 
 _EnumT = TypeVar("_EnumT", bound=Enum)
+
+
+def _optional_int(value: Any, *, context: str) -> int | None:
+    """Map a STRATZ scalar to int, preserving null and zero.
+
+    Missing/null stays None. Zero is a real observation. Bool and
+    non-integer values fail closed so schema drift is visible.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise CanonicalMatchError(f"{context}: expected integer or null, got {value!r}")
+    return int(value)
+
+
+def _box_score_from_player(
+    player: Mapping[str, Any], *, player_id: int
+) -> MatchPlayerBoxScore:
+    kwargs: dict[str, int | None] = {}
+    for stratz_name, canonical_name in PLAYER_BOX_SCORE_FIELD_MAP:
+        kwargs[canonical_name] = _optional_int(
+            player.get(stratz_name),
+            context=f"player {player_id} {stratz_name}",
+        )
+    return MatchPlayerBoxScore(**kwargs)
 
 
 def _optional_enum(
@@ -211,10 +239,11 @@ def _side_roster(
     """Return mapped players for one side in lobby-slot order.
 
     Order follows STRATZ `playerSlot` (canonical `slot_in_side`), not
-    draft pick order and not `pickBans.playerIndex`. `heroId`,
-    `position`, `lane`, and `role` are taken from the player row itself.
-    `proSteamAccount` is ignored. Missing position/lane/role stay None
-    and do not fail mapping.
+    draft pick order and not `pickBans.playerIndex`.     `heroId`,
+    `position`, `lane`, `role`, and post-match box-score scalars are
+    taken from the player row itself. `proSteamAccount` is ignored.
+    Missing position/lane/role/box-score fields stay None and do not
+    fail mapping.
     """
     side_players = sorted(
         (player for player in players if player.get("isRadiant") == is_radiant),
@@ -254,6 +283,7 @@ def _side_roster(
                     player.get("role"),
                     context=f"player {player_id}",
                 ),
+                box_score=_box_score_from_player(player, player_id=player_id),
             )
         )
     return tuple(roster)
@@ -301,6 +331,8 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
     dire_lanes = tuple(player.lane for player in dire_roster)
     radiant_roles = tuple(player.role for player in radiant_roster)
     dire_roles = tuple(player.role for player in dire_roster)
+    radiant_box_scores = tuple(player.box_score for player in radiant_roster)
+    dire_box_scores = tuple(player.box_score for player in dire_roster)
 
     pick_bans = raw.get("pickBans") or []
     draft_events = tuple(
@@ -337,6 +369,8 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
         dire_lanes=dire_lanes,
         radiant_roles=radiant_roles,
         dire_roles=dire_roles,
+        radiant_box_scores=radiant_box_scores,
+        dire_box_scores=dire_box_scores,
         draft_events=draft_events,
         radiant_win=radiant_win,
         duration_seconds=duration_seconds,

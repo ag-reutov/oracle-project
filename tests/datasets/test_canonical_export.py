@@ -494,6 +494,28 @@ def test_match_players_parquet_preserves_null_and_unknown_position() -> None:
     validate_match_players_table(table, matches_table, drafts_table)
 
 
+def test_match_players_parquet_preserves_zero_and_null_box_scores() -> None:
+    match, players, drafts = _aligned_players(
+        1, num_bans=4, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]
+    )
+    players[0]["kills"] = 0
+    players[0]["deaths"] = 3
+    players[0]["num_last_hits"] = 0
+    players[0]["hero_damage"] = None
+    players[0]["level"] = 11
+    table = build_match_players_table([match], players)
+    by_player = {row["player_id"]: row for row in table.to_pylist()}
+    assert by_player[1]["kills"] == 0
+    assert by_player[1]["deaths"] == 3
+    assert by_player[1]["num_last_hits"] == 0
+    assert by_player[1]["hero_damage"] is None
+    assert by_player[1]["level"] == 11
+    assert by_player[2]["kills"] is None
+    matches_table = build_matches_table([match], players)
+    drafts_table = build_draft_events_table(drafts)
+    validate_match_players_table(table, matches_table, drafts_table)
+
+
 def test_validate_match_players_table_accepts_short_draft() -> None:
     match, players, drafts = _aligned_players(
         1, num_bans=0, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]
@@ -508,7 +530,11 @@ def test_validate_match_players_table_requires_ten_rows() -> None:
     match, players, drafts = _aligned_players(
         1, num_bans=4, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]
     )
-    players = [row for row in players if not (row["side"] == "DIRE" and row["slot_in_side"] == 4)]
+    players = [
+        row
+        for row in players
+        if not (row["side"] == "DIRE" and row["slot_in_side"] == 4)
+    ]
     matches_table = build_matches_table(
         [match],
         _player_rows(1, radiant_ids=[1, 2, 3, 4, 5], dire_ids=[6, 7, 8, 9, 10]),
@@ -604,7 +630,10 @@ def test_write_canonical_dataset_includes_match_players(tmp_path: Path) -> None:
     assert "lane" in read_players.column_names
     assert "role" in read_players.column_names
     assert all(row["position"] is None for row in read_players.to_pylist())
-    assert "radiant_player_0_hero_id" not in pq.read_table(
-        tmp_path / MATCHES_FILENAME
-    ).column_names
-
+    assert "kills" in read_players.column_names
+    assert "gold_per_minute" in read_players.column_names
+    assert all(row["kills"] is None for row in read_players.to_pylist())
+    assert (
+        "radiant_player_0_hero_id"
+        not in pq.read_table(tmp_path / MATCHES_FILENAME).column_names
+    )

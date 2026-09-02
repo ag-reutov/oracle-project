@@ -183,7 +183,7 @@ def test_slice_5_not_in_win_model_or_pre_draft_snapshot() -> None:
 
 
 def test_schema_versions_unchanged() -> None:
-    assert ANALYTICAL_SCHEMA_VERSION == 3
+    assert ANALYTICAL_SCHEMA_VERSION == 4
     assert REFERENCE_SCHEMA_VERSION == 1
 
 
