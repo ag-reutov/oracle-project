@@ -1,4 +1,4 @@
-# Research status: Slices 13–25
+# Research status: Slices 13–26
 
 Production features are only `FEATURE_COLUMNS` (33 PRE_DRAFT snapshot
 columns: team/player history, roster continuity, team Elo). A `FROZEN_*`
@@ -40,6 +40,7 @@ remains reserved. Later slices evaluate on the development frame only.
 | 23 | Player × hero behavioral compatibility | `player_hero_compatibility.py` | yes | **B — suggestive but unstable** | no fit-score freeze | no | no | no | **yes; required** | none | none remaining |
 | 24 | Current-meta Hero × Position state | `hero_position_meta_state.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | none |
 | 25 | Causal Player × Position hero-pool state | `player_hero_pool_state.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | prior A under estimator-specific Laplace support invalidated; common-support scoring shows expanding P×R×H worse than P×H on LL/Brier |
+| 26 | Causal sequential draft-state dataset | `sequential_draft_state.py` | **no** (working tree) | **A — freeze construction** | yes: `before_event_t` boundary + ordered prefix state + successful-ban semantics | no | no | no | state is research-only substrate | later next-pick / draft-policy slices | none |
 
 ## Slice 19 / 20 commit-state
 
@@ -78,11 +79,18 @@ Reuse without retuning:
   expanding P×R×H, last-5, or hierarchical backoff. Keep as diagnostic
   evidence that role-conditioned next-choice lift was an artifact of
   estimator-specific support normalization.
+- Slice 26 result: sequential draft-state construction is **A**. Freeze
+  `S_(M,t)` = state **before** event `sequence == t` (events with
+  `sequence < t`), ordered event prefixes, successful-vs-unsuccessful
+  ban semantics (`was_successful is not False` for availability), and
+  the terminal boundary after the last event. This is a dataset/state
+  freeze only — not a next-pick model and not a production feature.
 
 Do not treat as production or as a successful fit feature:
 
-- Any Slice 13–25 research column
+- Any Slice 13–26 research column
 - Slice 23 compatibility terms
 - Slice 24 current-meta H×P columns
 - Slice 25 pool-state / next-choice diagnostic columns
+- Slice 26 sequential draft-state fields (research substrate only)
 - `PLAYER_*_FEATURE_COLUMNS` names (evaluation plumbing, not `FEATURE_COLUMNS`)
