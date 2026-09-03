@@ -1,4 +1,4 @@
-# Research status: Slices 13–27
+# Research status: Slices 13–28
 
 Production features are only `FEATURE_COLUMNS` (33 PRE_DRAFT snapshot
 columns: team/player history, roster continuity, team Elo). A `FROZEN_*`
@@ -42,6 +42,7 @@ remains reserved. Later slices evaluate on the development frame only.
 | 25 | Causal Player × Position hero-pool state | `player_hero_pool_state.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | prior A under estimator-specific Laplace support invalidated; common-support scoring shows expanding P×R×H worse than P×H on LL/Brier |
 | 26 | Causal sequential draft-state dataset | `sequential_draft_state.py` | yes | **A — freeze construction** | yes: `before_event_t` boundary + ordered prefix state + successful-ban semantics | no | no | no | state is research-only substrate | 27 | none |
 | 27 | Incremental draft-value (Elo vs Elo+checkpoint picks) | `sequential_draft_benchmark.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | Pattern D: side-aware hero main effects worsen Elo at every checkpoint; bans worsen further |
+| 28 | Causal next-pick draft-policy | `next_pick_policy.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | Pattern D: no tested extension (prefix, bans, team, version) beats baseline_b (side + pick-index popularity). Sparse linear OVR SGD representation limitation at current data scale; does not prove absence of conditional draft structure. |
 
 ## Slice 19 / 20 commit-state
 
@@ -93,13 +94,18 @@ Reuse without retuning:
   that raw hero identity main effects are not a stable live-draft
   outcome signal beyond Elo. Do not respond by adding interactions
   inside Slice 27.
+- Slice 28 result: **C — do not freeze**. Pattern D. SGDClassifier(loss='log_loss') OVR logistic; multinomial logistic abandoned pre-benchmark for computational reasons. Best baseline: baseline_b (side + pick-index popularity, LL 4.385). No tested extension beats it: baseline_c +0.650, team_tendency +0.481, prefix_picks +6.052, team_identity +5.180. Extreme SGD underperformance is a sparse linear OVR representation limitation at this data scale, not proof of absence of conditional draft structure. No frozen components.
+  benchmark (`draft prefix -> next successful pick hero`). Classification
+  and any freeze will be recorded after development OOS evidence.
 
 Do not treat as production or as a successful fit feature:
 
-- Any Slice 13–27 research column
+- Any Slice 13–28 research column
 - Slice 23 compatibility terms
 - Slice 24 current-meta H×P columns
 - Slice 25 pool-state / next-choice diagnostic columns
 - Slice 26 sequential draft-state fields (research substrate only)
 - Slice 27 checkpoint pick/ban indicator columns
+- Slice 28 next-pick policy features / coefficients (research-only unless
+  a later confirmation freezes a supported policy-state definition)
 - `PLAYER_*_FEATURE_COLUMNS` names (evaluation plumbing, not `FEATURE_COLUMNS`)

@@ -221,6 +221,32 @@ from dota_predictor.training.sequential_draft_benchmark import (
     run_slice27_sequential_draft_benchmark,
     slice27_report_to_jsonable,
 )
+from dota_predictor.training.next_pick_policy import (
+    CLASSIFICATION_A as SLICE28_CLASSIFICATION_A,
+)
+from dota_predictor.training.next_pick_policy import (
+    CLASSIFICATION_B as SLICE28_CLASSIFICATION_B,
+)
+from dota_predictor.training.next_pick_policy import (
+    CLASSIFICATION_C as SLICE28_CLASSIFICATION_C,
+)
+from dota_predictor.training.next_pick_policy import (
+    HOLDOUT_POLICY as SLICE28_HOLDOUT_POLICY,
+    SLICE28_BOOTSTRAP_RESAMPLES,
+    SLICE28_BOOTSTRAP_SEED,
+    SLICE28_DIAGNOSTIC_ONLY,
+    SLICE28_FROZEN_COMPONENTS,
+    SLICE28_RESEARCH_CLASSIFICATION,
+    Slice28BenchmarkReport,
+    build_next_pick_decision_rows,
+    build_policy_feature_vector,
+    candidate_universe_for_row,
+    classify_slice28,
+    run_slice28_next_pick_policy_benchmark,
+    score_policy_distribution,
+    slice28_report_to_jsonable,
+    unavailable_heroes,
+)
 from dota_predictor.training.hero_requirement_state import (
     CLASSIFICATION_A as SLICE22_CLASSIFICATION_A,
 )
@@ -671,7 +697,17 @@ __all__ = [
     "SLICE27_PICKS_PLUS_BANS_SPEC_NAME",
     "SLICE27_REFERENCE_SPEC_NAME",
     "SLICE27_RESEARCH_CLASSIFICATION",
+    "SLICE28_BOOTSTRAP_RESAMPLES",
+    "SLICE28_BOOTSTRAP_SEED",
+    "SLICE28_CLASSIFICATION_A",
+    "SLICE28_CLASSIFICATION_B",
+    "SLICE28_CLASSIFICATION_C",
+    "SLICE28_DIAGNOSTIC_ONLY",
+    "SLICE28_FROZEN_COMPONENTS",
+    "SLICE28_HOLDOUT_POLICY",
+    "SLICE28_RESEARCH_CLASSIFICATION",
     "Slice27BenchmarkReport",
+    "Slice28BenchmarkReport",
     "Slice26DiagnosticReport",
     "TEAM_HERO_COMPARISON_COLUMNS",
     "WINDOW_SPECS",
@@ -758,6 +794,8 @@ __all__ = [
     "attach_player_hero_pool_state",
     "audit_draft_events_population",
     "build_draft_prefix_state",
+    "build_next_pick_decision_rows",
+    "build_policy_feature_vector",
     "build_sequential_draft_states",
     "build_familiarity_mix",
     "build_logistic_pipeline",
@@ -775,6 +813,7 @@ __all__ = [
     "build_slice16_model_ready_dataset",
     "build_slice20_model_ready_dataset",
     "candidate_position_means_table",
+    "candidate_universe_for_row",
     "career_gate_weights",
     "causal_previous_version_id",
     "chronological_split",
@@ -790,6 +829,7 @@ __all__ = [
     "classify_slice25",
     "classify_slice26",
     "classify_slice27",
+    "classify_slice28",
     "classify_match_draft_category",
     "compare_terminal_picks_to_players",
     "boundary_after_n_successful_picks",
@@ -819,6 +859,7 @@ __all__ = [
     "restrict_fold_to_memory",
     "rows_with_any_missing",
     "score_distribution",
+    "score_policy_distribution",
     "scoring_candidates",
     "run_combat_performance_target_diagnostics",
     "run_compatibility_diagnostics_on_frame",
@@ -836,6 +877,7 @@ __all__ = [
     "run_player_hero_pool_diagnostics",
     "run_sequential_draft_state_diagnostics",
     "run_slice27_sequential_draft_benchmark",
+    "run_slice28_next_pick_policy_benchmark",
     "reconstruct_events_from_prefix",
     "run_player_performance_target_diagnostics",
     "run_post_draft_benchmark",
@@ -867,8 +909,10 @@ __all__ = [
     "slice25_report_to_jsonable",
     "slice26_report_to_jsonable",
     "slice27_report_to_jsonable",
+    "slice28_report_to_jsonable",
     "standardized_coefficients",
     "subset_model_ready_dataset",
     "train_tertile_edges",
+    "unavailable_heroes",
     "utc_datetime",
 ]
