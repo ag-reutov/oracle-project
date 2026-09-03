@@ -12,7 +12,7 @@ alwaysApply: true
 - Organize features by **entity** (hero, player, team, match), not as one undifferentiated feature dump.
 - **Log hyperparameters and validation metrics** for every training run.
 - **Prefer less data over potentially leaked data.** If a feature might not have been knowable at draft time, drop it.
-- Slices 13–23 research status lives in `docs/research/slice_status.md`. A `FROZEN_*` name is a methodological or benchmark-spec freeze, not a production feature.
+- Slices 13–24 research status lives in `docs/research/slice_status.md`. A `FROZEN_*` name is a methodological or benchmark-spec freeze, not a production feature.
 
 ```python
 # ❌ BAD — uses the match result and in-game stats as features
