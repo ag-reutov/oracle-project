@@ -1,4 +1,4 @@
-# Research status: Slices 13–24
+# Research status: Slices 13–25
 
 Production features are only `FEATURE_COLUMNS` (33 PRE_DRAFT snapshot
 columns: team/player history, roster continuity, team Elo). A `FROZEN_*`
@@ -39,6 +39,7 @@ remains reserved. Later slices evaluate on the development frame only.
 | 22 | LPO hero×position requirement states | `hero_requirement_state.py` | yes | A | yes: LPO construction | yes: `FROZEN_HERO_FARM_SHRINKAGE_K=2`, `FROZEN_HERO_COMBAT_SHRINKAGE_K=2` | no | no | yes (no fit score) | 23 | none |
 | 23 | Player × hero behavioral compatibility | `player_hero_compatibility.py` | yes | **B — suggestive but unstable** | no fit-score freeze | no | no | no | **yes; required** | none | none remaining |
 | 24 | Current-meta Hero × Position state | `hero_position_meta_state.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | none |
+| 25 | Causal Player × Position hero-pool state | `player_hero_pool_state.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | prior A under estimator-specific Laplace support invalidated; common-support scoring shows expanding P×R×H worse than P×H on LL/Brier |
 
 ## Slice 19 / 20 commit-state
 
@@ -72,10 +73,16 @@ Reuse without retuning:
 - Slice 20 result: combat vs Elo is B (do not promote)
 - Slice 23 result: compatibility is B diagnostic-only (no production fit)
 - Slice 24 result: current-meta H×P is C (do not freeze a time-varying layer)
+- Slice 25 result: causal P×R×H hero-pool availability is **C** under
+  common-support scoring (`C_T` + fixed epsilon mixture). Do not freeze
+  expanding P×R×H, last-5, or hierarchical backoff. Keep as diagnostic
+  evidence that role-conditioned next-choice lift was an artifact of
+  estimator-specific support normalization.
 
 Do not treat as production or as a successful fit feature:
 
-- Any Slice 13–24 research column
+- Any Slice 13–25 research column
 - Slice 23 compatibility terms
 - Slice 24 current-meta H×P columns
+- Slice 25 pool-state / next-choice diagnostic columns
 - `PLAYER_*_FEATURE_COLUMNS` names (evaluation plumbing, not `FEATURE_COLUMNS`)
