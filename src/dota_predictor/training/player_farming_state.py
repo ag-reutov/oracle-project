@@ -103,9 +103,10 @@ RESIDUALIZER_N_PARAMS = 6
 RESIDUAL_STD_FLOOR = 1e-12
 DURATION_VARIANCE_FLOOR = 1e-12
 SHRINKAGE_GRID: tuple[float, ...] = (0.0, 2.0, 5.0, 10.0, 20.0, 40.0, 80.0)
-# Frozen after the development-only grid + later-development confirmation.
-# ``select_shrinkage_k`` is the authority; this constant documents the
-# chosen grid point so later slices do not re-search.
+# Methodological freeze after the development-only grid + later-development
+# confirmation. ``select_shrinkage_k`` is the authority; this constant
+# documents the chosen grid point so later slices do not re-search.
+# Not a production FEATURE_COLUMNS freeze.
 FROZEN_SHRINKAGE_K = 5.0
 MIN_EMPIRICAL_BAYES_PLAYER_N = 8
 MIN_EMPIRICAL_BAYES_PLAYERS = 8

@@ -116,10 +116,11 @@ __all__ = [
 
 CAUSAL_C_COLUMN = "combat_causal_c"
 COMBAT_SHRINKAGE_GRID = SHRINKAGE_GRID
-# Frozen after the development-only grid + later-development confirmation.
-# ``select_combat_shrinkage_k`` is the authority; this constant documents
-# the chosen grid point so later slices do not re-search. Combat k is
-# independent of farming ``k=5``.
+# Methodological freeze after the development-only grid + later-development
+# confirmation. ``select_combat_shrinkage_k`` is the authority; this
+# constant documents the chosen grid point so later slices do not
+# re-search. Combat k is independent of farming ``k=5``. Not a
+# production FEATURE_COLUMNS freeze.
 FROZEN_COMBAT_SHRINKAGE_K = 20.0
 MIN_EMPIRICAL_BAYES_PLAYER_N = 8
 MIN_EMPIRICAL_BAYES_PLAYERS = 8

@@ -6,7 +6,8 @@ does not re-search it and does not use match outcomes to choose it.
 
 Research / evaluation plumbing only. Does not add columns to production
 ``FEATURE_COLUMNS``, does not train a win model, and does not score the
-frozen holdout.
+frozen holdout. ``SLICE15_FROZEN_SPECS`` is a frozen *benchmark spec*
+for Slice 16, not a production-feature freeze.
 """
 
 from __future__ import annotations

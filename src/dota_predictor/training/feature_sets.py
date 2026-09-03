@@ -20,6 +20,9 @@ from dota_predictor.features.draft_profile import (
     DRAFT_PROFILE_PLAYER_METRIC_COLUMNS,
     DRAFT_PROFILE_TEAM_METRIC_COLUMNS,
 )
+from dota_predictor.features.player_combat_comparison import (
+    PLAYER_COMBAT_FEATURE_COLUMNS,
+)
 from dota_predictor.features.player_farming_comparison import (
     PLAYER_FARMING_COMPARISON_METRIC_COLUMNS,
     PLAYER_FARMING_FEATURE_COLUMNS,
@@ -47,11 +50,14 @@ __all__ = [
     "ELO_PLUS_DRAFT_COMPARISON_COLUMNS",
     "ELO_PLUS_HERO_META_COLUMNS",
     "ELO_PLUS_PLAYER_AND_TEAM_HERO_COLUMNS",
+    "ELO_PLUS_PLAYER_COMBAT_COLUMNS",
     "ELO_PLUS_PLAYER_FARMING_COLUMNS",
     "ELO_PLUS_PLAYER_HERO_COLUMNS",
     "ELO_PLUS_TEAM_HERO_COLUMNS",
     "HERO_META_COMPARISON_COLUMNS",
     "HISTORICAL_WITHOUT_ELO_COLUMNS",
+    "PLAYER_COMBAT_COMPARISON_COLUMNS",
+    "PLAYER_COMBAT_FEATURE_COLUMNS",
     "PLAYER_FARMING_COMPARISON_COLUMNS",
     "PLAYER_FARMING_FEATURE_COLUMNS",
     "PLAYER_HERO_COMPARISON_COLUMNS",
@@ -82,6 +88,11 @@ __all__ = [
     "SLICE15_FROZEN_SPECS",
     "SLICE15_REFERENCE_SPEC",
     "SLICE15_REFERENCE_SPEC_NAME",
+    "SLICE19_CANDIDATE_SPEC",
+    "SLICE19_CANDIDATE_SPEC_NAME",
+    "SLICE19_FROZEN_SPECS",
+    "SLICE19_REFERENCE_SPEC",
+    "SLICE19_REFERENCE_SPEC_NAME",
     "TEAM_HERO_COMPARISON_COLUMNS",
     "BlockAblationSpec",
     "slice8_interaction_column",
@@ -407,8 +418,11 @@ SLICE8_META_PLAYER_HERO_SPECS: tuple[BlockAblationSpec, ...] = (
 )
 
 
-# Slice 9 frozen candidate. Elo + unconditional Career Player × Hero,
-# already named in Slices 7/8. No new columns, gates, or interactions.
+# Slice 9 frozen *holdout evaluation* specs. Elo vs Elo + unconditional
+# Career Player × Hero (already named in Slices 7/8). This freezes the
+# one-shot holdout comparison protocol. It is not a production
+# FEATURE_COLUMNS promotion and adds no new columns, gates, or
+# interactions.
 SLICE9_REFERENCE_SPEC_NAME = "logistic_elo_only"
 SLICE9_CANDIDATE_SPEC_NAME = SLICE8_CAREER_SPEC_NAME
 SLICE9_REFERENCE_SPEC = BlockAblationSpec(
@@ -427,9 +441,10 @@ SLICE9_FROZEN_SPECS: tuple[BlockAblationSpec, ...] = (
 )
 
 
-# Slice 15 evaluation spec. Elo + pre-draft farming comparison of frozen
-# Slice 14 shrunk causal B. Not production FEATURE_COLUMNS and not a
-# replacement for Slice 9.
+# Slice 15 frozen *benchmark/evaluation* spec. Elo + pre-draft farming
+# comparison of methodologically frozen Slice 14 shrunk causal B. Held
+# fixed so later walk-forwards cannot move the goalposts. Not a
+# production FEATURE_COLUMNS column and not a replacement for Slice 9.
 PLAYER_FARMING_COMPARISON_COLUMNS: tuple[str, ...] = (
     PLAYER_FARMING_COMPARISON_METRIC_COLUMNS
 )
@@ -447,4 +462,26 @@ SLICE15_CANDIDATE_SPEC = BlockAblationSpec(
 SLICE15_FROZEN_SPECS: tuple[BlockAblationSpec, ...] = (
     SLICE15_REFERENCE_SPEC,
     SLICE15_CANDIDATE_SPEC,
+)
+
+
+# Slice 19 frozen *benchmark/evaluation* spec. Elo + pre-draft combat
+# comparison of methodologically frozen Slice 18 shrunk causal C. Held
+# fixed so Slice 20 cannot move the goalposts. Not a production
+# FEATURE_COLUMNS column and not a replacement for Slice 9 or Slice 15.
+PLAYER_COMBAT_COMPARISON_COLUMNS: tuple[str, ...] = PLAYER_COMBAT_FEATURE_COLUMNS
+ELO_PLUS_PLAYER_COMBAT_COLUMNS: tuple[str, ...] = (
+    ELO_ONLY_FEATURE_COLUMNS + PLAYER_COMBAT_FEATURE_COLUMNS
+)
+SLICE19_REFERENCE_SPEC_NAME = SLICE9_REFERENCE_SPEC_NAME
+SLICE19_CANDIDATE_SPEC_NAME = "logistic_elo_plus_player_combat"
+SLICE19_REFERENCE_SPEC = SLICE9_REFERENCE_SPEC
+SLICE19_CANDIDATE_SPEC = BlockAblationSpec(
+    name=SLICE19_CANDIDATE_SPEC_NAME,
+    label="Elo + player combat",
+    feature_columns=ELO_PLUS_PLAYER_COMBAT_COLUMNS,
+)
+SLICE19_FROZEN_SPECS: tuple[BlockAblationSpec, ...] = (
+    SLICE19_REFERENCE_SPEC,
+    SLICE19_CANDIDATE_SPEC,
 )

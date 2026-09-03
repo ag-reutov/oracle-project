@@ -66,6 +66,9 @@ from dota_predictor.training.player_hero_compatibility import (
     FARMING_SPEC,
     MODEL_SPECS,
     SLICE23_DIAGNOSTIC_COLUMNS,
+    SLICE23_DIAGNOSTIC_ONLY,
+    SLICE23_FIT_SCORE_FROZEN,
+    SLICE23_RESEARCH_CLASSIFICATION,
     attach_compatibility_terms,
     attach_player_hero_compatibility_terms,
     compatibility_terms,
@@ -644,6 +647,12 @@ def test_no_win_result_or_team_aggregation() -> None:
     assert report.combat_semantics["team_aggregated"] is False
 
 
+def test_slice23_is_diagnostic_only_and_not_a_frozen_fit() -> None:
+    assert SLICE23_RESEARCH_CLASSIFICATION == "B"
+    assert SLICE23_DIAGNOSTIC_ONLY is True
+    assert SLICE23_FIT_SCORE_FROZEN is False
+
+
 def test_feature_columns_remain_thirty_three_and_no_fit_registered() -> None:
     assert len(FEATURE_COLUMNS) == 33
     assert list(ALL_FEATURE_COLUMNS) == list(FEATURE_COLUMNS)
@@ -735,6 +744,7 @@ def test_holdout_excluded_and_integrity_flags(tmp_path: Path) -> None:
     assert report.integrity["feature_columns_unchanged_length"] is True
     assert report.integrity["player_hero_fit_created"] is False
     assert report.integrity["fit_score_frozen"] is False
+    assert report.integrity["diagnostic_only"] is True
     assert report.integrity["inclusive_hero_state_used"] is False
     holdout = pd.DataFrame({"start_time": [later], "hero_id": [1], "player_id": [11]})
     assert restrict_development(holdout).empty

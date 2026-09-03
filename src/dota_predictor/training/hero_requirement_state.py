@@ -150,9 +150,11 @@ HERO_FARM_SHRINKAGE_GRID: tuple[float, ...] = (
     80.0,
 )
 HERO_COMBAT_SHRINKAGE_GRID: tuple[float, ...] = HERO_FARM_SHRINKAGE_GRID
-# Frozen after Slice 22 development diagnostics. Selection remains
-# the authority of ``select_hero_*_shrinkage_k``; these constants
-# record the independently chosen grid points (both happened to be 2).
+# Methodological freeze after Slice 22 development diagnostics.
+# Selection remains the authority of ``select_hero_*_shrinkage_k``;
+# these constants record the independently chosen grid points (both
+# happened to be 2). Research-state shrinkage only; not production
+# features and not a player×hero fit score.
 FROZEN_HERO_FARM_SHRINKAGE_K = 2.0
 FROZEN_HERO_COMBAT_SHRINKAGE_K = 2.0
 MIN_EMPIRICAL_BAYES_CELL_N = 10

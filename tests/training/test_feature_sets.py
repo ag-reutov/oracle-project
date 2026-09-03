@@ -9,6 +9,9 @@ from dota_predictor.features.draft_profile import (
     DRAFT_PROFILE_PLAYER_METRIC_COLUMNS,
     DRAFT_PROFILE_TEAM_METRIC_COLUMNS,
 )
+from dota_predictor.features.player_combat_comparison import (
+    PLAYER_COMBAT_FEATURE_COLUMNS,
+)
 from dota_predictor.features.player_farming_comparison import (
     PLAYER_FARMING_COMPARISON_METRIC_COLUMNS,
     PLAYER_FARMING_FEATURE_COLUMNS,
@@ -39,6 +42,7 @@ from dota_predictor.training.feature_sets import (
     ELO_PLUS_DRAFT_COMPARISON_COLUMNS,
     ELO_PLUS_HERO_META_COLUMNS,
     ELO_PLUS_PLAYER_AND_TEAM_HERO_COLUMNS,
+    ELO_PLUS_PLAYER_COMBAT_COLUMNS,
     ELO_PLUS_PLAYER_FARMING_COLUMNS,
     ELO_PLUS_PLAYER_HERO_COLUMNS,
     ELO_PLUS_TEAM_HERO_COLUMNS,
@@ -59,6 +63,10 @@ from dota_predictor.training.feature_sets import (
     SLICE15_CANDIDATE_SPEC_NAME,
     SLICE15_FROZEN_SPECS,
     SLICE15_REFERENCE_SPEC,
+    SLICE19_CANDIDATE_SPEC,
+    SLICE19_CANDIDATE_SPEC_NAME,
+    SLICE19_FROZEN_SPECS,
+    SLICE19_REFERENCE_SPEC,
     TEAM_HERO_COMPARISON_COLUMNS,
 )
 
@@ -213,9 +221,7 @@ def test_slice7_specs_are_named_blocks_not_in_production_or_existing_ablation() 
     assert recent_wr.feature_columns == (
         recent.feature_columns + SLICE7_RECENT20_RATE_DIFF_COLUMNS
     )
-    assert role.feature_columns == (
-        ELO_ONLY_FEATURE_COLUMNS + SLICE7_ROLE_DIFF_COLUMNS
-    )
+    assert role.feature_columns == (ELO_ONLY_FEATURE_COLUMNS + SLICE7_ROLE_DIFF_COLUMNS)
     assert set(role.feature_columns) - set(ELO_ONLY_FEATURE_COLUMNS) == set(
         SLICE7_ROLE_DIFF_COLUMNS
     )
@@ -295,9 +301,7 @@ def test_slice9_frozen_specs_are_unconditional_elo_plus_career() -> None:
     assert SLICE9_REFERENCE_SPEC.feature_columns == ELO_ONLY_FEATURE_COLUMNS
     assert SLICE9_CANDIDATE_SPEC.feature_columns == ELO_PLUS_PLAYER_HERO_COLUMNS
     assert SLICE9_FROZEN_SPECS == (SLICE9_REFERENCE_SPEC, SLICE9_CANDIDATE_SPEC)
-    extra = set(SLICE9_CANDIDATE_SPEC.feature_columns) - set(
-        ELO_ONLY_FEATURE_COLUMNS
-    )
+    extra = set(SLICE9_CANDIDATE_SPEC.feature_columns) - set(ELO_ONLY_FEATURE_COLUMNS)
     assert extra.isdisjoint(FEATURE_COLUMNS)
     assert extra.isdisjoint(ALL_FEATURE_COLUMNS)
     assert extra.isdisjoint(SLICE8_CONTEXT_COLUMNS)
@@ -353,6 +357,38 @@ def test_slice15_farming_spec_is_elo_plus_shrunk_b_not_production() -> None:
     assert extra.isdisjoint(PLAYER_HERO_COMPARISON_COLUMNS)
     assert extra.isdisjoint(SLICE9_CANDIDATE_SPEC.feature_columns)
     assert SLICE15_FROZEN_SPECS == (SLICE15_REFERENCE_SPEC, SLICE15_CANDIDATE_SPEC)
+    for spec in POST_DRAFT_BLOCK_ABLATION_SPECS:
+        assert extra.isdisjoint(spec.feature_columns)
+    assert [spec.name for spec in POST_DRAFT_BLOCK_ABLATION_SPECS] == [
+        "logistic_elo_only",
+        "logistic_elo_plus_player_hero",
+        "logistic_elo_plus_team_hero",
+        "logistic_elo_plus_hero_meta",
+        "logistic_elo_plus_player_and_team_hero",
+        "logistic_elo_plus_all_three",
+    ]
+    assert [spec.name for spec in SLICE9_FROZEN_SPECS] == [
+        SLICE9_REFERENCE_SPEC_NAME,
+        SLICE9_CANDIDATE_SPEC_NAME,
+    ]
+
+
+def test_slice19_combat_spec_is_elo_plus_shrunk_c_not_production() -> None:
+    assert SLICE19_REFERENCE_SPEC is SLICE9_REFERENCE_SPEC
+    assert SLICE19_CANDIDATE_SPEC_NAME == "logistic_elo_plus_player_combat"
+    assert SLICE19_CANDIDATE_SPEC.feature_columns == ELO_PLUS_PLAYER_COMBAT_COLUMNS
+    assert ELO_PLUS_PLAYER_COMBAT_COLUMNS == (
+        ELO_ONLY_FEATURE_COLUMNS + PLAYER_COMBAT_FEATURE_COLUMNS
+    )
+    assert PLAYER_COMBAT_FEATURE_COLUMNS == ("mean_combat_shrunk_c_diff",)
+    extra = set(SLICE19_CANDIDATE_SPEC.feature_columns) - set(ELO_ONLY_FEATURE_COLUMNS)
+    assert extra == set(PLAYER_COMBAT_FEATURE_COLUMNS)
+    assert extra.isdisjoint(FEATURE_COLUMNS)
+    assert extra.isdisjoint(ALL_FEATURE_COLUMNS)
+    assert extra.isdisjoint(PLAYER_HERO_COMPARISON_COLUMNS)
+    assert extra.isdisjoint(SLICE9_CANDIDATE_SPEC.feature_columns)
+    assert extra.isdisjoint(SLICE15_CANDIDATE_SPEC.feature_columns)
+    assert SLICE19_FROZEN_SPECS == (SLICE19_REFERENCE_SPEC, SLICE19_CANDIDATE_SPEC)
     for spec in POST_DRAFT_BLOCK_ABLATION_SPECS:
         assert extra.isdisjoint(spec.feature_columns)
     assert [spec.name for spec in POST_DRAFT_BLOCK_ABLATION_SPECS] == [

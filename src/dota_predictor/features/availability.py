@@ -39,6 +39,14 @@ from dota_predictor.data.canonical_schema import (
 )
 from dota_predictor.features.expected_position import EXPECTED_POSITION_EVIDENCE_COLUMNS
 from dota_predictor.features.hero_state import HERO_STATE_METRIC_COLUMNS
+from dota_predictor.features.player_combat_comparison import (
+    COMBAT_CAUSAL_C_COLUMN,
+    PLAYER_COMBAT_COMPARISON_EVIDENCE_COLUMNS,
+    PLAYER_COMBAT_COMPARISON_IDENTITY_COLUMNS,
+    PLAYER_COMBAT_COMPARISON_METRIC_COLUMNS,
+    PLAYER_COMBAT_STATE_FEATURE_COLUMNS,
+    PLAYER_COMBAT_STATE_IDENTITY_COLUMNS,
+)
 from dota_predictor.features.player_farming_comparison import (
     FARMING_CAUSAL_B_COLUMN,
     PLAYER_FARMING_COMPARISON_IDENTITY_COLUMNS,
@@ -61,6 +69,8 @@ __all__ = [
     "HERO_STATE_COLUMN_AVAILABILITY",
     "MATCHES_COLUMN_AVAILABILITY",
     "MATCH_PLAYERS_COLUMN_AVAILABILITY",
+    "PLAYER_COMBAT_COMPARISON_COLUMN_AVAILABILITY",
+    "PLAYER_COMBAT_STATE_COLUMN_AVAILABILITY",
     "PLAYER_FARMING_COMPARISON_COLUMN_AVAILABILITY",
     "PLAYER_FARMING_STATE_COLUMN_AVAILABILITY",
     "PLAYER_HERO_ELO_COLUMN_AVAILABILITY",
@@ -343,6 +353,45 @@ PLAYER_FARMING_COMPARISON_COLUMN_AVAILABILITY: dict[str, InformationAvailability
     },
 }
 
+# Historical player combat state (Slice 18/19). Prior shrunk C is
+# PRE_DRAFT: it is keyed by rostered `player_id` and strictly earlier
+# appearances, not the current drafted hero or current position.
+# Current `hero_id` remains DRAFT identity if present. `combat_causal_c`
+# uses this appearance's hero damage / position baseline and is
+# POST_MATCH.
+PLAYER_COMBAT_STATE_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in PLAYER_COMBAT_STATE_IDENTITY_COLUMNS
+    },
+    "hero_id": InformationAvailability.DRAFT,
+    "position": InformationAvailability.POST_MATCH,
+    COMBAT_CAUSAL_C_COLUMN: InformationAvailability.POST_MATCH,
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in PLAYER_COMBAT_STATE_FEATURE_COLUMNS
+    },
+}
+
+# Match-level Radiant − Dire combat comparison (Slice 19). Side means
+# of prior combat state need only the ten rostered players, so every
+# comparison column is PRE_DRAFT. Current hero damage, hero, and
+# position are not comparison inputs.
+PLAYER_COMBAT_COMPARISON_COLUMN_AVAILABILITY: dict[str, InformationAvailability] = {
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in PLAYER_COMBAT_COMPARISON_IDENTITY_COLUMNS
+    },
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in PLAYER_COMBAT_COMPARISON_METRIC_COLUMNS
+    },
+    **{
+        column: InformationAvailability.PRE_DRAFT
+        for column in PLAYER_COMBAT_COMPARISON_EVIDENCE_COLUMNS
+    },
+}
+
 # Elo-adjusted Player × Hero (Slice 10). Current `hero_id` is the DRAFT
 # lookup key, so residual / shrinkage metrics are DRAFT even though the
 # Elo expected-win ingredient is PRE_DRAFT team state. Identity columns
@@ -396,6 +445,8 @@ _VIEW_COLUMN_AVAILABILITY: dict[str, dict[str, InformationAvailability]] = {
     "player_hero_elo": PLAYER_HERO_ELO_COLUMN_AVAILABILITY,
     "player_farming_state": PLAYER_FARMING_STATE_COLUMN_AVAILABILITY,
     "player_farming_comparison": PLAYER_FARMING_COMPARISON_COLUMN_AVAILABILITY,
+    "player_combat_state": PLAYER_COMBAT_STATE_COLUMN_AVAILABILITY,
+    "player_combat_comparison": PLAYER_COMBAT_COMPARISON_COLUMN_AVAILABILITY,
     "heroes": HEROES_COLUMN_AVAILABILITY,
     "game_versions": GAME_VERSIONS_COLUMN_AVAILABILITY,
 }

@@ -130,7 +130,8 @@ COMBAT_C_DURATION = "hero_damage_share_duration_resid"
 COMBAT_C_POSITION_DURATION = "hero_damage_share_position_duration_resid"
 COMBAT_D = "deaths_per_30"
 FROZEN_FARMING_B_COLUMN = FROZEN_FARMING_B
-# Frozen after Slice 17 development diagnostics. Historical state is Slice 18.
+# Methodological freeze of the combat *target definition* after Slice 17
+# diagnostics. Historical state is Slice 18. Not a production feature.
 FROZEN_COMBAT_CANDIDATE = COMBAT_C_POSITION
 REQUIRED_TEAM_SIZE = 5
 MIN_VARIANCE_PLAYER_N = 10

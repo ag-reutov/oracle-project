@@ -1,20 +1,20 @@
-"""Slice 16: walk-forward evaluation of frozen player farming vs Elo.
+"""Slice 20: walk-forward evaluation of frozen player combat vs Elo.
 
-One incremental test. The candidate is the Slice 15 named spec
-``logistic_elo_plus_player_farming`` (Elo + ``mean_farming_shrunk_b_diff``).
+One incremental test. The candidate is the Slice 19 named spec
+``logistic_elo_plus_player_combat`` (Elo + ``mean_combat_shrunk_c_diff``).
 The reference is the frozen logistic Elo spec ``logistic_elo_only``.
 
-Does not redesign candidate B, ``k``, player history, or the five-player
-Radiant − Dire mean. Does not add ``prior_n``, raw farming means, or
-interactions. Does not change production ``FEATURE_COLUMNS`` or Slice 9
-specs.
+Does not redesign candidate C, ``k``, player history, or the five-player
+Radiant − Dire mean. Does not add ``prior_n``, raw combat means,
+farming, or interactions. Does not change production ``FEATURE_COLUMNS``
+or Slice 9 specs.
 
 Holdout policy
 --------------
 The frozen Slice 9 holdout remains reserved until an explicit later
 promotion of a production spec. Slice 9's one-shot scorer is locked to
-Career Player × Hero. Later research slices (10–15) evaluate on the
-development frame only. Slice 16 follows that policy: expanding-window
+Career Player × Hero. Later research slices (10–19) evaluate on the
+development frame only. Slice 20 follows that policy: expanding-window
 OOS on ``start_time <= FROZEN_DEVELOPMENT_END``. The holdout is not
 scored and is not used to choose ``C`` or preprocessing.
 """
@@ -31,13 +31,18 @@ from dota_predictor.features.duckdb_layer import (
     MATCH_PLAYERS_VIEW,
     FeatureDuckDBConnection,
 )
-from dota_predictor.features.player_farming_comparison import (
-    FARMING_CAUSAL_B_COLUMN,
+from dota_predictor.features.player_combat_comparison import (
+    COMBAT_CAUSAL_C_COLUMN,
+    COMBAT_ROSTER_SIDE_SIZE,
     MATCH_ID_COLUMN,
-    PLAYER_FARMING_COMPARISON_METRIC_COLUMNS,
+    PLAYER_COMBAT_COMPARISON_EVIDENCE_COLUMNS,
+    PLAYER_COMBAT_COMPARISON_METRIC_COLUMNS,
+    PLAYER_COMBAT_FEATURE_COLUMNS,
+    PLAYER_COMBAT_REQUIRED_COLUMNS,
+    PLAYER_COMBAT_STATE_FEATURE_COLUMNS,
+)
+from dota_predictor.features.player_farming_comparison import (
     PLAYER_FARMING_FEATURE_COLUMNS,
-    PLAYER_FARMING_REQUIRED_COLUMNS,
-    PLAYER_FARMING_STATE_FEATURE_COLUMNS,
 )
 from dota_predictor.features.pre_draft_snapshot import (
     FEATURE_COLUMNS,
@@ -51,22 +56,28 @@ from dota_predictor.features.team_elo import (
     TEAM_ELO_FEATURE_COLUMNS,
     EloConfig,
 )
+from dota_predictor.training.combat_performance_target import (
+    COMBAT_C_POSITION,
+    FROZEN_COMBAT_CANDIDATE,
+)
 from dota_predictor.training.dataset import ModelReadyDataset, TrainingDatasetError
 from dota_predictor.training.evaluation import _fit_logistic
+from dota_predictor.training.farming_performance_target import CANDIDATE_B
 from dota_predictor.training.feature_sets import (
     ALL_FEATURE_COLUMNS,
     ELO_ONLY_FEATURE_COLUMNS,
-    ELO_PLUS_PLAYER_FARMING_COLUMNS,
+    ELO_PLUS_PLAYER_COMBAT_COLUMNS,
     POST_DRAFT_BLOCK_ABLATION_SPECS,
     SLICE9_CANDIDATE_SPEC,
     SLICE9_CANDIDATE_SPEC_NAME,
     SLICE9_FROZEN_SPECS,
     SLICE9_REFERENCE_SPEC_NAME,
     SLICE15_CANDIDATE_SPEC,
-    SLICE15_CANDIDATE_SPEC_NAME,
-    SLICE15_FROZEN_SPECS,
-    SLICE15_REFERENCE_SPEC,
-    SLICE15_REFERENCE_SPEC_NAME,
+    SLICE19_CANDIDATE_SPEC,
+    SLICE19_CANDIDATE_SPEC_NAME,
+    SLICE19_FROZEN_SPECS,
+    SLICE19_REFERENCE_SPEC,
+    SLICE19_REFERENCE_SPEC_NAME,
 )
 from dota_predictor.training.logistic_model import (
     LogisticRegressionConfig,
@@ -78,19 +89,26 @@ from dota_predictor.training.metrics import (
     per_sample_brier,
     per_sample_log_loss,
 )
+from dota_predictor.training.player_combat_comparison import (
+    build_player_combat_comparison,
+)
+from dota_predictor.training.player_combat_state import (
+    FROZEN_COMBAT_SHRINKAGE_K,
+    SLICE18_STATE_COLUMNS,
+)
 from dota_predictor.training.player_farming_comparison import (
     build_player_farming_comparison,
 )
 from dota_predictor.training.player_farming_state import (
     FROZEN_CANDIDATE_B,
     FROZEN_SHRINKAGE_K,
-    SLICE14_STATE_COLUMNS,
 )
 from dota_predictor.training.player_performance_target import (
     BOX_SCORE_COLUMNS,
     _jsonable_value,
     _numeric,
     _pearson,
+    _spearman,
     _std,
     restrict_development,
 )
@@ -114,130 +132,167 @@ from dota_predictor.training.walk_forward import (
 )
 
 __all__ = [
-    "ABS_FARMING_BUCKET_COUNT",
+    "ABS_COMBAT_BUCKET_COUNT",
     "CLASSIFICATION_A",
     "CLASSIFICATION_B",
     "CLASSIFICATION_C",
+    "COMBAT_FEATURE_COLUMN",
     "FARMING_FEATURE_COLUMN",
     "HOLDOUT_POLICY",
     "PREDICTION_MOVE_THRESHOLDS",
-    "SLICE16_BOOTSTRAP_RESAMPLES",
-    "SLICE16_BOOTSTRAP_SEED",
-    "SLICE16_CANDIDATE_SPEC",
-    "SLICE16_CANDIDATE_SPEC_NAME",
-    "SLICE16_FROZEN_SPECS",
-    "SLICE16_REFERENCE_SPEC",
-    "SLICE16_REFERENCE_SPEC_NAME",
-    "Slice16Assembly",
-    "Slice16BenchmarkReport",
+    "SLICE16_FARMING_FROZEN_RESULT",
+    "SLICE20_BOOTSTRAP_RESAMPLES",
+    "SLICE20_BOOTSTRAP_SEED",
+    "SLICE20_CANDIDATE_SPEC",
+    "SLICE20_CANDIDATE_SPEC_NAME",
+    "SLICE20_FROZEN_SPECS",
+    "SLICE20_REFERENCE_SPEC",
+    "SLICE20_REFERENCE_SPEC_NAME",
+    "Slice20Assembly",
+    "Slice20BenchmarkReport",
     "assign_abs_quantile_bucket",
-    "build_slice16_model_ready_dataset",
-    "classify_slice16",
-    "run_slice16_player_farming_benchmark",
-    "slice16_report_to_jsonable",
+    "assign_signed_combat_bucket",
+    "build_slice20_model_ready_dataset",
+    "classify_slice20",
+    "run_slice20_player_combat_benchmark",
+    "slice20_report_to_jsonable",
 ]
 
 
 # Repository names. User-facing "logistic_elo" is ``logistic_elo_only``.
-SLICE16_REFERENCE_SPEC_NAME = SLICE15_REFERENCE_SPEC_NAME
-SLICE16_CANDIDATE_SPEC_NAME = SLICE15_CANDIDATE_SPEC_NAME
-SLICE16_REFERENCE_SPEC = SLICE15_REFERENCE_SPEC
-SLICE16_CANDIDATE_SPEC = SLICE15_CANDIDATE_SPEC
-# Alias of the Slice 15 *benchmark/evaluation* spec. Held fixed so this
-# walk-forward cannot retune columns. Does not mean farming is production.
-SLICE16_FROZEN_SPECS = SLICE15_FROZEN_SPECS
+SLICE20_REFERENCE_SPEC_NAME = SLICE19_REFERENCE_SPEC_NAME
+SLICE20_CANDIDATE_SPEC_NAME = SLICE19_CANDIDATE_SPEC_NAME
+SLICE20_REFERENCE_SPEC = SLICE19_REFERENCE_SPEC
+SLICE20_CANDIDATE_SPEC = SLICE19_CANDIDATE_SPEC
+# Alias of the Slice 19 *benchmark/evaluation* spec. Held fixed so this
+# walk-forward cannot retune columns. Does not mean combat is production.
+SLICE20_FROZEN_SPECS = SLICE19_FROZEN_SPECS
+COMBAT_FEATURE_COLUMN = PLAYER_COMBAT_FEATURE_COLUMNS[0]
 FARMING_FEATURE_COLUMN = PLAYER_FARMING_FEATURE_COLUMNS[0]
 
-SLICE16_BOOTSTRAP_RESAMPLES = FROZEN_HOLDOUT_BOOTSTRAP_RESAMPLES
-SLICE16_BOOTSTRAP_SEED = FROZEN_HOLDOUT_BOOTSTRAP_SEED
-ABS_FARMING_BUCKET_COUNT = 4
+SLICE20_BOOTSTRAP_RESAMPLES = FROZEN_HOLDOUT_BOOTSTRAP_RESAMPLES
+SLICE20_BOOTSTRAP_SEED = FROZEN_HOLDOUT_BOOTSTRAP_SEED
+ABS_COMBAT_BUCKET_COUNT = 4
 PREDICTION_MOVE_THRESHOLDS: tuple[float, ...] = (0.01, 0.02, 0.05)
 
 HOLDOUT_POLICY = (
     "development_oos_only: frozen Slice 9 holdout remains reserved until "
     "an explicit later promotion of a production spec. Slice 9's one-shot "
-    "scorer is locked to Career Player × Hero. Farming's target, k, and "
-    "comparison formula were methodologically frozen in Slices 13–15, and "
-    "the Slice 15 evaluation spec is held fixed here, but this research "
-    "candidate is not a promoted production spec, so Slice 16 scores "
+    "scorer is locked to Career Player × Hero. Combat's target, k, and "
+    "comparison formula were methodologically frozen in Slices 17–19, and "
+    "the Slice 19 evaluation spec is held fixed here, but this research "
+    "candidate is not a promoted production spec, so Slice 20 scores "
     "development walk-forward OOS only "
     "(start_time <= FROZEN_DEVELOPMENT_END)."
 )
 
-CLASSIFICATION_A = "A — consistent incremental signal beyond Elo"
+CLASSIFICATION_A = "A — consistent incremental combat signal beyond Elo"
 CLASSIFICATION_B = (
-    "B — weak/mixed incremental signal; retain state but do not promote"
+    "B — weak/mixed incremental combat signal; retain state but do not promote"
 )
-CLASSIFICATION_C = "C — no useful incremental win signal beyond Elo"
+CLASSIFICATION_C = "C — no useful incremental combat win signal beyond Elo"
+
+# Frozen Slice 16 farming result. Recorded as stated; Slice 20 does not
+# re-score farming or run a farming-vs-combat promotion test.
+SLICE16_FARMING_FROZEN_RESULT: dict[str, object] = {
+    "pooled_delta_log_loss_approx": -0.00029,
+    "ci_included_zero": True,
+    "n_folds_improved": 2,
+    "n_folds": 4,
+    "coefficient": "stable_positive",
+    "classification": (
+        "B — weak/mixed incremental signal; retain state but do not promote"
+    ),
+}
 
 _FORBIDDEN_MODEL_COLUMNS: tuple[str, ...] = (
+    "combat_prior_n",
+    "mean_combat_prior_n",
+    "mean_combat_prior_n_diff",
+    "min_combat_prior_n",
+    "radiant_combat_prior_n_sum",
+    "dire_combat_prior_n_sum",
+    "radiant_combat_cold_start_count",
+    "dire_combat_cold_start_count",
+    "radiant_mean_combat_shrunk_c",
+    "dire_mean_combat_shrunk_c",
+    FARMING_FEATURE_COLUMN,
     "farming_prior_n",
-    "mean_farming_prior_n",
-    "mean_farming_prior_n_diff",
-    "min_farming_prior_n",
-    "min_farming_prior_n_diff",
     "hero_id",
     "position",
     "position_number",
+    "hero_damage",
+    "kills",
+    "assists",
+    "deaths",
     "num_last_hits",
     "duration_seconds",
-    "last_hits_per_minute",
-    FARMING_CAUSAL_B_COLUMN,
+    "networth",
+    COMBAT_CAUSAL_C_COLUMN,
     TARGET_COLUMN,
 )
 
 
 @dataclass(frozen=True)
-class Slice16Assembly:
-    """Elo + frozen farming comparison on the development frame."""
+class Slice20Assembly:
+    """Elo + frozen combat comparison on the development frame."""
 
     dataset: ModelReadyDataset
     n_snapshot_matches: int
-    n_farming_comparison_matches: int
-    n_missing_farming_join: int
+    n_combat_comparison_matches: int
+    n_missing_combat_join: int
     n_holdout_excluded: int
+    farming_by_match: pd.DataFrame
 
 
 @dataclass
-class Slice16BenchmarkReport:
-    """Walk-forward paired evaluation of frozen farming vs logistic Elo."""
+class Slice20BenchmarkReport:
+    """Walk-forward paired evaluation of frozen combat vs logistic Elo."""
 
     development_end: datetime
     holdout_policy: str
     n_development_matches: int
     n_holdout_excluded: int
     n_oos: int
-    frozen_k: float
-    assembly: Slice16Assembly
+    frozen_combat_k: float
+    frozen_farming_k: float
+    assembly: Slice20Assembly
     walk_forward: WalkForwardReport
     fold_table: pd.DataFrame
     pooled: pd.DataFrame
     bootstrap: dict[str, object]
     coefficients: pd.DataFrame
     fold_sign_consistency: dict[str, object]
-    farming_elo_correlation: float
-    farming_distribution: pd.DataFrame
-    elo_by_farming_bucket: pd.DataFrame
+    combat_elo_pearson: float
+    combat_elo_spearman: float
+    combat_farming_pearson: float
+    combat_farming_spearman: float
+    combat_distribution: pd.DataFrame
+    elo_by_combat_bucket: pd.DataFrame
     prediction_movement: dict[str, object]
     magnitude_buckets: pd.DataFrame
+    directional_buckets: pd.DataFrame
     calibration: dict[str, object]
+    slice16_comparison: dict[str, object]
     integrity: dict[str, object]
     classification: str
     classification_rationale: str
 
 
-def build_slice16_model_ready_dataset(
+def build_slice20_model_ready_dataset(
     store: FeatureDuckDBConnection,
     *,
     elo_config: EloConfig | None = None,
     development_end: datetime | None = None,
-) -> Slice16Assembly:
-    """PRE_DRAFT Elo plus the frozen farming comparison, development only.
+) -> Slice20Assembly:
+    """PRE_DRAFT Elo plus the frozen combat comparison, development only.
 
-    Farming state is attached with ``development_end`` set so later
-    holdout box scores cannot enter the residualizer or player history.
-    The current match still never contributes last hits, duration,
-    position, hero, or result to ``mean_farming_shrunk_b_diff``.
+    Combat state is attached with ``development_end`` set so later
+    holdout box scores cannot enter the position baseline or player
+    history. The current match still never contributes hero damage,
+    kills, assists, deaths, duration, position, hero, or result to
+    ``mean_combat_shrunk_c_diff``. Farming is joined for diagnostics
+    only and is not a model column.
     """
     end = utc_datetime(
         development_end if development_end is not None else FROZEN_DEVELOPMENT_END
@@ -249,37 +304,51 @@ def build_slice16_model_ready_dataset(
     stamp = pd.to_datetime(full["start_time"], utc=True)
     holdout_n = int((stamp > pd.Timestamp(end)).sum())
     development = restrict_development(full, development_end=end)
-    comparison = build_player_farming_comparison(
-        store, k=FROZEN_SHRINKAGE_K, elo_config=resolved_elo, development_end=end
+    comparison = build_player_combat_comparison(
+        store,
+        k=FROZEN_COMBAT_SHRINKAGE_K,
+        elo_config=resolved_elo,
+        development_end=end,
     )
-    farming = comparison.loc[:, [MATCH_ID_COLUMN, *PLAYER_FARMING_FEATURE_COLUMNS]]
+    combat = comparison.loc[:, [MATCH_ID_COLUMN, *PLAYER_COMBAT_FEATURE_COLUMNS]]
     merged = development.merge(
-        farming,
+        combat,
         on=MATCH_ID_COLUMN,
         how="left",
         validate="one_to_one",
     )
+    farming_comparison = build_player_farming_comparison(
+        store, k=FROZEN_SHRINKAGE_K, elo_config=resolved_elo, development_end=end
+    )
+    farming = farming_comparison.loc[
+        :, [MATCH_ID_COLUMN, *PLAYER_FARMING_FEATURE_COLUMNS]
+    ]
     ordered = merged.sort_values(
         ["start_time", MATCH_ID_COLUMN], kind="stable"
     ).reset_index(drop=True)
-    feature_columns = ELO_PLUS_PLAYER_FARMING_COLUMNS
+    feature_columns = ELO_PLUS_PLAYER_COMBAT_COLUMNS
     missing = [name for name in feature_columns if name not in ordered.columns]
     if missing:
         raise TrainingDatasetError(
-            "Slice 16 assembly is missing required columns: "
-            f"{missing}"
+            f"Slice 20 assembly is missing required columns: {missing}"
         )
-    overlap = set(FEATURE_COLUMNS) & set(PLAYER_FARMING_FEATURE_COLUMNS)
+    overlap = set(FEATURE_COLUMNS) & set(PLAYER_COMBAT_FEATURE_COLUMNS)
     if overlap:
         raise TrainingDatasetError(
-            "farming candidate columns must not appear in FEATURE_COLUMNS: "
+            "combat candidate columns must not appear in FEATURE_COLUMNS: "
             f"{sorted(overlap)}"
+        )
+    farming_in_x = [
+        name for name in PLAYER_FARMING_FEATURE_COLUMNS if name in feature_columns
+    ]
+    if farming_in_x:
+        raise TrainingDatasetError(
+            f"Slice 20 feature matrix must not include farming columns: {farming_in_x}"
         )
     forbidden = [name for name in _FORBIDDEN_MODEL_COLUMNS if name in feature_columns]
     if forbidden:
         raise TrainingDatasetError(
-            "Slice 16 feature matrix must not include "
-            f"{forbidden}"
+            f"Slice 20 feature matrix must not include {forbidden}"
         )
     dataset = ModelReadyDataset(
         X=ordered[list(feature_columns)].copy(),
@@ -289,19 +358,18 @@ def build_slice16_model_ready_dataset(
         target_column=TARGET_COLUMN,
         identity_columns=IDENTITY_COLUMNS,
     )
-    assert_development_frame_excludes_holdout(
-        dataset.context, development_end=end
-    )
-    present_ids = set(farming[MATCH_ID_COLUMN].tolist()) if len(farming) else set()
+    assert_development_frame_excludes_holdout(dataset.context, development_end=end)
+    present_ids = set(combat[MATCH_ID_COLUMN].tolist()) if len(combat) else set()
     n_missing_join = int((~ordered[MATCH_ID_COLUMN].isin(present_ids)).sum())
-    return Slice16Assembly(
+    return Slice20Assembly(
         dataset=dataset,
         n_snapshot_matches=n_snapshot,
-        n_farming_comparison_matches=int(farming[MATCH_ID_COLUMN].nunique())
-        if len(farming)
+        n_combat_comparison_matches=int(combat[MATCH_ID_COLUMN].nunique())
+        if len(combat)
         else 0,
-        n_missing_farming_join=n_missing_join,
+        n_missing_combat_join=n_missing_join,
         n_holdout_excluded=holdout_n,
+        farming_by_match=farming.copy(),
     )
 
 
@@ -319,9 +387,9 @@ def _quantile_edges(values: np.ndarray, n_buckets: int) -> np.ndarray:
 
 
 def assign_abs_quantile_bucket(value: float, edges: np.ndarray) -> str:
-    """Map ``|farming diff|`` onto precomputed quantile edges.
+    """Map ``|combat diff|`` onto precomputed quantile edges.
 
-    Edges come from the OOS ``|mean_farming_shrunk_b_diff|`` distribution
+    Edges come from the OOS ``|mean_combat_shrunk_c_diff|`` distribution
     only. They are not chosen from prediction metrics.
     """
     if not np.isfinite(value):
@@ -336,10 +404,21 @@ def assign_abs_quantile_bucket(value: float, edges: np.ndarray) -> str:
     return f"Q{idx + 1}"
 
 
+def assign_signed_combat_bucket(value: float) -> str:
+    """Fixed sign split. Cutoffs are not optimized from outcomes."""
+    if not np.isfinite(value):
+        return "NULL"
+    if value < 0.0:
+        return "combat_diff_lt_0"
+    if value > 0.0:
+        return "combat_diff_gt_0"
+    return "combat_diff_eq_0"
+
+
 def _paired_oos(walk_forward: WalkForwardReport) -> pd.DataFrame:
     oos = walk_forward.oos_predictions
-    reference = oos.loc[oos["model"] == SLICE16_REFERENCE_SPEC_NAME].copy()
-    candidate = oos.loc[oos["model"] == SLICE16_CANDIDATE_SPEC_NAME].copy()
+    reference = oos.loc[oos["model"] == SLICE20_REFERENCE_SPEC_NAME].copy()
+    candidate = oos.loc[oos["model"] == SLICE20_CANDIDATE_SPEC_NAME].copy()
     ref_ids = reference[MATCH_ID_COLUMN].to_numpy()
     cand_ids = candidate[MATCH_ID_COLUMN].to_numpy()
     if ref_ids.shape != cand_ids.shape or not np.array_equal(ref_ids, cand_ids):
@@ -366,18 +445,26 @@ def _paired_oos(walk_forward: WalkForwardReport) -> pd.DataFrame:
 
 
 def _attach_features(
-    paired: pd.DataFrame, dataset: ModelReadyDataset
+    paired: pd.DataFrame,
+    dataset: ModelReadyDataset,
+    farming_by_match: pd.DataFrame,
 ) -> pd.DataFrame:
     features = dataset.context[[MATCH_ID_COLUMN]].copy()
     features[TEAM_ELO_DELTA_COLUMN] = dataset.X[TEAM_ELO_DELTA_COLUMN].to_numpy()
-    features[FARMING_FEATURE_COLUMN] = dataset.X[FARMING_FEATURE_COLUMN].to_numpy()
-    return paired.merge(
+    features[COMBAT_FEATURE_COLUMN] = dataset.X[COMBAT_FEATURE_COLUMN].to_numpy()
+    attached = paired.merge(
         features, on=MATCH_ID_COLUMN, how="left", validate="one_to_one"
+    )
+    farming = farming_by_match.loc[
+        :, [MATCH_ID_COLUMN, *PLAYER_FARMING_FEATURE_COLUMNS]
+    ]
+    return attached.merge(
+        farming, on=MATCH_ID_COLUMN, how="left", validate="one_to_one"
     )
 
 
-def _farming_coefficient(table: pd.DataFrame) -> float:
-    rows = table.loc[table["feature"] == FARMING_FEATURE_COLUMN]
+def _combat_coefficient(table: pd.DataFrame) -> float:
+    rows = table.loc[table["feature"] == COMBAT_FEATURE_COLUMN]
     if rows.empty:
         return float("nan")
     return float(rows["coefficient"].iloc[0])
@@ -389,7 +476,7 @@ def _fold_coefficients(
     rows: list[dict[str, object]] = []
     for fold in folds:
         c_lookup = selected_c.loc[selected_c["fold_id"] == fold.fold_id]
-        for spec in SLICE16_FROZEN_SPECS:
+        for spec in SLICE20_FROZEN_SPECS:
             c = float(c_lookup.loc[c_lookup["model"] == spec.name, "C"].iloc[0])
             model = _fit_logistic(
                 fold.train,
@@ -397,24 +484,22 @@ def _fold_coefficients(
                 config=LogisticRegressionConfig(C=c),
             )
             coef = standardized_coefficients(model)
-            farming = _farming_coefficient(coef)
-            train_farming = _numeric(fold.train.X[FARMING_FEATURE_COLUMN])
-            finite = train_farming.to_numpy(dtype=float)
+            combat = _combat_coefficient(coef)
+            train_combat = _numeric(fold.train.X[COMBAT_FEATURE_COLUMN])
+            finite = train_combat.to_numpy(dtype=float)
             finite = finite[np.isfinite(finite)]
             rows.append(
                 {
                     "fold_id": fold.fold_id,
                     "model": spec.name,
                     "C": c,
-                    "farming_coefficient": farming
-                    if spec.name == SLICE16_CANDIDATE_SPEC_NAME
+                    "combat_coefficient": combat
+                    if spec.name == SLICE20_CANDIDATE_SPEC_NAME
                     else float("nan"),
-                    "train_farming_mean": (
+                    "train_combat_mean": (
                         float(finite.mean()) if finite.size else float("nan")
                     ),
-                    "train_farming_std": (
-                        _std(finite) if finite.size else float("nan")
-                    ),
+                    "train_combat_std": (_std(finite) if finite.size else float("nan")),
                     "n_train": len(fold.train),
                     "missingness_indicator_in_model": any(
                         str(name).endswith(MISSINGNESS_INDICATOR_SUFFIX)
@@ -436,7 +521,7 @@ def _fold_table(
 ) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     cand_coef = coefficients.loc[
-        coefficients["model"] == SLICE16_CANDIDATE_SPEC_NAME
+        coefficients["model"] == SLICE20_CANDIDATE_SPEC_NAME
     ].set_index("fold_id")
     for fold in walk_forward.folds:
         subset = paired.loc[paired["fold_id"] == fold.fold_id]
@@ -465,15 +550,15 @@ def _fold_table(
                 "paired_delta_log_loss": float(delta.mean()),
                 "reference_brier": ref_metrics.brier_score,
                 "candidate_brier": cand_metrics.brier_score,
-                "farming_coefficient": float(coef_row["farming_coefficient"]),
-                "train_farming_mean": float(coef_row["train_farming_mean"]),
-                "train_farming_std": float(coef_row["train_farming_std"]),
+                "combat_coefficient": float(coef_row["combat_coefficient"]),
+                "train_combat_mean": float(coef_row["train_combat_mean"]),
+                "train_combat_std": float(coef_row["train_combat_std"]),
                 "C_reference": float(
                     walk_forward.selected_C.loc[
                         (walk_forward.selected_C["fold_id"] == fold.fold_id)
                         & (
                             walk_forward.selected_C["model"]
-                            == SLICE16_REFERENCE_SPEC_NAME
+                            == SLICE20_REFERENCE_SPEC_NAME
                         ),
                         "C",
                     ].iloc[0]
@@ -511,16 +596,16 @@ def _bootstrap_delta(delta: np.ndarray) -> dict[str, object]:
     observed = float(delta.mean()) if delta.size else float("nan")
     ci_lo, ci_hi = bootstrap_mean_ci(
         delta,
-        n_resamples=SLICE16_BOOTSTRAP_RESAMPLES,
-        random_state=SLICE16_BOOTSTRAP_SEED,
+        n_resamples=SLICE20_BOOTSTRAP_RESAMPLES,
+        random_state=SLICE20_BOOTSTRAP_SEED,
     )
-    rng = np.random.default_rng(SLICE16_BOOTSTRAP_SEED)
+    rng = np.random.default_rng(SLICE20_BOOTSTRAP_SEED)
     if delta.size == 0:
         frac_negative = float("nan")
         boot_mean = float("nan")
     else:
         draws = rng.choice(
-            delta, size=(SLICE16_BOOTSTRAP_RESAMPLES, delta.size), replace=True
+            delta, size=(SLICE20_BOOTSTRAP_RESAMPLES, delta.size), replace=True
         )
         means = draws.mean(axis=1)
         frac_negative = float((means < 0.0).mean())
@@ -531,8 +616,8 @@ def _bootstrap_delta(delta: np.ndarray) -> dict[str, object]:
         "ci95_low": ci_lo,
         "ci95_high": ci_hi,
         "frac_delta_negative": frac_negative,
-        "n_resamples": SLICE16_BOOTSTRAP_RESAMPLES,
-        "seed": SLICE16_BOOTSTRAP_SEED,
+        "n_resamples": SLICE20_BOOTSTRAP_RESAMPLES,
+        "seed": SLICE20_BOOTSTRAP_SEED,
         "grouping": "oos_match",
     }
 
@@ -545,7 +630,7 @@ def _sign(value: float) -> int:
 
 def _fold_sign_consistency(fold_table: pd.DataFrame) -> dict[str, object]:
     deltas = fold_table["paired_delta_log_loss"].to_numpy(dtype=float)
-    coefs = fold_table["farming_coefficient"].to_numpy(dtype=float)
+    coefs = fold_table["combat_coefficient"].to_numpy(dtype=float)
     n_neg = int((deltas < 0.0).sum())
     n_pos = int((deltas > 0.0).sum())
     n_zero = int((deltas == 0.0).sum()) + int((~np.isfinite(deltas)).sum())
@@ -568,12 +653,15 @@ def _fold_sign_consistency(fold_table: pd.DataFrame) -> dict[str, object]:
 
 
 def _distribution(values: pd.Series, *, column: str) -> pd.DataFrame:
-    finite = _numeric(values).to_numpy(dtype=float)
+    raw = _numeric(values)
+    finite = raw.to_numpy(dtype=float)
+    n_null = int((~np.isfinite(finite)).sum())
     finite = finite[np.isfinite(finite)]
     if finite.size == 0:
         stats = {
             "column": column,
             "n": 0,
+            "n_null": n_null,
             "mean": float("nan"),
             "std": float("nan"),
             "median": float("nan"),
@@ -583,6 +671,7 @@ def _distribution(values: pd.Series, *, column: str) -> pd.DataFrame:
             "p95": float("nan"),
             "min": float("nan"),
             "max": float("nan"),
+            "mean_abs": float("nan"),
         }
         return pd.DataFrame([stats])
     return pd.DataFrame(
@@ -590,6 +679,7 @@ def _distribution(values: pd.Series, *, column: str) -> pd.DataFrame:
             {
                 "column": column,
                 "n": int(finite.size),
+                "n_null": n_null,
                 "mean": float(finite.mean()),
                 "std": _std(finite),
                 "median": float(np.median(finite)),
@@ -599,6 +689,7 @@ def _distribution(values: pd.Series, *, column: str) -> pd.DataFrame:
                 "p95": float(np.quantile(finite, 0.95)),
                 "min": float(finite.min()),
                 "max": float(finite.max()),
+                "mean_abs": float(np.mean(np.abs(finite))),
             }
         ]
     )
@@ -632,58 +723,92 @@ def _prediction_movement(delta: np.ndarray) -> dict[str, object]:
     }
 
 
-def _magnitude_buckets(paired: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray]:
-    abs_diff = np.abs(_numeric(paired[FARMING_FEATURE_COLUMN]).to_numpy(dtype=float))
-    edges = _quantile_edges(abs_diff, ABS_FARMING_BUCKET_COUNT)
-    labels = [
-        assign_abs_quantile_bucket(value, edges) for value in abs_diff
-    ]
-    work = paired.copy()
-    work["abs_farming_diff"] = abs_diff
-    work["abs_farming_bucket"] = labels
-    rows: list[dict[str, object]] = []
+def _bucket_sort_key(label: str) -> int:
+    if label.startswith("Q"):
+        return int(label[1:])
+    signed = {
+        "combat_diff_lt_0": 0,
+        "combat_diff_eq_0": 1,
+        "combat_diff_gt_0": 2,
+    }
+    return signed.get(label, 99)
+
+
+def _bucket_metrics(
+    work: pd.DataFrame, *, bucket_column: str, mean_abs_column: str | None
+) -> pd.DataFrame:
+    labels = work[bucket_column].tolist()
     order = sorted(
         {label for label in labels if label != "NULL"},
-        key=lambda item: int(item[1:]) if item.startswith("Q") else 99,
+        key=_bucket_sort_key,
     )
     if "NULL" in labels:
         order.append("NULL")
+    rows: list[dict[str, object]] = []
     for label in order:
-        subset = work.loc[work["abs_farming_bucket"] == label]
+        subset = work.loc[work[bucket_column] == label]
         if subset.empty:
             continue
         y = subset["y_true"]
         ref_ll = float(per_sample_log_loss(y, subset["p_reference"]).mean())
         cand_ll = float(per_sample_log_loss(y, subset["p_candidate"]).mean())
-        rows.append(
-            {
-                "bucket": label,
-                "n": len(subset),
-                "mean_abs_farming_diff": float(
-                    np.nanmean(subset["abs_farming_diff"].to_numpy(dtype=float))
-                ),
-                "reference_log_loss": ref_ll,
-                "candidate_log_loss": cand_ll,
-                "paired_delta_log_loss": cand_ll - ref_ll,
-            }
-        )
-    return pd.DataFrame(rows), edges
+        row: dict[str, object] = {
+            "bucket": label,
+            "n": len(subset),
+            "reference_log_loss": ref_ll,
+            "candidate_log_loss": cand_ll,
+            "paired_delta_log_loss": cand_ll - ref_ll,
+        }
+        if mean_abs_column is not None:
+            row["mean_abs_combat_diff"] = float(
+                np.nanmean(subset[mean_abs_column].to_numpy(dtype=float))
+            )
+        else:
+            combat = _numeric(subset[COMBAT_FEATURE_COLUMN]).to_numpy(dtype=float)
+            finite = combat[np.isfinite(combat)]
+            row["mean_combat_diff"] = (
+                float(finite.mean()) if finite.size else float("nan")
+            )
+        rows.append(row)
+    return pd.DataFrame(rows)
 
 
-def _elo_by_farming_bucket(paired: pd.DataFrame, edges: np.ndarray) -> pd.DataFrame:
-    abs_diff = np.abs(_numeric(paired[FARMING_FEATURE_COLUMN]).to_numpy(dtype=float))
-    labels = [
+def _magnitude_buckets(paired: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray]:
+    abs_diff = np.abs(_numeric(paired[COMBAT_FEATURE_COLUMN]).to_numpy(dtype=float))
+    edges = _quantile_edges(abs_diff, ABS_COMBAT_BUCKET_COUNT)
+    work = paired.copy()
+    work["abs_combat_diff"] = abs_diff
+    work["abs_combat_bucket"] = [
         assign_abs_quantile_bucket(value, edges) for value in abs_diff
     ]
+    return _bucket_metrics(
+        work, bucket_column="abs_combat_bucket", mean_abs_column="abs_combat_diff"
+    ), edges
+
+
+def _directional_buckets(paired: pd.DataFrame) -> pd.DataFrame:
+    combat = _numeric(paired[COMBAT_FEATURE_COLUMN]).to_numpy(dtype=float)
     work = paired.copy()
-    work["abs_farming_bucket"] = labels
+    work["signed_combat_bucket"] = [
+        assign_signed_combat_bucket(value) for value in combat
+    ]
+    return _bucket_metrics(
+        work, bucket_column="signed_combat_bucket", mean_abs_column=None
+    )
+
+
+def _elo_by_combat_bucket(paired: pd.DataFrame, edges: np.ndarray) -> pd.DataFrame:
+    abs_diff = np.abs(_numeric(paired[COMBAT_FEATURE_COLUMN]).to_numpy(dtype=float))
+    labels = [assign_abs_quantile_bucket(value, edges) for value in abs_diff]
+    work = paired.copy()
+    work["abs_combat_bucket"] = labels
     rows: list[dict[str, object]] = []
     order = sorted(
         {label for label in labels if label != "NULL"},
         key=lambda item: int(item[1:]) if item.startswith("Q") else 99,
     )
     for label in order:
-        subset = work.loc[work["abs_farming_bucket"] == label]
+        subset = work.loc[work["abs_combat_bucket"] == label]
         elo = _numeric(subset[TEAM_ELO_DELTA_COLUMN]).to_numpy(dtype=float)
         finite = elo[np.isfinite(elo)]
         rows.append(
@@ -711,7 +836,7 @@ def _calibration(paired: pd.DataFrame) -> dict[str, object]:
     }
 
 
-def classify_slice16(
+def classify_slice20(
     *,
     pooled_delta: float,
     ci_low: float,
@@ -740,11 +865,7 @@ def classify_slice16(
         and n_folds_delta_positive == 0
     )
     mixed_folds = n_folds_delta_negative > 0 and n_folds_delta_positive > 0
-    isolated_fold = (
-        n_folds >= 3
-        and n_folds_delta_negative == 1
-        and pooled_delta < 0.0
-    )
+    isolated_fold = n_folds >= 3 and n_folds_delta_negative == 1 and pooled_delta < 0.0
     brier_worse = (
         np.isfinite(candidate_brier)
         and np.isfinite(reference_brier)
@@ -774,7 +895,7 @@ def classify_slice16(
             (
                 "Pooled paired Δ log loss is negative, the bootstrap CI "
                 "excludes zero on the improvement side, folds agree, the "
-                "farming coefficient sign is stable, and calibration does "
+                "combat coefficient sign is stable, and calibration does "
                 "not degrade."
             ),
         )
@@ -809,7 +930,7 @@ def classify_slice16(
     if isolated_fold:
         reasons.append("pooled improvement is concentrated in one fold")
     if not coefficient_sign_stable:
-        reasons.append("farming coefficient sign is unstable")
+        reasons.append("combat coefficient sign is unstable")
     if brier_worse:
         reasons.append("candidate Brier is worse")
     if tiny_movement:
@@ -819,54 +940,120 @@ def classify_slice16(
     return CLASSIFICATION_B, "; ".join(reasons) + "."
 
 
+def _slice16_qualitative_comparison(
+    *,
+    pooled_delta: float,
+    ci_low: float,
+    ci_high: float,
+    n_folds_delta_negative: int,
+    n_folds: int,
+    coefficient_sign_stable: bool,
+    n_folds_coefficient_positive: int,
+    mean_abs_prediction_delta: float,
+    reference_ece: float,
+    candidate_ece: float,
+    classification: str,
+) -> dict[str, object]:
+    ci_includes_zero = (
+        np.isfinite(ci_low) and np.isfinite(ci_high) and ci_low <= 0.0 <= ci_high
+    )
+    return {
+        "farming_pooled_delta_approx": SLICE16_FARMING_FROZEN_RESULT[
+            "pooled_delta_log_loss_approx"
+        ],
+        "farming_ci_included_zero": SLICE16_FARMING_FROZEN_RESULT["ci_included_zero"],
+        "farming_folds_improved": (
+            f"{SLICE16_FARMING_FROZEN_RESULT['n_folds_improved']}/"
+            f"{SLICE16_FARMING_FROZEN_RESULT['n_folds']}"
+        ),
+        "farming_coefficient": SLICE16_FARMING_FROZEN_RESULT["coefficient"],
+        "farming_classification": SLICE16_FARMING_FROZEN_RESULT["classification"],
+        "combat_pooled_delta": pooled_delta,
+        "combat_ci_includes_zero": ci_includes_zero,
+        "combat_folds_improved": f"{n_folds_delta_negative}/{n_folds}",
+        "combat_coefficient_sign_stable": coefficient_sign_stable,
+        "combat_n_folds_coefficient_positive": n_folds_coefficient_positive,
+        "combat_mean_abs_prediction_delta": mean_abs_prediction_delta,
+        "combat_ece_reference": reference_ece,
+        "combat_ece_candidate": candidate_ece,
+        "combat_classification": classification,
+        "models_combined": False,
+        "statistical_test_between_farming_and_combat": False,
+        "promotion_contest": False,
+    }
+
+
 def _integrity(
     store: FeatureDuckDBConnection,
-    assembly: Slice16Assembly,
+    assembly: Slice20Assembly,
     paired: pd.DataFrame,
 ) -> dict[str, object]:
     dataset = assembly.dataset
     view_columns = store.relation(MATCH_PLAYERS_VIEW).columns
     ref_ids = paired[MATCH_ID_COLUMN].to_numpy()
+    extra = set(SLICE20_CANDIDATE_SPEC.feature_columns) - set(
+        SLICE20_REFERENCE_SPEC.feature_columns
+    )
     return {
         "holdout_policy": HOLDOUT_POLICY,
         "development_end": FROZEN_DEVELOPMENT_END.isoformat(),
-        "frozen_shrinkage_k": FROZEN_SHRINKAGE_K,
-        "frozen_candidate_b": FROZEN_CANDIDATE_B,
+        "frozen_combat_candidate": FROZEN_COMBAT_CANDIDATE,
+        "slice17_candidate_unchanged": FROZEN_COMBAT_CANDIDATE == COMBAT_C_POSITION,
+        "frozen_combat_shrinkage_k": FROZEN_COMBAT_SHRINKAGE_K,
+        "combat_k_is_20": FROZEN_COMBAT_SHRINKAGE_K == 20.0,
         "k_re_searched": False,
-        "alternative_farming_features_searched": False,
+        "alternative_combat_features_searched": False,
+        "farming_candidate_b": FROZEN_CANDIDATE_B,
+        "farming_candidate_b_unchanged": FROZEN_CANDIDATE_B == CANDIDATE_B,
+        "farming_frozen_shrinkage_k": FROZEN_SHRINKAGE_K,
+        "farming_k_is_5": FROZEN_SHRINKAGE_K == 5.0,
+        "farming_in_candidate": FARMING_FEATURE_COLUMN
+        in SLICE20_CANDIDATE_SPEC.feature_columns,
+        "farming_spec_unchanged": list(SLICE15_CANDIDATE_SPEC.feature_columns)
+        == list(ELO_ONLY_FEATURE_COLUMNS) + list(PLAYER_FARMING_FEATURE_COLUMNS),
         "holdout_scored": False,
         "holdout_used_for_c": False,
         "holdout_used_for_feature": False,
         "stratz_called": False,
-        "reference_spec": SLICE16_REFERENCE_SPEC_NAME,
-        "candidate_spec": SLICE16_CANDIDATE_SPEC_NAME,
-        "reference_columns": list(SLICE16_REFERENCE_SPEC.feature_columns),
-        "candidate_columns": list(SLICE16_CANDIDATE_SPEC.feature_columns),
-        "reference_is_elo_only": list(SLICE16_REFERENCE_SPEC.feature_columns)
+        "ingestion_modified": False,
+        "schema_modified": False,
+        "reference_spec": SLICE20_REFERENCE_SPEC_NAME,
+        "candidate_spec": SLICE20_CANDIDATE_SPEC_NAME,
+        "reference_columns": list(SLICE20_REFERENCE_SPEC.feature_columns),
+        "candidate_columns": list(SLICE20_CANDIDATE_SPEC.feature_columns),
+        "reference_is_elo_only": list(SLICE20_REFERENCE_SPEC.feature_columns)
         == list(ELO_ONLY_FEATURE_COLUMNS)
         == list(TEAM_ELO_FEATURE_COLUMNS),
-        "candidate_is_elo_plus_farming": list(
-            SLICE16_CANDIDATE_SPEC.feature_columns
-        )
-        == list(ELO_PLUS_PLAYER_FARMING_COLUMNS),
+        "candidate_is_elo_plus_combat": list(SLICE20_CANDIDATE_SPEC.feature_columns)
+        == list(ELO_PLUS_PLAYER_COMBAT_COLUMNS),
+        "candidate_extra_columns": sorted(extra),
         "candidate_excludes_prior_n": all(
-            "prior_n" not in name for name in SLICE16_CANDIDATE_SPEC.feature_columns
+            "prior_n" not in name for name in SLICE20_CANDIDATE_SPEC.feature_columns
+        ),
+        "candidate_excludes_evidence": all(
+            name not in SLICE20_CANDIDATE_SPEC.feature_columns
+            for name in PLAYER_COMBAT_COMPARISON_EVIDENCE_COLUMNS
         ),
         "forbidden_columns_absent_from_x": all(
             name not in dataset.X.columns for name in _FORBIDDEN_MODEL_COLUMNS
         ),
-        "hero_id_in_required_columns": "hero_id" in PLAYER_FARMING_REQUIRED_COLUMNS,
-        "position_in_required_columns": "position" in PLAYER_FARMING_REQUIRED_COLUMNS,
-        "causal_b_in_state_feature_columns": (
-            FARMING_CAUSAL_B_COLUMN in PLAYER_FARMING_STATE_FEATURE_COLUMNS
+        "farming_absent_from_x": FARMING_FEATURE_COLUMN not in dataset.X.columns,
+        "hero_id_in_required_columns": "hero_id" in PLAYER_COMBAT_REQUIRED_COLUMNS,
+        "position_in_required_columns": "position" in PLAYER_COMBAT_REQUIRED_COLUMNS,
+        "hero_damage_in_required_columns": (
+            "hero_damage" in PLAYER_COMBAT_REQUIRED_COLUMNS
         ),
-        "causal_b_in_comparison_columns": (
-            FARMING_CAUSAL_B_COLUMN in PLAYER_FARMING_COMPARISON_METRIC_COLUMNS
+        "kills_in_required_columns": "kills" in PLAYER_COMBAT_REQUIRED_COLUMNS,
+        "causal_c_in_state_feature_columns": (
+            COMBAT_CAUSAL_C_COLUMN in PLAYER_COMBAT_STATE_FEATURE_COLUMNS
+        ),
+        "causal_c_in_comparison_columns": (
+            COMBAT_CAUSAL_C_COLUMN in PLAYER_COMBAT_COMPARISON_METRIC_COLUMNS
         ),
         "state_in_feature_columns": any(
-            name in FEATURE_COLUMNS for name in SLICE14_STATE_COLUMNS
+            name in FEATURE_COLUMNS for name in SLICE18_STATE_COLUMNS
         ),
-        "farming_in_feature_columns": FARMING_FEATURE_COLUMN in FEATURE_COLUMNS,
+        "combat_in_feature_columns": COMBAT_FEATURE_COLUMN in FEATURE_COLUMNS,
         "feature_columns_unchanged_length": len(FEATURE_COLUMNS) == 33,
         "all_feature_columns_is_feature_columns": list(ALL_FEATURE_COLUMNS)
         == list(FEATURE_COLUMNS),
@@ -877,7 +1064,7 @@ def _integrity(
         "slice9_candidate_unchanged": (
             SLICE9_CANDIDATE_SPEC_NAME == "logistic_elo_plus_player_hero"
         ),
-        "slice9_candidate_excludes_farming": FARMING_FEATURE_COLUMN
+        "slice9_candidate_excludes_combat": COMBAT_FEATURE_COLUMN
         not in SLICE9_CANDIDATE_SPEC.feature_columns,
         "post_draft_block_ablation_spec_count": len(POST_DRAFT_BLOCK_ABLATION_SPECS),
         "box_scores_in_feature_match_players_view": any(
@@ -885,42 +1072,43 @@ def _integrity(
         ),
         "identical_oos_match_ids": True,
         "n_oos_match_ids": len(np.unique(ref_ids)),
-        "population_matches_expected": (
-            len(dataset) == FROZEN_DEVELOPMENT_MATCH_COUNT
-        ),
+        "population_matches_expected": (len(dataset) == FROZEN_DEVELOPMENT_MATCH_COUNT),
         "oos_count_matches_frozen_frame": (
             len(paired) == FROZEN_DEVELOPMENT_OOS_MATCH_COUNT
         ),
         "n_holdout_excluded": assembly.n_holdout_excluded,
-        "n_missing_farming_join": assembly.n_missing_farming_join,
+        "n_missing_combat_join": assembly.n_missing_combat_join,
         "team_aggregation": "arithmetic_five_player_side_mean",
+        "team_aggregation_n_players": COMBAT_ROSTER_SIDE_SIZE,
         "orientation": "radiant_minus_dire",
         "cold_start": 0.0,
         "walk_forward_config_n_blocks": DEFAULT_WALK_FORWARD_CONFIG.n_blocks,
     }
 
 
-def run_slice16_player_farming_benchmark(
+def run_slice20_player_combat_benchmark(
     store: FeatureDuckDBConnection,
     *,
     config: WalkForwardConfig | None = None,
     elo_config: EloConfig | None = None,
     development_end: datetime | None = None,
-) -> Slice16BenchmarkReport:
-    """Walk-forward paired test of frozen farming vs logistic Elo."""
+) -> Slice20BenchmarkReport:
+    """Walk-forward paired test of frozen combat vs logistic Elo."""
     resolved = config if config is not None else DEFAULT_WALK_FORWARD_CONFIG
     end = utc_datetime(
         development_end if development_end is not None else FROZEN_DEVELOPMENT_END
     )
-    assembly = build_slice16_model_ready_dataset(
+    assembly = build_slice20_model_ready_dataset(
         store, elo_config=elo_config, development_end=end
     )
     walk_forward = run_post_draft_walk_forward(
         assembly.dataset,
         config=resolved,
-        specs=SLICE16_FROZEN_SPECS,
+        specs=SLICE20_FROZEN_SPECS,
     )
-    paired = _attach_features(_paired_oos(walk_forward), assembly.dataset)
+    paired = _attach_features(
+        _paired_oos(walk_forward), assembly.dataset, assembly.farming_by_match
+    )
     coefficients = _fold_coefficients(walk_forward.folds, walk_forward.selected_C)
     fold_table = _fold_table(walk_forward, paired, coefficients)
     pooled = _pooled_row(paired)
@@ -930,19 +1118,27 @@ def run_slice16_player_farming_benchmark(
         )
     )
     consistency = _fold_sign_consistency(fold_table)
-    farming_elo_corr = _pearson(
-        paired[FARMING_FEATURE_COLUMN], paired[TEAM_ELO_DELTA_COLUMN]
+    combat_elo_pearson = _pearson(
+        paired[COMBAT_FEATURE_COLUMN], paired[TEAM_ELO_DELTA_COLUMN]
     )
-    farming_distribution = _distribution(
-        paired[FARMING_FEATURE_COLUMN], column=FARMING_FEATURE_COLUMN
+    combat_elo_spearman = _spearman(
+        paired[COMBAT_FEATURE_COLUMN], paired[TEAM_ELO_DELTA_COLUMN]
+    )
+    combat_farming_pearson = _pearson(
+        paired[COMBAT_FEATURE_COLUMN], paired[FARMING_FEATURE_COLUMN]
+    )
+    combat_farming_spearman = _spearman(
+        paired[COMBAT_FEATURE_COLUMN], paired[FARMING_FEATURE_COLUMN]
+    )
+    combat_distribution = _distribution(
+        paired[COMBAT_FEATURE_COLUMN], column=COMBAT_FEATURE_COLUMN
     )
     magnitude_buckets, edges = _magnitude_buckets(paired)
-    elo_by_bucket = _elo_by_farming_bucket(paired, edges)
-    movement = _prediction_movement(
-        paired["prediction_delta"].to_numpy(dtype=float)
-    )
+    elo_by_bucket = _elo_by_combat_bucket(paired, edges)
+    directional_buckets = _directional_buckets(paired)
+    movement = _prediction_movement(paired["prediction_delta"].to_numpy(dtype=float))
     calibration = _calibration(paired)
-    classification, rationale = classify_slice16(
+    classification, rationale = classify_slice20(
         pooled_delta=float(pooled.iloc[0]["paired_delta_log_loss"]),
         ci_low=float(bootstrap["ci95_low"]),
         ci_high=float(bootstrap["ci95_high"]),
@@ -957,15 +1153,29 @@ def run_slice16_player_farming_benchmark(
         candidate_ece=float(pooled.iloc[0]["candidate_ece"]),
         mean_abs_prediction_delta=float(movement["mean_abs"]),
     )
+    slice16_comparison = _slice16_qualitative_comparison(
+        pooled_delta=float(pooled.iloc[0]["paired_delta_log_loss"]),
+        ci_low=float(bootstrap["ci95_low"]),
+        ci_high=float(bootstrap["ci95_high"]),
+        n_folds_delta_negative=int(consistency["n_folds_delta_negative"]),
+        n_folds=int(consistency["n_folds"]),
+        coefficient_sign_stable=bool(consistency["coefficient_sign_stable"]),
+        n_folds_coefficient_positive=int(consistency["n_folds_coefficient_positive"]),
+        mean_abs_prediction_delta=float(movement["mean_abs"]),
+        reference_ece=float(pooled.iloc[0]["reference_ece"]),
+        candidate_ece=float(pooled.iloc[0]["candidate_ece"]),
+        classification=classification,
+    )
     integrity = _integrity(store, assembly, paired)
-    integrity["abs_farming_bucket_edges"] = [float(edge) for edge in edges]
-    return Slice16BenchmarkReport(
+    integrity["abs_combat_bucket_edges"] = [float(edge) for edge in edges]
+    return Slice20BenchmarkReport(
         development_end=end,
         holdout_policy=HOLDOUT_POLICY,
         n_development_matches=len(assembly.dataset),
         n_holdout_excluded=assembly.n_holdout_excluded,
         n_oos=len(paired),
-        frozen_k=FROZEN_SHRINKAGE_K,
+        frozen_combat_k=FROZEN_COMBAT_SHRINKAGE_K,
+        frozen_farming_k=FROZEN_SHRINKAGE_K,
         assembly=assembly,
         walk_forward=walk_forward,
         fold_table=fold_table,
@@ -973,37 +1183,47 @@ def run_slice16_player_farming_benchmark(
         bootstrap=bootstrap,
         coefficients=coefficients,
         fold_sign_consistency=consistency,
-        farming_elo_correlation=farming_elo_corr,
-        farming_distribution=farming_distribution,
-        elo_by_farming_bucket=elo_by_bucket,
+        combat_elo_pearson=combat_elo_pearson,
+        combat_elo_spearman=combat_elo_spearman,
+        combat_farming_pearson=combat_farming_pearson,
+        combat_farming_spearman=combat_farming_spearman,
+        combat_distribution=combat_distribution,
+        elo_by_combat_bucket=elo_by_bucket,
         prediction_movement=movement,
         magnitude_buckets=magnitude_buckets,
+        directional_buckets=directional_buckets,
         calibration=calibration,
+        slice16_comparison=slice16_comparison,
         integrity=integrity,
         classification=classification,
         classification_rationale=rationale,
     )
 
 
-def slice16_report_to_jsonable(report: Slice16BenchmarkReport) -> dict[str, object]:
-    """JSON-safe dump of the Slice 16 walk-forward report."""
+def slice20_report_to_jsonable(report: Slice20BenchmarkReport) -> dict[str, object]:
+    """JSON-safe dump of the Slice 20 walk-forward report."""
     return {
         "development_end": report.development_end.isoformat(),
         "holdout_policy": report.holdout_policy,
         "n_development_matches": report.n_development_matches,
         "n_holdout_excluded": report.n_holdout_excluded,
         "n_oos": report.n_oos,
-        "frozen_k": report.frozen_k,
+        "frozen_combat_k": report.frozen_combat_k,
+        "frozen_farming_k": report.frozen_farming_k,
         "fold_table": _jsonable_value(report.fold_table),
         "pooled": _jsonable_value(report.pooled),
         "bootstrap": _jsonable_value(report.bootstrap),
         "coefficients": _jsonable_value(report.coefficients),
         "fold_sign_consistency": _jsonable_value(report.fold_sign_consistency),
-        "farming_elo_correlation": _jsonable_value(report.farming_elo_correlation),
-        "farming_distribution": _jsonable_value(report.farming_distribution),
-        "elo_by_farming_bucket": _jsonable_value(report.elo_by_farming_bucket),
+        "combat_elo_pearson": _jsonable_value(report.combat_elo_pearson),
+        "combat_elo_spearman": _jsonable_value(report.combat_elo_spearman),
+        "combat_farming_pearson": _jsonable_value(report.combat_farming_pearson),
+        "combat_farming_spearman": _jsonable_value(report.combat_farming_spearman),
+        "combat_distribution": _jsonable_value(report.combat_distribution),
+        "elo_by_combat_bucket": _jsonable_value(report.elo_by_combat_bucket),
         "prediction_movement": _jsonable_value(report.prediction_movement),
         "magnitude_buckets": _jsonable_value(report.magnitude_buckets),
+        "directional_buckets": _jsonable_value(report.directional_buckets),
         "calibration": {
             "reference_brier": report.calibration["reference_brier"],
             "candidate_brier": report.calibration["candidate_brier"],
@@ -1015,11 +1235,10 @@ def slice16_report_to_jsonable(report: Slice16BenchmarkReport) -> dict[str, obje
                 "intercept_slope_available"
             ],
         },
+        "slice16_comparison": _jsonable_value(report.slice16_comparison),
         "integrity": _jsonable_value(report.integrity),
         "classification": report.classification,
         "classification_rationale": report.classification_rationale,
-        "n_missing_farming_join": report.assembly.n_missing_farming_join,
-        "n_farming_comparison_matches": (
-            report.assembly.n_farming_comparison_matches
-        ),
+        "n_missing_combat_join": report.assembly.n_missing_combat_join,
+        "n_combat_comparison_matches": (report.assembly.n_combat_comparison_matches),
     }

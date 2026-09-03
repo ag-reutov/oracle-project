@@ -26,6 +26,13 @@ Targets: ``farming_causal_b`` and ``combat_causal_c``.
 Tune / validation uses the established Slice 14/18/22 chronological
 boundary. The frozen Slice 9 holdout is excluded from fitting, form
 selection, scaling, and every diagnostic used to choose a form.
+
+Research result
+---------------
+Classification **B — suggestive but unstable**. This slice is
+diagnostic-only. It does not freeze a production fit score. Downstream
+code must not treat compatibility terms as an accepted predictive
+feature. See ``docs/research/slice_status.md``.
 """
 
 from __future__ import annotations
@@ -106,6 +113,9 @@ __all__ = [
     "FARMING_SPEC",
     "MODEL_SPECS",
     "SLICE23_DIAGNOSTIC_COLUMNS",
+    "SLICE23_DIAGNOSTIC_ONLY",
+    "SLICE23_FIT_SCORE_FROZEN",
+    "SLICE23_RESEARCH_CLASSIFICATION",
     "Slice23DiagnosticReport",
     "attach_compatibility_terms",
     "attach_player_hero_compatibility_terms",
@@ -160,6 +170,11 @@ WIN_LABEL_COLUMNS: tuple[str, ...] = (
 CLASSIFICATION_A = "A — compatibility interaction exists"
 CLASSIFICATION_B = "B — suggestive but unstable"
 CLASSIFICATION_C = "C — no useful compatibility interaction"
+# Recorded development-window result. Diagnostic only: not a
+# methodological freeze of a fit score and not a production feature.
+SLICE23_RESEARCH_CLASSIFICATION = "B"
+SLICE23_DIAGNOSTIC_ONLY = True
+SLICE23_FIT_SCORE_FROZEN = False
 
 
 @dataclass(frozen=True)
@@ -1168,8 +1183,10 @@ def classify_slice23(
         classification = "B"
         gate = CLASSIFICATION_B
         next_slice = (
-            "Do not freeze a fit score. Revisit only if a later slice "
-            "has a sharper identification strategy."
+            "Diagnostic only. Do not freeze a production fit score and "
+            "do not treat compatibility terms as an accepted predictive "
+            "feature. Revisit only if a later slice has a sharper "
+            "identification strategy."
         )
     return pd.DataFrame(
         [
@@ -1700,7 +1717,8 @@ def run_compatibility_diagnostics_on_frame(
         ),
         "n_holdout_excluded": n_holdout_excluded,
         "model_trained": False,
-        "fit_score_frozen": False,
+        "fit_score_frozen": SLICE23_FIT_SCORE_FROZEN,
+        "diagnostic_only": SLICE23_DIAGNOSTIC_ONLY,
         "farming_gate": farming["gate"],
         "combat_gate": combat["gate"],
         "rng_seed": rng_seed,
