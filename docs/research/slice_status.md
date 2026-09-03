@@ -1,4 +1,4 @@
-# Research status: Slices 13–28
+# Research status: Slices 13–29
 
 Production features are only `FEATURE_COLUMNS` (33 PRE_DRAFT snapshot
 columns: team/player history, roster continuity, team Elo). A `FROZEN_*`
@@ -43,6 +43,7 @@ remains reserved. Later slices evaluate on the development frame only.
 | 26 | Causal sequential draft-state dataset | `sequential_draft_state.py` | yes | **A — freeze construction** | yes: `before_event_t` boundary + ordered prefix state + successful-ban semantics | no | no | no | state is research-only substrate | 27 | none |
 | 27 | Incremental draft-value (Elo vs Elo+checkpoint picks) | `sequential_draft_benchmark.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | Pattern D: side-aware hero main effects worsen Elo at every checkpoint; bans worsen further |
 | 28 | Causal next-pick draft-policy | `next_pick_policy.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | Pattern D: no tested extension (prefix, bans, team, version) beats baseline_b (side + pick-index popularity). Sparse linear OVR SGD representation limitation at current data scale; does not prove absence of conditional draft structure. |
+| 29 | Data-scale feasibility / learning-curve audit | `data_scale_diagnostics.py` | **no** (working tree) | **DATA + REPRESENTATION LIMITED** | no | no | no | no | **yes; required** | none | Track A: ΔLL +0.45→+0.08 with N (data-scale); C re-selected via frozen S27 fold-internal procedure (C_heroes always 0.1 in practice). Track B: frozen S28 recipe (alpha=1/(C*n)) gap stays ~+5.7–+6.1 — does not rescue as implemented; not proof every sparse linear prefix model is doomed. Expansion ~1.6–2.4k worthwhile, not claimed enough for Track A to beat Elo. |
 
 ## Slice 19 / 20 commit-state
 
@@ -95,12 +96,13 @@ Reuse without retuning:
   outcome signal beyond Elo. Do not respond by adding interactions
   inside Slice 27.
 - Slice 28 result: **C — do not freeze**. Pattern D. SGDClassifier(loss='log_loss') OVR logistic; multinomial logistic abandoned pre-benchmark for computational reasons. Best baseline: baseline_b (side + pick-index popularity, LL 4.385). No tested extension beats it: baseline_c +0.650, team_tendency +0.481, prefix_picks +6.052, team_identity +5.180. Extreme SGD underperformance is a sparse linear OVR representation limitation at this data scale, not proof of absence of conditional draft structure. No frozen components.
+- Slice 29 result: **DATA + REPRESENTATION LIMITED**. Track A (S27 Elo vs Elo+heroes): pooled ΔLL +0.45→+0.08 as N grows; train/eval gap shrinks. Strong data-scale evidence, but the curve has **not** demonstrated that more data will make heroes beat Elo — do not extrapolate a crossing. Method note: C is re-selected at each N via frozen Slice 27 fold-internal grid `(0.1,1,10)`; not a pure fixed-C curve. In confirmation, `C_heroes=0.1` for all 20 fold×fraction points; Elo-only `C` varied. Track B (S28 baseline_b vs prefix SGD): pooled ΔLL stays ~+5.7–+6.1 and does not systematically close. Method note: recipe freezes `C=1.0` but `alpha=1/(C*n)` so effective regularization varies with N by construction — evidence is that **more data does not rescue Slice 28 as implemented**, not that every sparse linear draft-prefix model is representation-limited. Same-regime expansion inventory ~1.6–2.4k pending T1/T2 matches (excl. TI holdout): worthwhile, **not** claimed sufficient to solve Track A. Recommendation: expand contemporary data; redesign next-pick representation/training before revisiting Slice 28.
   benchmark (`draft prefix -> next successful pick hero`). Classification
   and any freeze will be recorded after development OOS evidence.
 
 Do not treat as production or as a successful fit feature:
 
-- Any Slice 13–28 research column
+- Any Slice 13–29 research column
 - Slice 23 compatibility terms
 - Slice 24 current-meta H×P columns
 - Slice 25 pool-state / next-choice diagnostic columns

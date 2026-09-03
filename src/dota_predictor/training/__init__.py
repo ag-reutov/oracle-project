@@ -247,6 +247,12 @@ from dota_predictor.training.next_pick_policy import (
     slice28_report_to_jsonable,
     unavailable_heroes,
 )
+from dota_predictor.training.data_scale_diagnostics import (
+    SLICE29_DIAGNOSTIC_ONLY,
+    Slice29Report,
+    run_slice29_data_scale_benchmark,
+    slice29_report_to_jsonable,
+)
 from dota_predictor.training.hero_requirement_state import (
     CLASSIFICATION_A as SLICE22_CLASSIFICATION_A,
 )
@@ -878,6 +884,10 @@ __all__ = [
     "run_sequential_draft_state_diagnostics",
     "run_slice27_sequential_draft_benchmark",
     "run_slice28_next_pick_policy_benchmark",
+    "run_slice29_data_scale_benchmark",
+    "slice29_report_to_jsonable",
+    "SLICE29_DIAGNOSTIC_ONLY",
+    "Slice29Report",
     "reconstruct_events_from_prefix",
     "run_player_performance_target_diagnostics",
     "run_post_draft_benchmark",
