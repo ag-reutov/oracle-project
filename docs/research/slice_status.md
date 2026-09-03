@@ -1,4 +1,4 @@
-# Research status: Slices 13–26
+# Research status: Slices 13–27
 
 Production features are only `FEATURE_COLUMNS` (33 PRE_DRAFT snapshot
 columns: team/player history, roster continuity, team Elo). A `FROZEN_*`
@@ -40,7 +40,8 @@ remains reserved. Later slices evaluate on the development frame only.
 | 23 | Player × hero behavioral compatibility | `player_hero_compatibility.py` | yes | **B — suggestive but unstable** | no fit-score freeze | no | no | no | **yes; required** | none | none remaining |
 | 24 | Current-meta Hero × Position state | `hero_position_meta_state.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | none |
 | 25 | Causal Player × Position hero-pool state | `player_hero_pool_state.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | prior A under estimator-specific Laplace support invalidated; common-support scoring shows expanding P×R×H worse than P×H on LL/Brier |
-| 26 | Causal sequential draft-state dataset | `sequential_draft_state.py` | **no** (working tree) | **A — freeze construction** | yes: `before_event_t` boundary + ordered prefix state + successful-ban semantics | no | no | no | state is research-only substrate | later next-pick / draft-policy slices | none |
+| 26 | Causal sequential draft-state dataset | `sequential_draft_state.py` | yes | **A — freeze construction** | yes: `before_event_t` boundary + ordered prefix state + successful-ban semantics | no | no | no | state is research-only substrate | 27 | none |
+| 27 | Incremental draft-value (Elo vs Elo+checkpoint picks) | `sequential_draft_benchmark.py` | **no** (working tree) | **C — do not freeze** | no | no | no | no | **yes; required** | none | Pattern D: side-aware hero main effects worsen Elo at every checkpoint; bans worsen further |
 
 ## Slice 19 / 20 commit-state
 
@@ -85,12 +86,20 @@ Reuse without retuning:
   ban semantics (`was_successful is not False` for availability), and
   the terminal boundary after the last event. This is a dataset/state
   freeze only — not a next-pick model and not a production feature.
+- Slice 27 result: Elo + side-aware checkpoint pick main effects is **C**.
+  Do not freeze the picked-hero draft block. Pattern D on development
+  walk-forward: every positive-pick checkpoint raises log loss vs Elo;
+  adding successful bans worsens further. Keep as diagnostic evidence
+  that raw hero identity main effects are not a stable live-draft
+  outcome signal beyond Elo. Do not respond by adding interactions
+  inside Slice 27.
 
 Do not treat as production or as a successful fit feature:
 
-- Any Slice 13–26 research column
+- Any Slice 13–27 research column
 - Slice 23 compatibility terms
 - Slice 24 current-meta H×P columns
 - Slice 25 pool-state / next-choice diagnostic columns
 - Slice 26 sequential draft-state fields (research substrate only)
+- Slice 27 checkpoint pick/ban indicator columns
 - `PLAYER_*_FEATURE_COLUMNS` names (evaluation plumbing, not `FEATURE_COLUMNS`)
