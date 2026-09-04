@@ -1,17 +1,20 @@
-# Curated Tier 1 / Tier 2 professional Dota 2 league registry.
+# Curated professional Dota 2 league registry (Liquipedia T1/T2/T3).
 #
 # EVENT LIST (which tournaments, which tier): Liquipedia
 #   - https://liquipedia.net/dota2/Tier_1_Tournaments
 #   - https://liquipedia.net/dota2/Tier_2_Tournaments
+#   - https://liquipedia.net/dota2/Tier_3_Tournaments/{year}
 #   - Canonical manifest: config/liquipedia_events_2024plus.yaml
 #
-# STRATZ league_id: resolved via Dotabuff / Spectral / match leagueId probes
-#   (see scripts/build_leagues_yaml_from_liquipedia.py STRATZ_ID_MAP).
-#   Do NOT use STRATZ LeagueTier to decide T1/T2 scope.
+# STRATZ league_id: T1/T2 resolved via Dotabuff / Spectral / match leagueId
+# probes (see scripts/build_leagues_yaml_from_liquipedia.py STRATZ_ID_MAP).
+# T3 IDs resolved from Liquipedia tournament wikitext ``|leagueid=``.
+#   Do NOT use STRATZ LeagueTier to decide T1/T2/T3 scope.
 #
-# Scope: Liquipedia T1/T2 main events from 2024-01-01 through present.
+# Scope: Liquipedia T1/T2/T3 main events from 2024-01-01 through present.
 # Pre-2024 DPC-era rows kept for audit only (in_scope: false).
 # Qualifiers listed but excluded (in_scope: false).
+# T1/T2 labels are never overwritten by T3 discovery.
 #
 # fetch_mode (optional, default league):
 #   league     — STRATZ league(id) { matches } pagination (historical default)
@@ -20,6 +23,12 @@
 # `ingest_stratz_leagues --all` never calls the broken league(id) endpoint.
 #
 # Sync: scripts/load_league_registry.py → leagues / ingestion_leagues tables.
+#
+# Canonical Parquet carries league_id / league_name, not liquipedia_tier.
+# Later T1/T2 vs T1/T2+T3 experiments must join matches.league_id to this
+# file or to leagues.liquipedia_tier. Do not rerun Slices 9–29 on the
+# expanded corpus without that filter; Slice 9 asserts
+# FROZEN_DEVELOPMENT_MATCH_COUNT == 5967.
 
 leagues:
 
@@ -533,3 +542,1088 @@ leagues:
     liquipedia_tier: "EXCLUDED"
     in_scope: false
     notes: "Amateur; not on Liquipedia T1/T2."
+
+
+  # --- Liquipedia Tier 3 professional events (2024-01-01 through 2026-09-03) ---
+
+  - league_id: 15520
+    name: "Asia Pacific Predator League 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-01-10
+    end_date: 2024-01-14
+    notes: "Liquipedia T3: Asia Pacific Predator League 2024 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 15898
+    name: "European Pro League Season 16 (+5 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-01-16
+    end_date: 2024-10-18
+    notes: "Liquipedia T3 umbrella; shared Valve league_id 15898. Events: European Pro League Season 16; European Pro League Season 17; European Pro League Season 18; CyberScore Cup; European Pro League Season 19; European Pro League Season 20."
+
+  - league_id: 16108
+    name: "New Year Cup 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-01-19
+    end_date: 2024-02-17
+    notes: "Liquipedia T3: New Year Cup 2024 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 15899
+    name: "EPL World Series: America Season 9 (+4 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-01-31
+    end_date: 2024-08-28
+    notes: "Liquipedia T3 umbrella; shared Valve league_id 15899. Events: EPL World Series: America Season 9; EPL World Series: America Season 10; EPL World Series: America Season 11; EPL World Series: America Season 12; EPL World Series: America Season 13."
+
+  - league_id: 16315
+    name: "United Series 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-02-02
+    end_date: 2024-02-29
+    notes: "Liquipedia T3: United Series 1 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16207
+    name: "RES Regional Series: SEA #1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-02-03
+    end_date: 2024-02-21
+    notes: "Liquipedia T3: RES Regional Series: SEA #1 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16239
+    name: "Ace Americas 2024 - Season 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-02-16
+    end_date: 2024-02-22
+    notes: "Liquipedia T3: Ace Americas 2024 - Season 1 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16233
+    name: "RES Regional Series: LATAM #1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-02-22
+    end_date: 2024-03-08
+    notes: "Liquipedia T3: RES Regional Series: LATAM #1 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16523
+    name: "No Coffee Cup"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-03-04
+    end_date: 2024-04-08
+    notes: "Liquipedia T3: No Coffee Cup (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16349
+    name: "Maincard Unmatched - March"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-03-09
+    end_date: 2024-03-17
+    notes: "Liquipedia T3: Maincard Unmatched - March (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16343
+    name: "RES Regional Series: EU #1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-03-11
+    end_date: 2024-04-03
+    notes: "Liquipedia T3: RES Regional Series: EU #1 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16290
+    name: "Winline Insight Season 5"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-03-13
+    end_date: 2024-04-28
+    notes: "Liquipedia T3: Winline Insight Season 5 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16527
+    name: "Dota2 World Invitationals"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-03-28
+    end_date: 2024-03-31
+    notes: "Liquipedia T3: Dota2 World Invitationals (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16344
+    name: "RES Regional Series: SEA #2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-04-04
+    end_date: 2024-04-17
+    notes: "Liquipedia T3: RES Regional Series: SEA #2 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16443
+    name: "Minotaur League"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-04-06
+    end_date: 2024-05-07
+    notes: "Liquipedia T3: Minotaur League (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16586
+    name: "Kobolds Rave 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-04-17
+    end_date: 2024-05-12
+    notes: "Liquipedia T3: Kobolds Rave 2 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16345
+    name: "RES Regional Series: LATAM #2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-04-19
+    end_date: 2024-05-04
+    notes: "Liquipedia T3: RES Regional Series: LATAM #2 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16649
+    name: "Douyu Super Dream League"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-05-04
+    end_date: 2024-05-10
+    notes: "Liquipedia T3: Douyu Super Dream League (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16346
+    name: "RES Regional Series: EU #2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-05-08
+    end_date: 2024-05-23
+    notes: "Liquipedia T3: RES Regional Series: EU #2 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16705
+    name: "RES Regional Series: SEA #3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-06-07
+    end_date: 2024-06-18
+    notes: "Liquipedia T3: RES Regional Series: SEA #3 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16743
+    name: "Leon Masters #1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-06-10
+    end_date: 2024-07-28
+    notes: "Liquipedia T3: Leon Masters #1 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16706
+    name: "RES Regional Series: LATAM #3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-06-20
+    end_date: 2024-07-05
+    notes: "Liquipedia T3: RES Regional Series: LATAM #3 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16869
+    name: "CCT Series 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-06-24
+    end_date: 2024-07-03
+    notes: "Liquipedia T3: CCT Series 1 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16858
+    name: "Russian Esports Championship 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-06-26
+    end_date: 2024-06-28
+    notes: "Liquipedia T3: Russian Esports Championship 2024 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16707
+    name: "RES Regional Series: EU #3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-07-08
+    end_date: 2024-07-23
+    notes: "Liquipedia T3: RES Regional Series: EU #3 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16948
+    name: "Sber Tournament 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-07-27
+    end_date: 2024-08-03
+    notes: "Liquipedia T3: Sber Tournament 2024 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16708
+    name: "RES Regional Series: SEA #4"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-07-29
+    end_date: 2024-08-13
+    notes: "Liquipedia T3: RES Regional Series: SEA #4 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16953
+    name: "CCT Series 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-08-01
+    end_date: 2024-08-11
+    notes: "Liquipedia T3: CCT Series 2 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16709
+    name: "RES Regional Series: LATAM #4"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-08-16
+    end_date: 2024-08-29
+    notes: "Liquipedia T3: RES Regional Series: LATAM #4 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17056
+    name: "CCT Series 3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-08-20
+    end_date: 2024-08-30
+    notes: "Liquipedia T3: CCT Series 3 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17059
+    name: "Phoenix League"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-08-24
+    end_date: 2024-09-18
+    notes: "Liquipedia T3: Phoenix League (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16993
+    name: "Russian Esports Cup 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-08-24
+    end_date: 2024-08-25
+    notes: "Liquipedia T3: Russian Esports Cup 2024 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16973
+    name: "Douyu Super Dream League Season 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-08-26
+    end_date: 2024-09-03
+    notes: "Liquipedia T3: Douyu Super Dream League Season 2 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17074
+    name: "True Fighters 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-08-28
+    end_date: 2024-09-01
+    notes: "Liquipedia T3: True Fighters 2024 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16710
+    name: "RES Regional Series: EU #4 (+1 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-09-16
+    end_date: 2024-10-25
+    notes: "Liquipedia T3 umbrella; shared Valve league_id 16710. Events: RES Regional Series: EU #4; RES Regional Champions."
+
+  - league_id: 17111
+    name: "CCT Series 4"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-10-09
+    end_date: 2024-10-18
+    notes: "Liquipedia T3: CCT Series 4 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 16933
+    name: "Samsung Odyssey Cup"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-10-10
+    end_date: 2024-10-13
+    notes: "Liquipedia T3: Samsung Odyssey Cup (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17199
+    name: "Phoenix League 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-10-14
+    end_date: 2024-11-08
+    notes: "Liquipedia T3: Phoenix League 2 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17120
+    name: "MSI Gaming Arena 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-10-19
+    end_date: 2024-10-20
+    notes: "Liquipedia T3: MSI Gaming Arena 2024 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17229
+    name: "Asian Dragon Series: Regional Collision"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-11-08
+    end_date: 2024-11-24
+    notes: "Liquipedia T3: Asian Dragon Series: Regional Collision (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17367
+    name: "EPL World Series: America Season 14 (+3 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-11-12
+    end_date: 2025-06-29
+    notes: "Liquipedia T3 umbrella; shared Valve league_id 17367. Events: EPL World Series: America Season 14; EPL World Series: America Season 15; EPL World Series: America Season 16; EPL World Series: America Season 17."
+
+  - league_id: 17381
+    name: "European Pro League Season 21 (+10 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-11-12
+    end_date: 2025-10-28
+    notes: "Liquipedia T3 umbrella; shared Valve league_id 17381. Events: European Pro League Season 21; European Pro League Season 22; European Pro League Season 23; European Pro League Season 24; European Pro League Season 25; European Pro League Season 26; European Pro League Season 27; European Pro League Season 28; European Pro League Season 29; European Pro League Season 30; European Pro League Season 31."
+
+  - league_id: 17425
+    name: "CCT Series 5"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-11-16
+    end_date: 2024-11-25
+    notes: "Liquipedia T3: CCT Series 5 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17458
+    name: "AsiaPro League Season 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-11-20
+    end_date: 2024-12-04
+    notes: "Liquipedia T3: AsiaPro League Season 1 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17326
+    name: "MESA Invitational 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-12-10
+    end_date: 2024-12-15
+    notes: "Liquipedia T3: MESA Invitational 2024 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17554
+    name: "True Fighters 2024 Christmas"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-12-11
+    end_date: 2024-12-17
+    notes: "Liquipedia T3: True Fighters 2024 Christmas (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17513
+    name: "RESF Open Cup 2024"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2024-12-14
+    end_date: 2024-12-15
+    notes: "Liquipedia T3: RESF Open Cup 2024 (2024). leagueid from Liquipedia wikitext."
+
+  - league_id: 17512
+    name: "Asia Pacific Predator League 2025"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-01-08
+    end_date: 2025-01-12
+    notes: "Liquipedia T3: Asia Pacific Predator League 2025 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 17659
+    name: "EPL World Series: Southeast Asia Season 2 (+8 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-01-15
+    end_date: 2025-12-28
+    notes: "Liquipedia T3 umbrella; shared Valve league_id 17659. Events: EPL World Series: Southeast Asia Season 2; EPL World Series: Southeast Asia Season 3; EPL World Series: Southeast Asia Season 4; EPL World Series: Southeast Asia Season 5; EPL World Series: Southeast Asia Season 6; EPL World Series: Southeast Asia Season 7; EPL World Series: Southeast Asia Season 8; EPL World Series: Southeast Asia Season 9; EPL World Series: Southeast Asia Season 11."
+
+  - league_id: 17637
+    name: "CCT Series 6"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-01-21
+    end_date: 2025-01-31
+    notes: "Liquipedia T3: CCT Series 6 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 17719
+    name: "UPEA National League 2025"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-01-22
+    end_date: 2025-02-02
+    notes: "Liquipedia T3: UPEA National League 2025 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 16925
+    name: "Asian Dragon Series: Continental Collision"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-02-05
+    end_date: 2025-02-10
+    notes: "Liquipedia T3: Asian Dragon Series: Continental Collision (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 17782
+    name: "CCT Series 7"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-02-25
+    end_date: 2025-03-07
+    notes: "Liquipedia T3: CCT Series 7 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 17984
+    name: "CCT Series 8"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-04-02
+    end_date: 2025-04-11
+    notes: "Liquipedia T3: CCT Series 8 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18105
+    name: "Lunar Snake Trophy"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-04-28
+    end_date: 2025-05-30
+    notes: "Liquipedia T3: Lunar Snake Trophy (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 17875
+    name: "ACL X ESL Challenger China"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-05-01
+    end_date: 2025-05-03
+    notes: "Liquipedia T3: ACL X ESL Challenger China (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18153
+    name: "Immortal Cup Season 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-05-12
+    end_date: 2025-06-15
+    notes: "Liquipedia T3: Immortal Cup Season 1 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18120
+    name: "Cyber Clash"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-05-27
+    end_date: 2025-06-29
+    notes: "Liquipedia T3: Cyber Clash (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18242
+    name: "CCT Season 2 Series 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-06-09
+    end_date: 2025-06-18
+    notes: "Liquipedia T3: CCT Season 2 Series 1 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18374
+    name: "CCT Season 2 Series 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-06-30
+    end_date: 2025-07-08
+    notes: "Liquipedia T3: CCT Season 2 Series 2 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18325
+    name: "Russian Esports Championship 2025"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-07-05
+    end_date: 2025-07-06
+    notes: "Liquipedia T3: Russian Esports Championship 2025 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18490
+    name: "Lunar Snake Trophy 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-07-09
+    end_date: 2025-08-13
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (21 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Lunar Snake Trophy 2 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18396
+    name: "CCT Season 2 Series 3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-07-24
+    end_date: 2025-08-01
+    notes: "Liquipedia T3: CCT Season 2 Series 3 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18498
+    name: "Americas Convergence Series 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-07-28
+    end_date: 2025-08-18
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (32 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Americas Convergence Series 1 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18491
+    name: "CIS Battle"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-08-02
+    end_date: 2025-08-15
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (87 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: CIS Battle (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18524
+    name: "CCT Season 2 Series 4"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-08-16
+    end_date: 2025-08-24
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (56 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: CCT Season 2 Series 4 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 11845
+    name: "Sber Tournament 2025"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-08-16
+    end_date: 2025-08-30
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (119 ids). Liquipedia T3: Sber Tournament 2025 (2025). Reused Valve league_id; ingest only event dates 2025-08-16..2025-08-30 via match_ids. leagueid from Liquipedia wikitext."
+
+  - league_id: 18434
+    name: "Russian Esports Cup 2025"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-08-23
+    end_date: 2025-08-24
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (9 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Russian Esports Cup 2025 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18592
+    name: "CIS Battle 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-08-25
+    end_date: 2025-09-03
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (85 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: CIS Battle 2 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18543
+    name: "Volt Energy Cyber Cup 2025"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-08-28
+    end_date: 2025-09-20
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (0 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Volt Energy Cyber Cup 2025 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18502
+    name: "Americas Convergence Series 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-09-02
+    end_date: 2025-10-23
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (78 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Americas Convergence Series 2 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18618
+    name: "Lunar Snake Trophy 3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-09-11
+    end_date: 2025-10-21
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (84 ids). Liquipedia T3: Lunar Snake Trophy 3 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18666
+    name: "CCT Season 2 Series 5"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-10-03
+    end_date: 2025-10-14
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (48 ids). Liquipedia T3: CCT Season 2 Series 5 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18769
+    name: "DreamLeague Division 2 Season 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-10-11
+    end_date: 2025-10-26
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (170 ids). Liquipedia T3: DreamLeague Division 2 Season 1 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18995
+    name: "Redragon Latam Series"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-10-22
+    end_date: 2025-11-29
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (14 ids). Liquipedia T3: Redragon Latam Series (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18799
+    name: "CCT Season 2: South America Series 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-10-23
+    end_date: 2025-10-31
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (50 ids). Liquipedia T3: CCT Season 2: South America Series 1 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18893
+    name: "Lunar Snake Trophy 4"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-10-29
+    end_date: 2025-12-01
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (76 ids). Liquipedia T3: Lunar Snake Trophy 4 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18660
+    name: "CIS Battle 3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-11-03
+    end_date: 2025-11-14
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (112 ids). Liquipedia T3: CIS Battle 3 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18866
+    name: "European Pro League Season 32 (+7 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-11-03
+    end_date: 2026-07-12
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (670 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3 umbrella; shared Valve league_id 18866. Events: European Pro League Season 32; European Pro League Season 33; European Pro League Season 34; European Pro League Season 35; European Pro League Season 36; European Pro League Season 37; European Pro League Season 38; European Pro League Season 39."
+
+  - league_id: 18897
+    name: "DreamLeague Division 2 Season 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-11-04
+    end_date: 2025-11-11
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (98 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: DreamLeague Division 2 Season 2 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18865
+    name: "EPL World Series: Southeast Asia Season 10 (+6 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-11-04
+    end_date: 2026-09-15
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (400 ids). Date-window match_ids ingest 2024-01-01..2026-09-03 (0 ids). Liquipedia T3 umbrella; shared Valve league_id 18865. Events: EPL World Series: Southeast Asia Season 10; EPL World Series: Southeast Asia Season 12; EPL World Series: Southeast Asia Season 13; EPL World Series: Southeast Asia Season 14; EPL World Series: Southeast Asia Season 15; EPL World Series: Southeast Asia Season 16; EPL World Series: Southeast Asia Season 17."
+
+  - league_id: 18955
+    name: "CCT Season 2 Series 6"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-11-28
+    end_date: 2025-12-06
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (61 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: CCT Season 2 Series 6 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18940
+    name: "Tennisi Stampede Champions: Season 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-12-02
+    end_date: 2025-12-14
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (27 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Tennisi Stampede Champions: Season 1 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 19040
+    name: "RESF Open Cup 2025"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-12-06
+    end_date: 2025-12-07
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (10 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: RESF Open Cup 2025 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 19054
+    name: "Lunar Snake Trophy 5 (+1 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-12-09
+    end_date: 2026-03-05
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (154 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3 umbrella; shared Valve league_id 19054. Events: Lunar Snake Trophy 5; Lunar Snake Trophy 6."
+
+  - league_id: 19093
+    name: "CIS Battle 4"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2025-12-22
+    end_date: 2025-12-30
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (78 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: CIS Battle 4 (2025). leagueid from Liquipedia wikitext."
+
+  - league_id: 18999
+    name: "Asia Pacific Predator League 2026"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-01-07
+    end_date: 2026-01-11
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (26 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Asia Pacific Predator League 2026 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 18941
+    name: "EPL Championship Season 1 (+1 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-01-09
+    end_date: 2026-02-28
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (135 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (135 ids). Liquipedia T3 umbrella; shared Valve league_id 18941. Events: EPL Championship Season 1; EPL Championship Season 2."
+
+  - league_id: 19147
+    name: "CCT Season 2: South America Series 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-01-21
+    end_date: 2026-01-31
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (53 ids). Liquipedia T3: CCT Season 2: South America Series 2 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19322
+    name: "CCT Season 2 Series 7"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-02-12
+    end_date: 2026-02-20
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (57 ids). Liquipedia T3: CCT Season 2 Series 7 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19361
+    name: "CCT Season 2: South America Series 3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-02-28
+    end_date: 2026-03-08
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (57 ids). Liquipedia T3: CCT Season 2: South America Series 3 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19371
+    name: "Esports League Super Cup Pro Division"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-03-01
+    end_date: 2026-03-21
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (19 ids). Liquipedia T3: Esports League Super Cup Pro Division (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19421
+    name: "CCT Season 2 Series 8"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-03-12
+    end_date: 2026-03-20
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (56 ids). Liquipedia T3: CCT Season 2 Series 8 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19378
+    name: "Tennisi Stampede Champions: Season 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-03-16
+    end_date: 2026-03-27
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (28 ids). Liquipedia T3: Tennisi Stampede Champions: Season 2 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19503
+    name: "CCT Season 2: South America Series 4"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-04-09
+    end_date: 2026-04-17
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (50 ids). Liquipedia T3: CCT Season 2: South America Series 4 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19532
+    name: "DreamLeague Division 2 Season 4"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-04-19
+    end_date: 2026-05-01
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (170 ids). Liquipedia T3: DreamLeague Division 2 Season 4 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19545
+    name: "Lunar Horse Trophy 7"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-05-09
+    end_date: 2026-05-29
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (79 ids). Liquipedia T3: Lunar Horse Trophy 7 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19634
+    name: "Russian Esports Student League 2026"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-05-17
+    end_date: 2026-05-19
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (0 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Russian Esports Student League 2026 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19919
+    name: "Choco Cup"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-06-23
+    end_date: 2026-06-28
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (0 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Choco Cup (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19937
+    name: "Lunar Horse Trophy 8"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-07-19
+    end_date: 2026-08-11
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (0 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Lunar Horse Trophy 8 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19951
+    name: "Russian Esports Championship 2026"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-07-25
+    end_date: 2026-07-26
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (0 ids). STRATZ league(id) null; ingest via match(id) after windowed IDs (0 ids). Liquipedia T3: Russian Esports Championship 2026 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 19944
+    name: "EPL Masters I (+1 Liquipedia T3 events, shared Valve league_id)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-07-26
+    end_date: 2026-09-10
+    notes: "Date-window match_ids ingest 2024-01-01..2026-09-03 (207 ids). Liquipedia T3 umbrella; shared Valve league_id 19944. Events: EPL Masters I; EPL Masters II."
+
+  - league_id: 20026
+    name: "Asgard Championship Season 1"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-07-28
+    end_date: 2026-08-11
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (32 ids). Liquipedia T3: Asgard Championship Season 1 (2026). leagueid from Liquipedia wikitext."
+
+  - league_id: 20134
+    name: "ExitLag ChampZ"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T3"
+    in_scope: true
+    fetch_mode: match_ids
+    source: "liquipedia_tier3_2024plus"
+    start_date: 2026-08-29
+    end_date: 2026-08-30
+    notes: "STRATZ league(id) null; ingest via match(id) after windowed IDs (171 ids). Liquipedia T3: ExitLag ChampZ (2026). leagueid from Liquipedia wikitext."

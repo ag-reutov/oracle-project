@@ -48,6 +48,23 @@ def test_leagues_rejects_invalid_liquipedia_tier(engine):
         )
 
 
+def test_leagues_accepts_t3_liquipedia_tier(engine):
+    with engine.begin() as conn:
+        conn.execute(
+            LEAGUES.insert().values(
+                league_id=900001,
+                name="Tier 3 Example",
+                liquipedia_tier="T3",
+                in_scope=True,
+                notes="Tier 3 expansion test",
+            )
+        )
+        row = conn.execute(
+            LEAGUES.select().where(LEAGUES.c.league_id == 900001)
+        ).one()
+        assert row.liquipedia_tier == "T3"
+
+
 def test_leagues_rejects_invalid_fetch_mode(engine):
     with pytest.raises(IntegrityError), engine.begin() as conn:
         conn.execute(

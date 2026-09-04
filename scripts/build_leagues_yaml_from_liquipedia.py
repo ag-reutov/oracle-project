@@ -17,28 +17,35 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LIQUIPEDIA_EVENTS_PATH = REPO_ROOT / "config" / "liquipedia_events_2024plus.yaml"
+LEAGUES_YAML_PATH = REPO_ROOT / "config" / "leagues.yaml"
 
 HEADER = dedent(
     """
-    # Curated Tier 1 / Tier 2 professional Dota 2 league registry.
+    # Curated professional Dota 2 league registry (Liquipedia T1/T2/T3).
     #
     # EVENT LIST (which tournaments, which tier): Liquipedia
     #   - https://liquipedia.net/dota2/Tier_1_Tournaments
     #   - https://liquipedia.net/dota2/Tier_2_Tournaments
+    #   - https://liquipedia.net/dota2/Tier_3_Tournaments/{year}
     #   - Canonical manifest: config/liquipedia_events_2024plus.yaml
     #
-    # STRATZ league_id: resolved via Dotabuff / Spectral / match leagueId probes
-    #   (see scripts/build_leagues_yaml_from_liquipedia.py STRATZ_ID_MAP).
-    #   Do NOT use STRATZ LeagueTier to decide T1/T2 scope.
+    # STRATZ league_id: T1/T2 resolved via Dotabuff / Spectral / match leagueId
+    # probes (see STRATZ_ID_MAP below). T3 IDs from Liquipedia |leagueid=.
+    #   Do NOT use STRATZ LeagueTier to decide T1/T2/T3 scope.
     #
-    # Scope: Liquipedia T1/T2 main events from 2024-01-01 through present.
+    # Scope: Liquipedia T1/T2/T3 main events from 2024-01-01 through present.
     # Pre-2024 DPC-era rows kept for audit only (in_scope: false).
     # Qualifiers listed but excluded (in_scope: false).
+    # T1/T2 labels are never overwritten by T3 discovery.
     #
     # fetch_mode (optional, default league): league = league(id) pagination;
     # match_ids = STRATZ match(id) after ID discovery. Independent of in_scope.
     #
     # Sync: scripts/load_league_registry.py → leagues / ingestion_leagues tables.
+    #
+    # Canonical Parquet carries league_id / league_name, not liquipedia_tier.
+    # Later T1/T2 vs T1/T2+T3 experiments must join matches.league_id to this
+    # file or to leagues.liquipedia_tier.
     """
 ).strip()
 
@@ -176,6 +183,44 @@ def fmt_entry(
     return "\n".join(lines)
 
 
+def fmt_preserved_entry(entry: dict) -> str:
+    """Emit an existing leagues.yaml row (used to preserve T3 on regenerate)."""
+    in_scope = bool(entry.get("in_scope", False))
+    lines = [
+        f"  - league_id: {entry['league_id']}",
+        f"    name: \"{entry['name']}\"",
+        f"    stratz_tier: \"{entry.get('stratz_tier') or 'PROFESSIONAL'}\"",
+        f"    liquipedia_tier: \"{entry['liquipedia_tier']}\"",
+        f"    in_scope: {'true' if in_scope else 'false'}",
+    ]
+    fetch_mode = entry.get("fetch_mode")
+    if fetch_mode and fetch_mode != "league":
+        lines.append(f"    fetch_mode: {fetch_mode}")
+    if entry.get("source"):
+        lines.append(f"    source: \"{entry['source']}\"")
+    start = entry.get("start_date")
+    end = entry.get("end_date")
+    if start is not None:
+        lines.append(f"    start_date: {start}")
+    if end is not None:
+        lines.append(f"    end_date: {end}")
+    if entry.get("notes"):
+        notes = str(entry["notes"]).replace('"', '\\"')
+        lines.append(f"    notes: \"{notes}\"")
+    return "\n".join(lines)
+
+
+def load_preserved_t3_entries() -> list[dict]:
+    if not LEAGUES_YAML_PATH.is_file():
+        return []
+    raw = yaml.safe_load(LEAGUES_YAML_PATH.read_text(encoding="utf-8")) or {}
+    return [
+        entry
+        for entry in (raw.get("leagues") or [])
+        if entry.get("liquipedia_tier") == "T3"
+    ]
+
+
 def main() -> None:
     liquipedia = yaml.safe_load(LIQUIPEDIA_EVENTS_PATH.read_text(encoding="utf-8"))
     events = liquipedia.get("events") or []
@@ -193,6 +238,8 @@ def main() -> None:
             continue
 
         lp_tier = ev["liquipedia_tier"]
+        if lp_tier == "T3":
+            continue
         year = ev.get("year")
         extra = ev.get("notes")
 
@@ -226,6 +273,13 @@ def main() -> None:
     for league_id, name, tier, notes, stratz_tier in AUDIT_ONLY:
         print()
         print(fmt_entry(league_id, name, tier, False, notes, stratz_tier))
+
+    t3_entries = load_preserved_t3_entries()
+    if t3_entries:
+        print("\n  # --- Liquipedia Tier 3 professional events (preserved) ---")
+        for entry in t3_entries:
+            print()
+            print(fmt_preserved_entry(entry))
 
 
 if __name__ == "__main__":

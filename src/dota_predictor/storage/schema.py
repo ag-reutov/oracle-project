@@ -6,9 +6,10 @@ project's ingestion-state architecture plan for that sequencing. Four
 categories of state are modeled here, each documented on its table(s):
 
 1. League curation (`leagues`, `ingestion_leagues`) -- the manually
-   curated Tier 1/Tier 2 registry decided in the STRATZ tier
-   investigation, plus a strict allowlist that raw/canonical/progress
-   tables are gated on.
+   curated Liquipedia T1/T2/T3 registry, plus a strict allowlist that
+   raw/canonical/progress tables are gated on. Tier labels stay distinct
+   so later experiments can train T1/T2 vs T1/T2+T3 without collapsing
+   cohorts.
 2. Raw STRATZ landing (`stratz_raw_matches`) -- durable copy of fetched
    payloads, so reprocessing doesn't require re-fetching.
 3. Canonical domain data (`teams`, `players`, `matches`, `match_players`,
@@ -113,7 +114,7 @@ METADATA = sa.MetaData(naming_convention=NAMING_CONVENTION)
 # Allowed values for plain-text enum-like columns. Deliberately CHECK
 # constraints, not native enum types (see module docstring) -- changing
 # this list is a lightweight constraint migration, not a type migration.
-LIQUIPEDIA_TIERS = ("T1", "T2", "MINOR", "QUALIFIER", "EXCLUDED")
+LIQUIPEDIA_TIERS = ("T1", "T2", "T3", "MINOR", "QUALIFIER", "EXCLUDED")
 LEAGUE_INGESTION_STATUSES = ("PENDING", "IN_PROGRESS", "COMPLETE", "ERROR")
 MATCH_INGESTION_ERROR_STAGES = ("FETCH", "MAP", "WRITE")
 LEAGUE_FETCH_MODE_LEAGUE = "league"

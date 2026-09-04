@@ -3,14 +3,18 @@
 # AUTHORITATIVE tier and event names come from:
 #   - https://liquipedia.net/dota2/Tier_1_Tournaments
 #   - https://liquipedia.net/dota2/Tier_2_Tournaments
+#   - https://liquipedia.net/dota2/Tier_3_Tournaments/{year}
 #
-# Do not use STRATZ LeagueTier or prize pool to decide T1/T2 scope.
-# STRATZ league_id values are resolved separately (Dotabuff, Spectral, match
-# leagueId probes) and synced into config/leagues.yaml via
-# scripts/build_leagues_yaml_from_liquipedia.py.
+# Do not use STRATZ LeagueTier or prize pool to decide T1/T2/T3 scope.
+# T1/T2 STRATZ league_id values are resolved separately (Dotabuff, Spectral,
+# match leagueId probes) via scripts/build_leagues_yaml_from_liquipedia.py.
+# T3 Valve/STRATZ league_id values come from Liquipedia wikitext |leagueid=
+# (scripts/discover_tier3_league_ids.py) and are stored on config/leagues.yaml.
 #
-# Only main events from those tier pages — not qualifiers, showmatches, or
-# Liquipedia Tier 3/4 events.
+# T1/T2: main events from those tier pages, not qualifiers or showmatches.
+# T3: every Liquipedia Tier 3 year-page event with start >= 2024-01-01
+# through 2026-09-03. T3 is a distinct cohort, not equivalent to T1/T2.
+# Regenerating leagues.yaml must preserve existing T3 rows.
 
 events:
   # --- 2024 Tier 1 (Liquipedia Tier_1_Tournaments) ---
@@ -199,3 +203,930 @@ events:
   - liquipedia_name: The International 2026
     liquipedia_tier: T1
     year: 2026
+
+  # --- Liquipedia Tier 3
+
+  - liquipedia_name: "Asia Pacific Predator League 2024"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15520
+    start_date: 2024-01-10
+    end_date: 2024-01-14
+  - liquipedia_name: "European Pro League Season 16"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15898
+    start_date: 2024-01-16
+    end_date: 2024-02-10
+  - liquipedia_name: "New Year Cup 2024"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16108
+    start_date: 2024-01-19
+    end_date: 2024-02-17
+  - liquipedia_name: "EPL World Series: America Season 9"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15899
+    start_date: 2024-01-31
+    end_date: 2024-02-20
+  - liquipedia_name: "United Series 1"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16315
+    start_date: 2024-02-02
+    end_date: 2024-02-29
+  - liquipedia_name: "RES Regional Series: SEA #1"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16207
+    start_date: 2024-02-03
+    end_date: 2024-02-21
+  - liquipedia_name: "Ace Americas 2024 - Season 1"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16239
+    start_date: 2024-02-16
+    end_date: 2024-02-22
+  - liquipedia_name: "RES Regional Series: LATAM #1"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16233
+    start_date: 2024-02-22
+    end_date: 2024-03-08
+  - liquipedia_name: "EPL World Series: America Season 10"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15899
+    start_date: 2024-03-04
+    end_date: 2024-04-28
+  - liquipedia_name: "No Coffee Cup"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16523
+    start_date: 2024-03-04
+    end_date: 2024-04-08
+  - liquipedia_name: "Maincard Unmatched - March"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16349
+    start_date: 2024-03-09
+    end_date: 2024-03-17
+  - liquipedia_name: "RES Regional Series: EU #1"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16343
+    start_date: 2024-03-11
+    end_date: 2024-04-03
+  - liquipedia_name: "Winline Insight Season 5"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16290
+    start_date: 2024-03-13
+    end_date: 2024-04-28
+  - liquipedia_name: "Dota2 World Invitationals"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16527
+    start_date: 2024-03-28
+    end_date: 2024-03-31
+  - liquipedia_name: "RES Regional Series: SEA #2"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16344
+    start_date: 2024-04-04
+    end_date: 2024-04-17
+  - liquipedia_name: "European Pro League Season 17"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15898
+    start_date: 2024-04-06
+    end_date: 2024-04-21
+  - liquipedia_name: "Minotaur League"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16443
+    start_date: 2024-04-06
+    end_date: 2024-05-07
+  - liquipedia_name: "Kobolds Rave 2"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16586
+    start_date: 2024-04-17
+    end_date: 2024-05-12
+  - liquipedia_name: "RES Regional Series: LATAM #2"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16345
+    start_date: 2024-04-19
+    end_date: 2024-05-04
+  - liquipedia_name: "European Pro League Season 18"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15898
+    start_date: 2024-04-29
+    end_date: 2024-05-12
+  - liquipedia_name: "Douyu Super Dream League"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16649
+    start_date: 2024-05-04
+    end_date: 2024-05-10
+  - liquipedia_name: "RES Regional Series: EU #2"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16346
+    start_date: 2024-05-08
+    end_date: 2024-05-23
+  - liquipedia_name: "EPL World Series: America Season 11"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15899
+    start_date: 2024-05-13
+    end_date: 2024-06-13
+  - liquipedia_name: "RES Regional Series: SEA #3"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16705
+    start_date: 2024-06-07
+    end_date: 2024-06-18
+  - liquipedia_name: "Leon Masters #1"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16743
+    start_date: 2024-06-10
+    end_date: 2024-07-28
+  - liquipedia_name: "RES Regional Series: LATAM #3"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16706
+    start_date: 2024-06-20
+    end_date: 2024-07-05
+  - liquipedia_name: "CCT Series 1"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16869
+    start_date: 2024-06-24
+    end_date: 2024-07-03
+  - liquipedia_name: "Russian Esports Championship 2024"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16858
+    start_date: 2024-06-26
+    end_date: 2024-06-28
+  - liquipedia_name: "CyberScore Cup"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15898
+    start_date: 2024-06-27
+    end_date: 2024-07-13
+  - liquipedia_name: "EPL World Series: America Season 12"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15899
+    start_date: 2024-06-27
+    end_date: 2024-07-13
+  - liquipedia_name: "RES Regional Series: EU #3"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16707
+    start_date: 2024-07-08
+    end_date: 2024-07-23
+  - liquipedia_name: "European Pro League Season 19"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15898
+    start_date: 2024-07-27
+    end_date: 2024-08-18
+  - liquipedia_name: "Sber Tournament 2024"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16948
+    start_date: 2024-07-27
+    end_date: 2024-08-03
+  - liquipedia_name: "RES Regional Series: SEA #4"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16708
+    start_date: 2024-07-29
+    end_date: 2024-08-13
+  - liquipedia_name: "CCT Series 2"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16953
+    start_date: 2024-08-01
+    end_date: 2024-08-11
+  - liquipedia_name: "EPL World Series: America Season 13"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15899
+    start_date: 2024-08-04
+    end_date: 2024-08-28
+  - liquipedia_name: "RES Regional Series: LATAM #4"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16709
+    start_date: 2024-08-16
+    end_date: 2024-08-29
+  - liquipedia_name: "CCT Series 3"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17056
+    start_date: 2024-08-20
+    end_date: 2024-08-30
+  - liquipedia_name: "Phoenix League"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17059
+    start_date: 2024-08-24
+    end_date: 2024-09-18
+  - liquipedia_name: "Russian Esports Cup 2024"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16993
+    start_date: 2024-08-24
+    end_date: 2024-08-25
+  - liquipedia_name: "Douyu Super Dream League Season 2"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16973
+    start_date: 2024-08-26
+    end_date: 2024-09-03
+  - liquipedia_name: "True Fighters 2024"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17074
+    start_date: 2024-08-28
+    end_date: 2024-09-01
+  - liquipedia_name: "RES Regional Series: EU #4"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16710
+    start_date: 2024-09-16
+    end_date: 2024-09-29
+  - liquipedia_name: "European Pro League Season 20"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 15898
+    start_date: 2024-09-17
+    end_date: 2024-10-18
+  - liquipedia_name: "CCT Series 4"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17111
+    start_date: 2024-10-09
+    end_date: 2024-10-18
+  - liquipedia_name: "Own Code 2024"
+    liquipedia_tier: T3
+    year: 2024
+    notes: "No Liquipedia |leagueid=; not ingested."
+    start_date: 2024-10-10
+    end_date: 2024-10-11
+  - liquipedia_name: "Samsung Odyssey Cup"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16933
+    start_date: 2024-10-10
+    end_date: 2024-10-13
+  - liquipedia_name: "Phoenix League 2"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17199
+    start_date: 2024-10-14
+    end_date: 2024-11-08
+  - liquipedia_name: "MSI Gaming Arena 2024"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17120
+    start_date: 2024-10-19
+    end_date: 2024-10-20
+  - liquipedia_name: "RES Regional Champions"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16710
+    start_date: 2024-10-22
+    end_date: 2024-10-25
+  - liquipedia_name: "Asian Dragon Series: Regional Collision"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17229
+    start_date: 2024-11-08
+    end_date: 2024-11-24
+  - liquipedia_name: "EPL World Series: America Season 14"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17367
+    start_date: 2024-11-12
+    end_date: 2024-12-08
+  - liquipedia_name: "European Pro League Season 21"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17381
+    start_date: 2024-11-12
+    end_date: 2024-12-04
+  - liquipedia_name: "CCT Series 5"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17425
+    start_date: 2024-11-16
+    end_date: 2024-11-25
+  - liquipedia_name: "AsiaPro League Season 1"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17458
+    start_date: 2024-11-20
+    end_date: 2024-12-04
+  - liquipedia_name: "MESA Invitational 2024"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17326
+    start_date: 2024-12-10
+    end_date: 2024-12-15
+  - liquipedia_name: "European Pro League Season 22"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17381
+    start_date: 2024-12-11
+    end_date: 2024-12-27
+  - liquipedia_name: "True Fighters 2024 Christmas"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17554
+    start_date: 2024-12-11
+    end_date: 2024-12-17
+  - liquipedia_name: "RESF Open Cup 2024"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 17513
+    start_date: 2024-12-14
+    end_date: 2024-12-15
+  - liquipedia_name: "1win Series Dota 2 Punch"
+    liquipedia_tier: T3
+    year: 2024
+    league_id: 16427
+    start_date: 2024-12-21
+    end_date: 2024-12-22
+  - liquipedia_name: "Asia Pacific Predator League 2025"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17512
+    start_date: 2025-01-08
+    end_date: 2025-01-12
+  - liquipedia_name: "European Pro League Season 23"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17381
+    start_date: 2025-01-11
+    end_date: 2025-01-26
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 2"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17659
+    start_date: 2025-01-15
+    end_date: 2025-01-28
+  - liquipedia_name: "AsiaPro League Season 2"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17622
+    start_date: 2025-01-20
+    end_date: 2025-02-17
+  - liquipedia_name: "CCT Series 6"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17637
+    start_date: 2025-01-21
+    end_date: 2025-01-31
+  - liquipedia_name: "UPEA National League 2025"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17719
+    start_date: 2025-01-22
+    end_date: 2025-02-02
+  - liquipedia_name: "Asian Dragon Series: Continental Collision"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 16925
+    start_date: 2025-02-05
+    end_date: 2025-02-10
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 3"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17659
+    start_date: 2025-02-11
+    end_date: 2025-02-26
+  - liquipedia_name: "European Pro League Season 24"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17381
+    start_date: 2025-02-11
+    end_date: 2025-03-07
+  - liquipedia_name: "CCT Series 7"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17782
+    start_date: 2025-02-25
+    end_date: 2025-03-07
+  - liquipedia_name: "EPL World Series: America Season 15"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17367
+    start_date: 2025-03-14
+    end_date: 2025-03-26
+  - liquipedia_name: "European Pro League Season 25"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17381
+    start_date: 2025-03-19
+    end_date: 2025-04-13
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 4"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17659
+    start_date: 2025-03-20
+    end_date: 2025-04-12
+  - liquipedia_name: "CCT Series 8"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17984
+    start_date: 2025-04-02
+    end_date: 2025-04-11
+  - liquipedia_name: "EPL World Series: America Season 16"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17367
+    start_date: 2025-04-19
+    end_date: 2025-04-30
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 5"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17659
+    start_date: 2025-04-26
+    end_date: 2025-05-15
+  - liquipedia_name: "Lunar Snake Trophy"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18105
+    start_date: 2025-04-28
+    end_date: 2025-05-30
+  - liquipedia_name: "European Pro League Season 26"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17381
+    start_date: 2025-04-29
+    end_date: 2025-05-18
+  - liquipedia_name: "ACL X ESL Challenger China"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17875
+    start_date: 2025-05-01
+    end_date: 2025-05-03
+  - liquipedia_name: "Immortal Cup Season 1"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18153
+    start_date: 2025-05-12
+    end_date: 2025-06-15
+  - liquipedia_name: "Cyber Clash"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18120
+    start_date: 2025-05-27
+    end_date: 2025-06-29
+  - liquipedia_name: "CCT Season 2 Series 1"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18242
+    start_date: 2025-06-09
+    end_date: 2025-06-18
+  - liquipedia_name: "EPL World Series: America Season 17"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17367
+    start_date: 2025-06-18
+    end_date: 2025-06-29
+  - liquipedia_name: "European Pro League Season 27"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17381
+    start_date: 2025-06-18
+    end_date: 2025-07-07
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 6"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17659
+    start_date: 2025-06-19
+    end_date: 2025-07-07
+  - liquipedia_name: "CCT Season 2 Series 2"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18374
+    start_date: 2025-06-30
+    end_date: 2025-07-08
+  - liquipedia_name: "Russian Esports Championship 2025"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18325
+    start_date: 2025-07-05
+    end_date: 2025-07-06
+  - liquipedia_name: "Lunar Snake Trophy 2"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18490
+    start_date: 2025-07-09
+    end_date: 2025-08-13
+  - liquipedia_name: "European Pro League Season 28"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17381
+    start_date: 2025-07-15
+    end_date: 2025-08-01
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 7"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17659
+    start_date: 2025-07-20
+    end_date: 2025-08-07
+  - liquipedia_name: "CCT Season 2 Series 3"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18396
+    start_date: 2025-07-24
+    end_date: 2025-08-01
+  - liquipedia_name: "Americas Convergence Series 1"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18498
+    start_date: 2025-07-28
+    end_date: 2025-08-18
+  - liquipedia_name: "CIS Battle"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18491
+    start_date: 2025-08-02
+    end_date: 2025-08-15
+  - liquipedia_name: "European Pro League Season 29"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17381
+    start_date: 2025-08-09
+    end_date: 2025-08-21
+  - liquipedia_name: "CCT Season 2 Series 4"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18524
+    start_date: 2025-08-16
+    end_date: 2025-08-24
+  - liquipedia_name: "Sber Tournament 2025"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 11845
+    start_date: 2025-08-16
+    end_date: 2025-08-30
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 8"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17659
+    start_date: 2025-08-23
+    end_date: 2025-09-10
+  - liquipedia_name: "Russian Esports Cup 2025"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18434
+    start_date: 2025-08-23
+    end_date: 2025-08-24
+  - liquipedia_name: "CIS Battle 2"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18592
+    start_date: 2025-08-25
+    end_date: 2025-09-03
+  - liquipedia_name: "Volt Energy Cyber Cup 2025"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18543
+    start_date: 2025-08-28
+    end_date: 2025-09-20
+  - liquipedia_name: "Americas Convergence Series 2"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18502
+    start_date: 2025-09-02
+    end_date: 2025-10-23
+  - liquipedia_name: "European Pro League Season 30"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17381
+    start_date: 2025-09-08
+    end_date: 2025-10-04
+  - liquipedia_name: "Lunar Snake Trophy 3"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18618
+    start_date: 2025-09-11
+    end_date: 2025-10-21
+  - liquipedia_name: "CCT Season 2 Series 5"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18666
+    start_date: 2025-10-03
+    end_date: 2025-10-14
+  - liquipedia_name: "DreamLeague Division 2 Season 1"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18769
+    start_date: 2025-10-11
+    end_date: 2025-10-26
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 9"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17659
+    start_date: 2025-10-15
+    end_date: 2025-10-28
+  - liquipedia_name: "European Pro League Season 31"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17381
+    start_date: 2025-10-15
+    end_date: 2025-10-28
+  - liquipedia_name: "Redragon Latam Series"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18995
+    start_date: 2025-10-22
+    end_date: 2025-11-29
+  - liquipedia_name: "CCT Season 2: South America Series 1"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18799
+    start_date: 2025-10-23
+    end_date: 2025-10-31
+  - liquipedia_name: "Lunar Snake Trophy 4"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18893
+    start_date: 2025-10-29
+    end_date: 2025-12-01
+  - liquipedia_name: "CIS Battle 3"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18660
+    start_date: 2025-11-03
+    end_date: 2025-11-14
+  - liquipedia_name: "European Pro League Season 32"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18866
+    start_date: 2025-11-03
+    end_date: 2025-11-17
+  - liquipedia_name: "DreamLeague Division 2 Season 2"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18897
+    start_date: 2025-11-04
+    end_date: 2025-11-11
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 10"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18865
+    start_date: 2025-11-04
+    end_date: 2025-11-20
+  - liquipedia_name: "CCT Season 2 Series 6"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18955
+    start_date: 2025-11-28
+    end_date: 2025-12-06
+  - liquipedia_name: "European Pro League Season 33"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18866
+    start_date: 2025-12-01
+    end_date: 2025-12-28
+  - liquipedia_name: "Tennisi Stampede Champions: Season 1"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 18940
+    start_date: 2025-12-02
+    end_date: 2025-12-14
+  - liquipedia_name: "RESF Open Cup 2025"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 19040
+    start_date: 2025-12-06
+    end_date: 2025-12-07
+  - liquipedia_name: "Lunar Snake Trophy 5"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 19054
+    start_date: 2025-12-09
+    end_date: 2025-12-31
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 11"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 17659
+    start_date: 2025-12-16
+    end_date: 2025-12-28
+  - liquipedia_name: "CIS Battle 4"
+    liquipedia_tier: T3
+    year: 2025
+    league_id: 19093
+    start_date: 2025-12-22
+    end_date: 2025-12-30
+  - liquipedia_name: "Asia Pacific Predator League 2026"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18999
+    start_date: 2026-01-07
+    end_date: 2026-01-11
+  - liquipedia_name: "EPL Championship Season 1"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18941
+    start_date: 2026-01-09
+    end_date: 2026-01-28
+  - liquipedia_name: "CCT Season 2: South America Series 2"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19147
+    start_date: 2026-01-21
+    end_date: 2026-01-31
+  - liquipedia_name: "European Pro League Season 34"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18866
+    start_date: 2026-01-31
+    end_date: 2026-02-17
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 12"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18865
+    start_date: 2026-02-02
+    end_date: 2026-02-21
+  - liquipedia_name: "Lunar Snake Trophy 6"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19054
+    start_date: 2026-02-07
+    end_date: 2026-03-05
+  - liquipedia_name: "CCT Season 2 Series 7"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19322
+    start_date: 2026-02-12
+    end_date: 2026-02-20
+  - liquipedia_name: "EPL Championship Season 2"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18941
+    start_date: 2026-02-19
+    end_date: 2026-02-28
+  - liquipedia_name: "CCT Season 2: South America Series 3"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19361
+    start_date: 2026-02-28
+    end_date: 2026-03-08
+  - liquipedia_name: "Esports League Super Cup Pro Division"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19371
+    start_date: 2026-03-01
+    end_date: 2026-03-21
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 13"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18865
+    start_date: 2026-03-04
+    end_date: 2026-03-26
+  - liquipedia_name: "European Pro League Season 35"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18866
+    start_date: 2026-03-04
+    end_date: 2026-03-27
+  - liquipedia_name: "CCT Season 2 Series 8"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19421
+    start_date: 2026-03-12
+    end_date: 2026-03-20
+  - liquipedia_name: "Tennisi Stampede Champions: Season 2"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19378
+    start_date: 2026-03-16
+    end_date: 2026-03-27
+  - liquipedia_name: "European Pro League Season 36"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18866
+    start_date: 2026-04-02
+    end_date: 2026-04-18
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 14"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18865
+    start_date: 2026-04-03
+    end_date: 2026-04-23
+  - liquipedia_name: "CCT Season 2: South America Series 4"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19503
+    start_date: 2026-04-09
+    end_date: 2026-04-17
+  - liquipedia_name: "DreamLeague Division 2 Season 4"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19532
+    start_date: 2026-04-19
+    end_date: 2026-05-01
+  - liquipedia_name: "European Pro League Season 37"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18866
+    start_date: 2026-04-28
+    end_date: 2026-05-12
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 15"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18865
+    start_date: 2026-05-01
+    end_date: 2026-05-14
+  - liquipedia_name: "Lunar Horse Trophy 7"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19545
+    start_date: 2026-05-09
+    end_date: 2026-05-29
+  - liquipedia_name: "Russian Esports Student League 2026"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19634
+    start_date: 2026-05-17
+    end_date: 2026-05-19
+  - liquipedia_name: "European Pro League Season 38"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18866
+    start_date: 2026-06-04
+    end_date: 2026-06-23
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 16"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18865
+    start_date: 2026-06-07
+    end_date: 2026-06-28
+  - liquipedia_name: "Choco Cup"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19919
+    start_date: 2026-06-23
+    end_date: 2026-06-28
+  - liquipedia_name: "European Pro League Season 39"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18866
+    start_date: 2026-06-27
+    end_date: 2026-07-12
+  - liquipedia_name: "Lunar Horse Trophy 8"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19937
+    start_date: 2026-07-19
+    end_date: 2026-08-11
+  - liquipedia_name: "Russian Esports Championship 2026"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19951
+    start_date: 2026-07-25
+    end_date: 2026-07-26
+  - liquipedia_name: "EPL Masters I"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19944
+    start_date: 2026-07-26
+    end_date: 2026-08-12
+  - liquipedia_name: "Asgard Championship Season 1"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 20026
+    start_date: 2026-07-28
+    end_date: 2026-08-11
+  - liquipedia_name: "ExitLag ChampZ"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 20134
+    start_date: 2026-08-29
+    end_date: 2026-08-30
+  - liquipedia_name: "EPL Masters II"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 19944
+    start_date: 2026-08-30
+    end_date: 2026-09-10
+  - liquipedia_name: "EPL World Series: Southeast Asia Season 17"
+    liquipedia_tier: T3
+    year: 2026
+    league_id: 18865
+    start_date: 2026-09-01
+    end_date: 2026-09-15
