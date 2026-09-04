@@ -27,6 +27,7 @@ __all__ = [
     "ensure_league_ingestion_state",
     "get_canonical_mapper_version",
     "get_league_fetch_mode",
+    "get_league_match_date_window",
     "get_persisted_match_ids_for_league",
     "insert_match_ingestion_error",
     "is_league_allowlisted",
@@ -87,6 +88,30 @@ def get_league_fetch_mode(conn: Connection, league_id: int) -> str:
     if row is None or not row.fetch_mode:
         return LEAGUE_FETCH_MODE_LEAGUE
     return str(row.fetch_mode)
+
+
+def get_league_match_date_window(
+    conn: Connection, league_id: int
+) -> tuple[datetime | None, datetime | None]:
+    """Return the main-event date window for a league, or (None, None).
+
+    A league uses a date window only when `window_filter` is set and both
+    `start_date`/`end_date` are present. The window is inclusive of both
+    end dates in the league's local calendar days, represented as UTC
+    instants (start of `start_date` through end of `end_date`).
+    """
+    row = conn.execute(
+        select(
+            LEAGUES.c.window_filter,
+            LEAGUES.c.start_date,
+            LEAGUES.c.end_date,
+        ).where(LEAGUES.c.league_id == league_id)
+    ).first()
+    if row is None or not row.window_filter or not row.start_date or not row.end_date:
+        return None, None
+    start = datetime.combine(row.start_date, datetime.min.time(), tzinfo=UTC)
+    end = datetime.combine(row.end_date, datetime.max.time(), tzinfo=UTC)
+    return start, end
 
 
 def ensure_league_ingestion_state(conn: Connection, league_id: int) -> None:

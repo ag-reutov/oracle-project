@@ -269,18 +269,20 @@ def test_canonical_match_from_stratz_normalizes_nonzero_gapped_order_to_sequence
 def test_canonical_match_from_stratz_rejects_duplicate_source_order() -> None:
     raw = build_raw_match()
     # Force two rows to share the same raw STRATZ `order`, which makes the
-    # source ordering ambiguous and must be rejected rather than silently
-    # broken-tie-sorted.
+    # source ordering ambiguous. The draft is unusable, so the match is
+    # represented with an absent draft rather than being dropped.
     raw["pickBans"][1]["order"] = raw["pickBans"][0]["order"]
-    with pytest.raises(CanonicalMatchError, match="duplicate"):
-        canonical_match_from_stratz(raw)
+    match = canonical_match_from_stratz(raw)
+    assert match.draft_complete is False
+    assert match.draft_events == ()
 
 
 def test_canonical_match_from_stratz_rejects_missing_order() -> None:
     raw = build_raw_match()
     del raw["pickBans"][0]["order"]
-    with pytest.raises(CanonicalMatchError, match="order"):
-        canonical_match_from_stratz(raw)
+    match = canonical_match_from_stratz(raw)
+    assert match.draft_complete is False
+    assert match.draft_events == ()
 
 
 def test_canonical_match_from_stratz_maps_player_hero_id_from_players_not_pick_order() -> (
@@ -340,22 +342,74 @@ def test_real_anomaly_fixtures_still_map_successfully(fixture_path: Path) -> Non
     else [],
     ids=lambda path: path.name,
 )
-def test_rejected_anomaly_fixtures_fail_canonicalization(
+def test_rejected_anomaly_fixtures_map_without_a_draft(
     fixture_path: Path,
 ) -> None:
-    """Real STRATZ payloads that lack draft data must stay rejected.
+    """Real STRATZ payloads with `pickBans: null` now canonicalize.
 
     These are completed professional matches where STRATZ returns
     `pickBans: null` even though `players[].heroId` is populated. Final
     hero lineups alone cannot reconstruct draft order, so canonicalization
-    must fail rather than invent draft events.
+    must not fabricate draft events; instead the match is canonical with
+    an absent draft (`draft_complete=False`, empty `draft_events`).
     """
     raw = json.loads(fixture_path.read_text(encoding="utf-8"))
     assert raw.get("pickBans") in (None, [])
-    with pytest.raises(
-        CanonicalMatchError,
-        match="expected exactly 5 actual radiant picks",
-    ):
+    match = canonical_match_from_stratz(raw)
+    assert match.match_id == raw["id"]
+    assert match.draft_complete is False
+    assert match.draft_events == ()
+    assert len(match.radiant_player_ids) == 5
+    assert len(match.dire_player_ids) == 5
+    assert len(match.radiant_hero_ids) == 5
+    assert len(match.dire_hero_ids) == 5
+
+
+def test_null_pick_bans_map_to_absent_draft() -> None:
+    raw = build_raw_match()
+    raw["pickBans"] = None
+    match = canonical_match_from_stratz(raw)
+    assert match.draft_complete is False
+    assert match.draft_events == ()
+    assert list(match.radiant_hero_ids) == [8, 10, 12, 14, 16]
+
+
+def test_empty_pick_bans_map_to_absent_draft() -> None:
+    raw = build_raw_match()
+    raw["pickBans"] = []
+    match = canonical_match_from_stratz(raw)
+    assert match.draft_complete is False
+    assert match.draft_events == ()
+
+
+def test_malformed_pick_bans_map_to_absent_draft() -> None:
+    raw = build_raw_match()
+    raw["pickBans"][1]["order"] = raw["pickBans"][0]["order"]
+    match = canonical_match_from_stratz(raw)
+    assert match.draft_complete is False
+    assert match.draft_events == ()
+
+
+def test_partial_draft_map_to_absent_draft_not_fabricated() -> None:
+    raw = build_raw_match()
+    raw["pickBans"] = raw["pickBans"][:6]
+    match = canonical_match_from_stratz(raw)
+    assert match.draft_complete is False
+    assert match.draft_events == ()
+
+
+def test_complete_draft_maps_draft_complete_true() -> None:
+    raw = build_raw_match()
+    match = canonical_match_from_stratz(raw)
+    assert match.draft_complete is True
+    assert len(match.draft_events) == 17
+
+
+def test_draft_less_match_still_requires_core_identity() -> None:
+    raw = build_raw_match()
+    raw["pickBans"] = None
+    raw["players"][0]["heroId"] = None
+    with pytest.raises(CanonicalMatchError, match="heroId"):
         canonical_match_from_stratz(raw)
 
 

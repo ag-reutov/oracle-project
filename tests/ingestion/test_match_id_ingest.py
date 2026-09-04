@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -17,11 +18,11 @@ from dota_predictor.ingestion.errors import LeagueNotRegisteredError
 from dota_predictor.ingestion.pipeline import ingest_league, ingest_matches_by_id
 from dota_predictor.storage.ingestion_writer import load_cursor_state
 from dota_predictor.storage.schema import (
+    DRAFT_EVENTS,
     LEAGUES,
     MATCH_INGESTION_ERRORS,
-    MATCHES,
     MATCH_PLAYERS,
-    DRAFT_EVENTS,
+    MATCHES,
     STRATZ_RAW_MATCHES,
 )
 
@@ -175,6 +176,77 @@ def test_mismatched_league_id_is_rejected(engine) -> None:
         ).one()
         assert err.stage == "FETCH"
         assert int(err.match_id) == 500
+
+
+@requires_test_database
+def test_out_of_window_matches_are_skipped(engine) -> None:
+    with engine.begin() as conn:
+        seed_ingestion_league(
+            conn,
+            LEAGUE_ID,
+            name="ESL Challenger China S2",
+            fetch_mode="match_ids",
+            start_date="2026-01-30",
+            end_date="2026-02-01",
+            window_filter=True,
+        )
+
+    # 2026-01-20 12:00 UTC (outside window) and 2026-01-30 12:00 UTC (inside).
+    in_match = _match(500, datetime(2026, 1, 30, 12, 0, tzinfo=UTC).timestamp())
+    out_match = _match(501, datetime(2026, 1, 20, 12, 0, tzinfo=UTC).timestamp())
+    result = ingest_matches_by_id(
+        engine,
+        MockMatchFetcher({500: in_match, 501: out_match}),
+        LEAGUE_ID,
+        [500, 501],
+        window_start=datetime(2026, 1, 30, tzinfo=UTC),
+        window_end=datetime(2026, 2, 1, 23, 59, 59, tzinfo=UTC),
+    )
+    assert result.skipped_out_of_window == 1
+    assert result.fetch_successes == 1
+    assert result.status == "COMPLETE"
+    with engine.connect() as conn:
+        stored = {int(r[0]) for r in conn.execute(select(MATCHES.c.match_id))}
+        assert stored == {500}
+
+
+@requires_test_database
+def test_no_window_filter_when_window_filter_disabled(engine) -> None:
+    with engine.begin() as conn:
+        seed_ingestion_league(conn, LEAGUE_ID, name="SLAM IV")
+
+    out_match = _match(600, 1_760_000_000)
+    result = ingest_matches_by_id(
+        engine, MockMatchFetcher({600: out_match}), LEAGUE_ID, [600]
+    )
+    assert result.skipped_out_of_window == 0
+    assert result.fetch_successes == 1
+    assert result.status == "COMPLETE"
+
+
+@requires_test_database
+def test_ingest_league_match_ids_applies_registry_window(engine) -> None:
+    with engine.begin() as conn:
+        seed_ingestion_league(
+            conn,
+            LEAGUE_ID,
+            name="NarodCast PREMIER SERIES",
+            fetch_mode="match_ids",
+            start_date="2026-04-01",
+            end_date="2026-04-11",
+            window_filter=True,
+        )
+
+    in_match = _match(700, datetime(2026, 4, 5, 12, 0, tzinfo=UTC).timestamp())
+    out_match = _match(701, datetime(2026, 3, 20, 12, 0, tzinfo=UTC).timestamp())
+    fetcher = MockMatchFetcher({700: in_match, 701: out_match})
+    result = ingest_league(
+        engine, fetcher, LEAGUE_ID, match_ids=[700, 701]
+    )
+    assert result.status == "COMPLETE"
+    with engine.connect() as conn:
+        stored = {int(r[0]) for r in conn.execute(select(MATCHES.c.match_id))}
+        assert stored == {700}
 
 
 @requires_test_database

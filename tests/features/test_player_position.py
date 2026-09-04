@@ -141,7 +141,7 @@ def test_historical_metrics_are_not_training_or_snapshot_features() -> None:
 
 
 def test_schema_versions_unchanged() -> None:
-    assert ANALYTICAL_SCHEMA_VERSION == 4
+    assert ANALYTICAL_SCHEMA_VERSION == 5
     assert REFERENCE_SCHEMA_VERSION == 1
 
 

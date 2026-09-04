@@ -39,6 +39,7 @@ def _match_row(
     radiant_team_id: int = 100,
     dire_team_id: int = 200,
     game_number_in_series: int | None = None,
+    draft_complete: bool = True,
 ) -> dict:
     return {
         "match_id": match_id,
@@ -55,6 +56,7 @@ def _match_row(
         "dire_team_name_observed": "Dire Team",
         "radiant_win": True,
         "duration_seconds": 1800,
+        "draft_complete": draft_complete,
         "mapper_version": 1,
         "canonicalized_at": START_TIME,
     }
@@ -524,6 +526,48 @@ def test_validate_match_players_table_accepts_short_draft() -> None:
     players_table = build_match_players_table([match], players)
     drafts_table = build_draft_events_table(drafts)
     validate_match_players_table(players_table, matches_table, drafts_table)
+
+
+def test_validate_match_players_table_accepts_draft_less_match() -> None:
+    # A match with draft_complete=false has no draft rows and no PICK set
+    # to cross-check; player hero ids must still be 5 distinct values per
+    # side. This must not fail validation.
+    radiant_heroes = [10 + i for i in range(5)]
+    dire_heroes = [20 + i for i in range(5)]
+    match = _match_row(1, draft_complete=False)
+    players = _player_rows(
+        1,
+        radiant_ids=[1, 2, 3, 4, 5],
+        dire_ids=[6, 7, 8, 9, 10],
+        radiant_heroes=radiant_heroes,
+        dire_heroes=dire_heroes,
+    )
+    matches_table = build_matches_table([match], players)
+    players_table = build_match_players_table([match], players)
+    drafts_table = build_draft_events_table([])
+    validate_match_players_table(players_table, matches_table, drafts_table)
+    assert "draft_complete" in matches_table.column_names
+    assert matches_table.column("draft_complete").to_pylist() == [False]
+
+
+def test_validate_match_players_table_draft_less_still_detects_duplicate_hero() -> None:
+    # Even with an absent draft, duplicate heroes on a side are invalid
+    # player-identity data and must fail validation.
+    radiant_heroes = [10, 10, 12, 13, 14]
+    dire_heroes = [20 + i for i in range(5)]
+    match = _match_row(1, draft_complete=False)
+    players = _player_rows(
+        1,
+        radiant_ids=[1, 2, 3, 4, 5],
+        dire_ids=[6, 7, 8, 9, 10],
+        radiant_heroes=radiant_heroes,
+        dire_heroes=dire_heroes,
+    )
+    matches_table = build_matches_table([match], players)
+    players_table = build_match_players_table([match], players)
+    drafts_table = build_draft_events_table([])
+    with pytest.raises(DatasetValidationError, match="not 5 distinct"):
+        validate_match_players_table(players_table, matches_table, drafts_table)
 
 
 def test_validate_match_players_table_requires_ten_rows() -> None:

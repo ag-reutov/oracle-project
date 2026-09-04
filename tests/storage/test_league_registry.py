@@ -44,7 +44,6 @@ HEAD_IN_SCOPE_T1_T2: dict[int, str] = {
     17509: "T1",
     16427: "T2",
     16730: "T2",
-    16446: "T2",
     16905: "T2",
     16846: "T2",
     17119: "T2",
@@ -127,6 +126,9 @@ def test_existing_t1_t2_entries_unchanged() -> None:
         assert entry.get("in_scope") is True
     assert by_id[16427]["liquipedia_tier"] == "T2"
     assert by_id[17622]["liquipedia_tier"] == "T2"
+    # 16446 was a dead STRATZ mapping (0 matches); reclassified audit-only.
+    assert by_id[16446]["liquipedia_tier"] == "EXCLUDED"
+    assert by_id[16446].get("in_scope") is False
     t3_ids = {
         entry["league_id"]
         for entry in by_id.values()
@@ -177,4 +179,4 @@ def test_feature_columns_remain_33() -> None:
 
 
 def test_analytical_schema_version_unchanged() -> None:
-    assert ANALYTICAL_SCHEMA_VERSION == 4
+    assert ANALYTICAL_SCHEMA_VERSION == 5

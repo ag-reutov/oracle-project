@@ -84,7 +84,7 @@ __all__ = [
 # (`storage.schema.MATCHES.c.mapper_version`) so a future reprocessing job
 # can select rows with `mapper_version < CANONICAL_MAPPER_VERSION` instead
 # of reprocessing everything or nothing.
-CANONICAL_MAPPER_VERSION = 3
+CANONICAL_MAPPER_VERSION = 4
 
 
 def _require(raw: Mapping[str, Any], key: str, *, context: str) -> Any:
@@ -334,11 +334,30 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
     radiant_box_scores = tuple(player.box_score for player in radiant_roster)
     dire_box_scores = tuple(player.box_score for player in dire_roster)
 
-    pick_bans = raw.get("pickBans") or []
-    draft_events = tuple(
-        draft_event_from_stratz_pick_ban(row, sequence=sequence)
-        for sequence, row in enumerate(_sorted_pick_ban_rows(pick_bans))
-    )
+    pick_bans = raw.get("pickBans")
+    draft_events: tuple[DraftEvent, ...]
+    draft_complete: bool
+    if not pick_bans:
+        # No source draft rows at all: represent the match canonically
+        # with an absent draft rather than dropping it. Draft data is
+        # never fabricated.
+        draft_events = ()
+        draft_complete = False
+    else:
+        try:
+            draft_events = tuple(
+                draft_event_from_stratz_pick_ban(row, sequence=sequence)
+                for sequence, row in enumerate(_sorted_pick_ban_rows(pick_bans))
+            )
+            draft_complete = True
+        except CanonicalMatchError:
+            # The source draft is present but malformed (missing/duplicate
+            # ordering, missing fields). A professional match should not
+            # disappear from the canonical census because one optional
+            # analytical component is unavailable: record it with an
+            # absent draft and let draft-dependent consumers exclude it.
+            draft_events = ()
+            draft_complete = False
 
     duration_seconds = _require(raw, "durationSeconds", context="match")
 
@@ -346,32 +365,74 @@ def canonical_match_from_stratz(raw: Mapping[str, Any]) -> CanonicalMatch:
     if radiant_win is None:
         raise CanonicalMatchError("match: missing required field 'didRadiantWin'")
 
-    return CanonicalMatch(
-        match_id=match_id,
-        start_time=start_time,
-        league_id=league_id,
-        league_name=league_name,
-        series_id=series_id,
-        series_type=series_type,
-        game_number_in_series=game_number_in_series,
-        game_version_id=raw.get("gameVersionId"),
-        radiant_team_id=radiant_team_id,
-        radiant_team_name_observed=radiant_team.get("name"),
-        radiant_player_ids=radiant_player_ids,
-        dire_team_id=dire_team_id,
-        dire_team_name_observed=dire_team.get("name"),
-        dire_player_ids=dire_player_ids,
-        radiant_hero_ids=radiant_hero_ids,
-        dire_hero_ids=dire_hero_ids,
-        radiant_positions=radiant_positions,
-        dire_positions=dire_positions,
-        radiant_lanes=radiant_lanes,
-        dire_lanes=dire_lanes,
-        radiant_roles=radiant_roles,
-        dire_roles=dire_roles,
-        radiant_box_scores=radiant_box_scores,
-        dire_box_scores=dire_box_scores,
-        draft_events=draft_events,
-        radiant_win=radiant_win,
-        duration_seconds=duration_seconds,
-    )
+    try:
+        return CanonicalMatch(
+            match_id=match_id,
+            start_time=start_time,
+            league_id=league_id,
+            league_name=league_name,
+            series_id=series_id,
+            series_type=series_type,
+            game_number_in_series=game_number_in_series,
+            game_version_id=raw.get("gameVersionId"),
+            radiant_team_id=radiant_team_id,
+            radiant_team_name_observed=radiant_team.get("name"),
+            radiant_player_ids=radiant_player_ids,
+            dire_team_id=dire_team_id,
+            dire_team_name_observed=dire_team.get("name"),
+            dire_player_ids=dire_player_ids,
+            radiant_hero_ids=radiant_hero_ids,
+            dire_hero_ids=dire_hero_ids,
+            radiant_positions=radiant_positions,
+            dire_positions=dire_positions,
+            radiant_lanes=radiant_lanes,
+            dire_lanes=dire_lanes,
+            radiant_roles=radiant_roles,
+            dire_roles=dire_roles,
+            radiant_box_scores=radiant_box_scores,
+            dire_box_scores=dire_box_scores,
+            draft_events=draft_events,
+            draft_complete=draft_complete,
+            radiant_win=radiant_win,
+            duration_seconds=duration_seconds,
+        )
+    except CanonicalMatchError:
+        if not draft_complete:
+            raise
+        # The draft built from the source rows fails a draft-completeness
+        # invariant (e.g. a partial draft with fewer than five picks per
+        # side). The match itself is a real completed professional game, so
+        # retry with the draft represented as absent. Identity/team/player
+        # validations run again in this retry, so any genuine identity
+        # failure still surfaces rather than being masked by the absent
+        # draft.
+        return CanonicalMatch(
+            match_id=match_id,
+            start_time=start_time,
+            league_id=league_id,
+            league_name=league_name,
+            series_id=series_id,
+            series_type=series_type,
+            game_number_in_series=game_number_in_series,
+            game_version_id=raw.get("gameVersionId"),
+            radiant_team_id=radiant_team_id,
+            radiant_team_name_observed=radiant_team.get("name"),
+            radiant_player_ids=radiant_player_ids,
+            dire_team_id=dire_team_id,
+            dire_team_name_observed=dire_team.get("name"),
+            dire_player_ids=dire_player_ids,
+            radiant_hero_ids=radiant_hero_ids,
+            dire_hero_ids=dire_hero_ids,
+            radiant_positions=radiant_positions,
+            dire_positions=dire_positions,
+            radiant_lanes=radiant_lanes,
+            dire_lanes=dire_lanes,
+            radiant_roles=radiant_roles,
+            dire_roles=dire_roles,
+            radiant_box_scores=radiant_box_scores,
+            dire_box_scores=dire_box_scores,
+            draft_events=(),
+            draft_complete=False,
+            radiant_win=radiant_win,
+            duration_seconds=duration_seconds,
+        )

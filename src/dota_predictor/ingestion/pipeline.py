@@ -44,6 +44,7 @@ from dota_predictor.storage.ingestion_writer import (
     ensure_league_ingestion_state,
     get_canonical_mapper_version,
     get_league_fetch_mode,
+    get_league_match_date_window,
     get_matches_seen_count,
     get_persisted_match_ids_for_league,
     insert_match_ingestion_error,
@@ -94,6 +95,7 @@ class MatchIdIngestionResult:
     fetch_failures: int
     league_id_mismatches: int
     skipped_already_raw: int
+    skipped_out_of_window: int
     raw_row_count: int
     raw_rows_before: int
     canonical_row_count: int
@@ -223,12 +225,26 @@ def _ingest_league_match_ids(
     match_ids: Sequence[int] | None,
 ) -> IngestionResult:
     match_fetcher = _require_match_by_id_fetcher(fetcher, league_id)
+    with engine.connect() as conn:
+        window_start, window_end = get_league_match_date_window(conn, league_id)
     if match_ids is None:
-        discovery = discover_league_match_ids(league_id, skip_team_walk=True)
+        discovery = discover_league_match_ids(
+            league_id,
+            skip_team_walk=True,
+            window_start=window_start,
+            window_end=window_end,
+        )
         for note in discovery.notes:
             logger.info("league %s ID discovery: %s", league_id, note)
         match_ids = discovery.match_ids
-    result = ingest_matches_by_id(engine, match_fetcher, league_id, match_ids)
+    result = ingest_matches_by_id(
+        engine,
+        match_fetcher,
+        league_id,
+        match_ids,
+        window_start=window_start,
+        window_end=window_end,
+    )
     return IngestionResult(
         league_id=result.league_id,
         status=result.status,
@@ -244,6 +260,9 @@ def ingest_matches_by_id(
     fetcher: MatchByIdFetcher,
     league_id: int,
     match_ids: Sequence[int],
+    *,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
 ) -> MatchIdIngestionResult:
     """Fetch STRATZ `match(id)` payloads and reuse raw/canonical writers.
 
@@ -251,6 +270,10 @@ def ingest_matches_by_id(
     order. Already-persisted raw rows are not re-fetched. Nested `league`
     metadata may be null. A returned `leagueId` that is missing or not
     equal to `league_id` is rejected and recorded as a FETCH error.
+    When `window_start`/`window_end` are set, fetched matches whose start
+    time falls outside the window are skipped (recorded as out-of-window,
+    not as errors) -- this keeps qualifiers sharing a STRATZ league out of
+    the canonical corpus.
     """
     unique_ids = dedupe_match_ids(match_ids)
 
@@ -282,6 +305,8 @@ def ingest_matches_by_id(
     fetch_failures = 0
     league_id_mismatches = 0
     skipped_already_raw = 0
+    skipped_out_of_window = 0
+    out_of_window_ids: set[int] = set()
 
     for match_id in unique_ids:
         if match_id in persisted:
@@ -308,6 +333,10 @@ def ingest_matches_by_id(
             league_id_mismatches += 1
             fetch_failures += 1
             _record_fetch_error(engine, match_id, league_id, str(exc), payload)
+            continue
+        if _out_of_window(payload, window_start=window_start, window_end=window_end):
+            skipped_out_of_window += 1
+            out_of_window_ids.add(match_id)
             continue
 
         fetched_at = datetime.now(UTC)
@@ -342,7 +371,7 @@ def ingest_matches_by_id(
             if version is not None and version >= CANONICAL_MAPPER_VERSION:
                 canonical_already_current += 1
 
-    fetch_complete = set(unique_ids) <= raw_ids
+    fetch_complete = (set(unique_ids) - out_of_window_ids) <= raw_ids
     last_match_id = unique_ids[-1] if unique_ids else None
     cursor = CursorState(
         next_skip=0,
@@ -404,6 +433,7 @@ def ingest_matches_by_id(
         fetch_failures=fetch_failures,
         league_id_mismatches=league_id_mismatches,
         skipped_already_raw=skipped_already_raw,
+        skipped_out_of_window=skipped_out_of_window,
         raw_row_count=raw_row_count,
         raw_rows_before=raw_rows_before,
         canonical_row_count=canonical_row_count,
@@ -414,6 +444,30 @@ def ingest_matches_by_id(
         max_start_time=max_start,
         all_canonical_league_ids_match=bool(all_match),
         message=message,
+    )
+
+
+def _out_of_window(
+    payload: dict[str, Any],
+    *,
+    window_start: datetime | None,
+    window_end: datetime | None,
+) -> bool:
+    """Whether a fetched match's start time falls outside the event window.
+
+    A match with no `startDateTime`, or outside `window_start`..`window_end`
+    (inclusive), is considered out of window when a window is configured.
+    Out-of-window matches are qualifiers/earlier stages sharing a STRATZ
+    league id and are intentionally excluded from ingestion.
+    """
+    if window_start is None and window_end is None:
+        return False
+    raw_start = payload.get("startDateTime")
+    if raw_start is None:
+        return True
+    start = datetime.fromtimestamp(int(raw_start), tz=UTC)
+    return (window_start is not None and start < window_start) or (
+        window_end is not None and start > window_end
     )
 
 

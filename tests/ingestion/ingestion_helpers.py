@@ -26,6 +26,9 @@ def seed_ingestion_league(
     *,
     name: str = "Test League",
     fetch_mode: str = "league",
+    start_date: str | None = None,
+    end_date: str | None = None,
+    window_filter: bool = False,
 ) -> None:
     conn.execute(
         LEAGUES.insert().values(
@@ -34,6 +37,9 @@ def seed_ingestion_league(
             liquipedia_tier="T1",
             in_scope=True,
             fetch_mode=fetch_mode,
+            start_date=start_date,
+            end_date=end_date,
+            window_filter=window_filter,
         )
     )
     conn.execute(INGESTION_LEAGUES.insert().values(league_id=league_id))

@@ -136,7 +136,10 @@ __all__ = [
 #     match_players.parquet. matches.parquet is unchanged.
 # v4: adds observed STRATZ post-match box-score scalars on
 #     match_players.parquet. matches.parquet is unchanged.
-ANALYTICAL_SCHEMA_VERSION = 4
+# v5: adds `draft_complete` on matches.parquet so analytical consumers can
+#     distinguish matches with a complete source draft from matches whose
+#     draft is absent (draft_events.parquet has no rows for them).
+ANALYTICAL_SCHEMA_VERSION = 5
 
 MATCHES_FILENAME = "matches.parquet"
 MATCH_PLAYERS_FILENAME = "match_players.parquet"
@@ -175,6 +178,7 @@ MATCHES_SCHEMA = pa.schema(
         pa.field("dire_player_4_id", pa.int64(), nullable=False),
         pa.field("radiant_win", pa.bool_(), nullable=False),
         pa.field("duration_seconds", pa.int32(), nullable=False),
+        pa.field("draft_complete", pa.bool_(), nullable=False),
         pa.field("mapper_version", pa.int32(), nullable=False),
         pa.field("canonicalized_at", pa.timestamp("us", tz="UTC"), nullable=False),
     ]
@@ -376,6 +380,7 @@ def build_matches_table(
             "dire_team_name_observed": row["dire_team_name_observed"],
             "radiant_win": bool(row["radiant_win"]),
             "duration_seconds": int(row["duration_seconds"]),
+            "draft_complete": bool(row.get("draft_complete", True)),
             "mapper_version": int(row["mapper_version"]),
             "canonicalized_at": row["canonicalized_at"],
         }
@@ -559,10 +564,12 @@ def validate_match_players_table(
     Checks transformation correctness plus the player/hero contract:
     10 rows per match, 5 per side, non-null ids, unique players, unique
     heroes per side, `team_id` derived from the parent match side, and
-    per-side hero set equal to the successful PICK set. Does not treat
+    (for matches with a complete draft) per-side hero set equal to the
+    successful PICK set. Does not treat
     `slot_in_side` as Dota position 1-5. Observed `position`/`lane`/
     `role` may be null or UNKNOWN; duplicate/missing 1–5 assignments
-    are not repaired here.
+    are not repaired here. Matches with `draft_complete=false` have no
+    draft and are exempt from the PICK-set cross-check.
     """
     match_ids = match_players_table.column("match_id").to_pylist()
     sides = match_players_table.column("side").to_pylist()
@@ -664,6 +671,14 @@ def validate_match_players_table(
             continue
         pick_heroes.setdefault((match_id, side), set()).add(hero_id)
 
+    draft_complete_by_match = dict(
+        zip(
+            matches_table.column("match_id").to_pylist(),
+            matches_table.column("draft_complete").to_pylist(),
+            strict=True,
+        )
+    )
+
     for match_id in exported_match_ids:
         for side in _SIDES:
             rows = by_match_side.get((match_id, side), [])
@@ -677,6 +692,11 @@ def validate_match_players_table(
                 raise DatasetValidationError(
                     f"match {match_id}: {side} hero_ids are not 5 distinct values"
                 )
+            if not draft_complete_by_match.get(match_id, True):
+                # Draft is absent for this match; there is no successful
+                # PICK set to cross-check against (player hero ids are
+                # still 5 distinct values, validated above).
+                continue
             expected_picks = pick_heroes.get((match_id, side), set())
             if set(heroes) != expected_picks:
                 raise DatasetValidationError(

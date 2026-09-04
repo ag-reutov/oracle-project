@@ -497,7 +497,19 @@ class CanonicalMatch:
     ] = _UNSET_SIDE_BOX_SCORES
 
     # --- Draft (DRAFT) ---
-    draft_events: tuple[DraftEvent, ...]
+    # Ordered pick/ban sequence when a complete source draft is available.
+    # A professional match may legitimately have no usable draft data from
+    # the source (STRATZ `pickBans` null/empty or malformed). In that case
+    # `draft_events` stays empty and `draft_complete` is False; the match
+    # remains canonical because match/result/team/player identity is
+    # present, and draft-dependent features/queries exclude it via
+    # `draft_complete`. Draft data is never fabricated.
+    draft_events: tuple[DraftEvent, ...] = ()
+    # Whether `draft_events` is a complete source draft. False when the
+    # source provided no usable full draft. When False, `draft_events`
+    # must be empty and the final-hero/pick consistency invariants are
+    # not applicable.
+    draft_complete: bool = True
 
     # --- Outcome (POST_MATCH) ---
     radiant_win: bool
@@ -532,7 +544,24 @@ class CanonicalMatch:
                 "a player id appears on both radiant and dire sides"
             )
 
-        self._validate_draft_events()
+        if not isinstance(self.draft_complete, bool):
+            raise CanonicalMatchError(
+                f"draft_complete must be a bool, got {self.draft_complete!r}"
+            )
+        if self.draft_complete:
+            if not self.draft_events:
+                raise CanonicalMatchError(
+                    "draft_complete=True requires a non-empty draft_events "
+                    "sequence"
+                )
+            self._validate_draft_events()
+        else:
+            if self.draft_events:
+                raise CanonicalMatchError(
+                    "draft_complete=False requires draft_events to be empty; "
+                    "a partial draft must not be presented as complete or "
+                    "silently truncated"
+                )
         self._validate_side_heroes("radiant", self.radiant_hero_ids)
         self._validate_side_heroes("dire", self.dire_hero_ids)
         self._validate_side_enum_tuple(
@@ -618,6 +647,12 @@ class CanonicalMatch:
                 f"{side_name}_hero_ids contains duplicate hero ids"
             )
         side = Side.RADIANT if side_name == "radiant" else Side.DIRE
+        if not self.draft_complete:
+            # No usable source draft: there is no successful PICK set to
+            # cross-check. Player hero ids are still validated above as
+            # 5 distinct positive ints (player-identity observations), but
+            # the draft-consistency invariant is not applicable.
+            return
         pick_hero_ids = set(self._final_hero_ids(side))
         if set(hero_ids) != pick_hero_ids:
             raise CanonicalMatchError(
@@ -652,12 +687,11 @@ class CanonicalMatch:
         # (5v5), not an assumption about draft-format phase structure, so
         # it is safe to validate regardless of historical ban-count
         # variation. This held for every completed Tier 1/Tier 2 match in
-        # a 265-match verification sample spanning 2019-2025. It currently
-        # represents the schema for completed, training-eligible
-        # professional games; a future ingestion layer may need a
-        # separate way to represent legitimate-but-incomplete historical
-        # records (abandons, remakes, etc.) that fail this invariant --
-        # that distinction is not implemented here.
+        # a 265-match verification sample spanning 2019-2025.
+        # Legitimate-but-incomplete historical records (source draft
+        # missing or malformed) are represented with
+        # `draft_complete=False` and an empty `draft_events`; this
+        # validator only runs when `draft_complete=True`.
         radiant_picks = len(self.radiant_final_hero_ids)
         if radiant_picks != 5:
             raise CanonicalMatchError(

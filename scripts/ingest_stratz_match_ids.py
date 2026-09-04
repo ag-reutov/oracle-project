@@ -19,11 +19,15 @@ from pathlib import Path
 from sqlalchemy import func, select
 
 from dota_predictor.ingestion.client import StratzClient
-from dota_predictor.ingestion.config import MissingStratzTokenError, load_ingestion_config
+from dota_predictor.ingestion.config import (
+    MissingStratzTokenError,
+    load_ingestion_config,
+)
 from dota_predictor.ingestion.discovery import discover_league_match_ids
 from dota_predictor.ingestion.errors import LeagueNotRegisteredError
 from dota_predictor.ingestion.pipeline import ingest_matches_by_id
 from dota_predictor.storage.engine import MissingDatabaseUrlError, get_engine
+from dota_predictor.storage.ingestion_writer import get_league_match_date_window
 from dota_predictor.storage.schema import DRAFT_EVENTS, MATCH_PLAYERS, MATCHES
 from dota_predictor.utils.env import load_project_env
 
@@ -83,6 +87,9 @@ def main(argv: list[str] | None = None) -> int:
 
     seed_team_ids = args.seed_team_ids or [DEFAULT_SEED_TEAM_ID]
 
+    with engine.connect() as conn:
+        window_start, window_end = get_league_match_date_window(conn, args.league_id)
+
     with StratzClient(config) as client:
         discovery = discover_league_match_ids(
             args.league_id,
@@ -90,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
             seed_team_ids=() if args.skip_team_walk else seed_team_ids,
             skip_opendota=args.skip_opendota,
             skip_team_walk=args.skip_team_walk,
+            window_start=window_start,
+            window_end=window_end,
         )
         print("=== discovery ===")
         for note in discovery.notes:
@@ -99,7 +108,12 @@ def main(argv: list[str] | None = None) -> int:
 
         try:
             result = ingest_matches_by_id(
-                engine, client, args.league_id, discovery.match_ids
+                engine,
+                client,
+                args.league_id,
+                discovery.match_ids,
+                window_start=window_start,
+                window_end=window_end,
             )
         except LeagueNotRegisteredError as exc:
             print(str(exc), file=sys.stderr)
@@ -118,6 +132,7 @@ def main(argv: list[str] | None = None) -> int:
         f"fetch_ok={result.fetch_successes} fetch_fail={result.fetch_failures} "
         f"league_mismatches={result.league_id_mismatches} "
         f"skipped_raw={result.skipped_already_raw} "
+        f"skipped_out_of_window={result.skipped_out_of_window} "
         f"raw_before={result.raw_rows_before} raw_after={result.raw_row_count} "
         f"canonical={result.canonical_row_count} "
         f"already_canonical={result.canonical_already_current} "

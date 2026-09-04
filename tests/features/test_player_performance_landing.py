@@ -101,4 +101,4 @@ def test_box_score_columns_are_not_production_features() -> None:
 
 
 def test_analytical_schema_version_is_v4_for_box_score_columns() -> None:
-    assert ANALYTICAL_SCHEMA_VERSION == 4
+    assert ANALYTICAL_SCHEMA_VERSION == 5

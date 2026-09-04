@@ -1,0 +1,81 @@
+# Event-level match assignments for shared STRATZ leagues.
+#
+# A STRATZ league_id normally maps 1:1 to one Liquipedia event and one tier.
+# Some leagues instead contain matches from more than one Liquipedia event
+# or tier (an umbrella / shared league). For those, a league-level row in
+# `leagues.yaml` cannot represent the whole league correctly, so specific
+# matches are assigned to a distinct Liquipedia event/tier here.
+#
+# Each assignment selects matches by `league_id` plus a `start_date`..`end_date`
+# window (inclusive calendar days, UTC). Matches within the window are
+# classified under `liquipedia_event`/`liquipedia_tier`; matches in the same
+# league outside the window keep the league's default tier.
+#
+# Consumers:
+#   - scripts/apply_event_classifications.py  -> match_classifications table
+#   - scripts/audit_t12_census.py             -> intended T1/T2 universe
+#
+# Do NOT add a league-level `liquipedia_tier` override here; that would
+# reclassify every match in the league. This file only ever maps a subset.
+
+assignments:
+  - league_id: 17875
+    liquipedia_event: "Asian Champions League 2025"
+    liquipedia_tier: "T2"
+    start_date: 2025-05-16
+    end_date: 2025-05-16
+    source: "liquipedia_tier2_2025"
+    notes: >-
+      STRATZ league 17875 is the T3 'ACL x ESL Challenger China' league.
+      It also contains the 9-match Asian Champions League 2025 finals
+      (Liquipedia T2, 2025-05-16, 4 teams). Only those 9 matches are
+      classified T2; the rest of 17875 stays T3.
+
+  - league_id: 16427
+    liquipedia_event: "1win Series Dota 2 Spring"
+    liquipedia_tier: "T2"
+    start_date: 2024-03-16
+    end_date: 2024-03-19
+    source: "liquipedia_tier2_2024"
+    notes: >-
+      STRATZ league 16427 is the T2 '1WIN SERIES DOTA 2' umbrella that
+      contains the T2 1win Spring/Summer/Fall events and the T3 1win
+      Punch event. These matches are the 1win Series Dota 2 Spring
+      (Liquipedia T2, 2024-03-16..2024-03-19).
+
+  - league_id: 16427
+    liquipedia_event: "1win Series Dota 2 Summer"
+    liquipedia_tier: "T2"
+    start_date: 2024-06-27
+    end_date: 2024-06-30
+    source: "liquipedia_tier2_2024"
+    notes: >-
+      STRATZ league 16427 is the T2 '1WIN SERIES DOTA 2' umbrella that
+      contains the T2 1win Spring/Summer/Fall events and the T3 1win
+      Punch event. These matches are the 1win Series Dota 2 Summer
+      (Liquipedia T2, 2024-06-27..2024-06-30; STRATZ league 16446 is a
+      dead mapping, Summer lives under 16427).
+
+  - league_id: 16427
+    liquipedia_event: "1win Series Dota 2 Fall"
+    liquipedia_tier: "T2"
+    start_date: 2024-11-19
+    end_date: 2024-11-22
+    source: "liquipedia_tier2_2024"
+    notes: >-
+      STRATZ league 16427 is the T2 '1WIN SERIES DOTA 2' umbrella that
+      contains the T2 1win Spring/Summer/Fall events and the T3 1win
+      Punch event. These matches are the 1win Series Dota 2 Fall
+      (Liquipedia T2, 2024-11-19..2024-11-22).
+
+  - league_id: 16427
+    liquipedia_event: "1win Series Dota 2 Punch"
+    liquipedia_tier: "T3"
+    start_date: 2024-12-21
+    end_date: 2024-12-22
+    source: "liquipedia_tier3_2024plus"
+    notes: >-
+      STRATZ league 16427 is the T2 '1WIN SERIES DOTA 2' umbrella that
+      contains the T2 1win Spring/Summer/Fall events and the T3 1win
+      Punch event. These matches are the 1win Series Dota 2 Punch
+      (Liquipedia T3, 2024-12-21..2024-12-22).

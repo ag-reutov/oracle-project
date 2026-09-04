@@ -41,9 +41,9 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from dota_predictor.storage.engine import get_engine
 from dota_predictor.storage.schema import (
     INGESTION_LEAGUES,
-    LEAGUES,
-    LEAGUE_FETCH_MODES,
     LEAGUE_FETCH_MODE_LEAGUE,
+    LEAGUE_FETCH_MODES,
+    LEAGUES,
     LIQUIPEDIA_TIERS,
 )
 from dota_predictor.utils.env import load_project_env
@@ -93,6 +93,7 @@ def sync_leagues(conn: Connection, entries: list[dict]) -> None:
             "source": entry.get("source"),
             "start_date": entry.get("start_date"),
             "end_date": entry.get("end_date"),
+            "window_filter": bool(entry.get("window_filter", False)),
         }
         if existing is None:
             conn.execute(LEAGUES.insert().values(**values))

@@ -7,8 +7,7 @@
 #   - Canonical manifest: config/liquipedia_events_2024plus.yaml
 #
 # STRATZ league_id: T1/T2 resolved via Dotabuff / Spectral / match leagueId
-# probes (see scripts/build_leagues_yaml_from_liquipedia.py STRATZ_ID_MAP).
-# T3 IDs resolved from Liquipedia tournament wikitext ``|leagueid=``.
+# probes (see STRATZ_ID_MAP below). T3 IDs from Liquipedia |leagueid=.
 #   Do NOT use STRATZ LeagueTier to decide T1/T2/T3 scope.
 #
 # Scope: Liquipedia T1/T2/T3 main events from 2024-01-01 through present.
@@ -21,6 +20,9 @@
 #   match_ids  — discover match IDs, then STRATZ match(id)
 # Independent of in_scope. Catalog-null post-TI leagues use match_ids so
 # `ingest_stratz_leagues --all` never calls the broken league(id) endpoint.
+# window_filter (optional): restrict match_ids discovery/ingest to the
+# league's start_date..end_date main-event window (for leagues whose
+# STRATZ league also contains qualifiers).
 #
 # Sync: scripts/load_league_registry.py → leagues / ingestion_leagues tables.
 #
@@ -130,7 +132,7 @@ leagues:
     stratz_tier: "PROFESSIONAL"
     liquipedia_tier: "T2"
     in_scope: true
-    notes: "Liquipedia: 1win Series Dota 2 Spring (2024). Liquipedia also lists Summer (16446) and Fall 2024; Fall shares STRATZ league_id 16427. Liquipedia 1win Spring 2024; STRATZ umbrella also contains Fall 2024 matches."
+    notes: "Liquipedia: 1win Series Dota 2 Spring (2024). Shares STRATZ league 16427 with 1win Summer, Fall, and the T3 1win Punch; resolved by league + event window. Liquipedia 1win Spring 2024; STRATZ umbrella also contains Fall 2024 matches."
 
   - league_id: 16730
     name: "FISSURE Tournament"
@@ -138,13 +140,6 @@ leagues:
     liquipedia_tier: "T2"
     in_scope: true
     notes: "Liquipedia: FISSURE Universe Episode 2 (2024)."
-
-  - league_id: 16446
-    name: "1win Series Dota 2 Summer"
-    stratz_tier: "PROFESSIONAL"
-    liquipedia_tier: "T2"
-    in_scope: true
-    notes: "Liquipedia: 1win Series Dota 2 Summer (2024)."
 
   - league_id: 16905
     name: "Elite League Season 2 Main Event – presented by ESB"
@@ -278,7 +273,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: BLAST Slam IV (2025). STRATZ league(id) null; ingest via match(id) after ID discovery."
+    notes: "Liquipedia: BLAST Slam IV (2025). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 18863
     name: "FISSURE PLAYGROUND 2"
@@ -286,7 +281,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: FISSURE PLAYGROUND 2 (2025). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: FISSURE PLAYGROUND 2 (2025). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 18920
     name: "PGL Wallachia 2025 Season 6"
@@ -294,7 +289,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: PGL Wallachia Season 6 (2025). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: PGL Wallachia Season 6 (2025). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 17420
     name: "SLAM V"
@@ -302,7 +297,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: BLAST Slam V (2025). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: BLAST Slam V (2025). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 18988
     name: "DreamLeague Season 27"
@@ -310,7 +305,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: DreamLeague Season 27 (2025). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: DreamLeague Season 27 (2025). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 18046
     name: "FISSURE Special"
@@ -332,7 +327,7 @@ leagues:
     liquipedia_tier: "T2"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: FISSURE Universe Episode 7 (2025). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: FISSURE Universe Episode 7 (2025). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 17622
     name: "AsiaPro League S2"
@@ -347,7 +342,7 @@ leagues:
     liquipedia_tier: "T2"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: Games of the Future 2025 Abu Dhabi (2025). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: Games of the Future 2025 Abu Dhabi (2025). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 19239
     name: "FISSURE Universe Episode 8"
@@ -355,7 +350,7 @@ leagues:
     liquipedia_tier: "T2"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: FISSURE Universe Episode 8 (2026). Listed on Liquipedia FISSURE Universe series; tier per Tier_2 pattern until promoted on tier page. STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: FISSURE Universe Episode 8 (2026). Listed on Liquipedia FISSURE Universe series; tier per Tier_2 pattern until promoted on tier page. STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 19099
     name: "BLAST SLAM VI"
@@ -363,7 +358,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: BLAST SLAM VI (2026). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: BLAST SLAM VI (2026). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 19269
     name: "DreamLeague Season 28"
@@ -371,7 +366,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: DreamLeague Season 28 (2026). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: DreamLeague Season 28 (2026). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 19435
     name: "PGL Wallachia 2026 Season 7"
@@ -379,7 +374,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: PGL Wallachia Season 7 (2026). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: PGL Wallachia Season 7 (2026). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 19422
     name: "ESL One Birmingham 2026"
@@ -387,7 +382,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: ESL One Birmingham 2026 (2026). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: ESL One Birmingham 2026 (2026). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 19543
     name: "PGL Wallachia 2026 Season 8"
@@ -395,7 +390,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: PGL Wallachia Season 8 (2026). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: PGL Wallachia Season 8 (2026). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 19696
     name: "DreamLeague Season 29"
@@ -403,7 +398,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: DreamLeague Season 29 (2026). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: DreamLeague Season 29 (2026). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 19101
     name: "BLAST SLAM VII"
@@ -411,7 +406,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: BLAST SLAM VII (2026). STRATZ league(id) null but match leagueId likely 19101; ingest via match(id) after ID discovery."
+    notes: "Liquipedia: BLAST SLAM VII (2026). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 19785
     name: "Esports World Cup 2026"
@@ -419,7 +414,7 @@ leagues:
     liquipedia_tier: "T1"
     in_scope: true
     fetch_mode: match_ids
-    notes: "Liquipedia: Esports World Cup 2026 (2026). STRATZ league(id) null at verification; pending ingest."
+    notes: "Liquipedia: Esports World Cup 2026 (2026). STRATZ league(id) null; ingested via match(id)."
 
   - league_id: 19719
     name: "The International 2026"
@@ -429,9 +424,89 @@ leagues:
     fetch_mode: match_ids
     notes: "Liquipedia: The International 2026 (2026). STRATZ league(id) null; ingest via match(id) after ID discovery."
 
+  - league_id: 20009
+    name: "1win Essence II"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T1"
+    in_scope: true
+    fetch_mode: match_ids
+    window_filter: true
+    start_date: 2026-07-30
+    end_date: 2026-08-05
+    notes: "Liquipedia: 1win Essence II (2026). Liquipedia Tier 1 2026. Catalog-null STRATZ league; ingested via match_ids. STRATZ league(id) null; all 60 matches are main event (2026-07-30..08-05)."
+
+  - league_id: 19130
+    name: "ESL Challenger China Season 2"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    fetch_mode: match_ids
+    window_filter: true
+    start_date: 2026-01-30
+    end_date: 2026-02-01
+    notes: "Liquipedia: ESL Challenger China Season 2 (2026). Catalog-null STRATZ league 19130 also contains 18 qualifier matches (2026-01-02..01-11); ingest only the main-event window via window_filter. STRATZ league(id) null; window_filter main-event window 2026-01-30..2026-02-01 excludes 18 qualifier matches."
+
+  - league_id: 19290
+    name: "DreamLeague Division 2 Season 3"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    fetch_mode: match_ids
+    window_filter: true
+    start_date: 2026-02-04
+    end_date: 2026-02-12
+    notes: "Liquipedia: DreamLeague Division 2 Season 3 (2026). Liquipedia lists Season 3 as T2; DL Div2 Seasons 1/2/4 remain T3 in the registry. STRATZ league(id) null; all 89 matches are main event (2026-02-04..02-12)."
+
+  - league_id: 19255
+    name: "PREMIER SERIES"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    fetch_mode: match_ids
+    window_filter: true
+    start_date: 2026-04-01
+    end_date: 2026-04-11
+    notes: "Liquipedia: PREMIER SERIES (2026). NarodCast PREMIER SERIES. Catalog-null league 19255 also contains 77 earlier-stage matches (2026-03-16..03-30); ingest only the main-event window via window_filter. STRATZ league(id) null; window_filter main-event window 2026-04-01..04-11 excludes 77 earlier-stage matches."
+
+  - league_id: 19575
+    name: "ESL Challenger China Season 3 x ACL 2026"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    fetch_mode: match_ids
+    window_filter: true
+    start_date: 2026-05-01
+    end_date: 2026-05-03
+    notes: "Liquipedia: ESL Challenger China Season 3 x ACL 2026 (2026). Catalog-null league 19575 also contains 17 earlier-stage matches (2026-04-17..04-26); ingest only the main-event window via window_filter. STRATZ league(id) null; window_filter main-event window 2026-05-01..05-03 excludes 17 earlier-stage matches."
+
+  - league_id: 19656
+    name: "1win Essence I"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    fetch_mode: match_ids
+    window_filter: true
+    start_date: 2026-05-02
+    end_date: 2026-05-11
+    notes: "Liquipedia: 1win Essence I (2026). Catalog-null STRATZ league; all 87 matches are main event. STRATZ league(id) null; all 87 matches are main event (2026-05-02..05-11)."
+
+  - league_id: 19917
+    name: "Games of the Future 2026"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "T2"
+    in_scope: true
+    fetch_mode: match_ids
+    window_filter: true
+    start_date: 2026-07-31
+    end_date: 2026-08-05
+    notes: "Liquipedia: Games of the Future 2026 (2026). Catalog-null STRATZ league; all 72 matches are main event. STRATZ league(id) null; all 72 matches are main event (2026-07-31..08-05)."
+
+  # --- Shared-league events (event-level assignment, no league row) ---
+  # 2025 T2 Asian Champions League 2025 (league_id=17875)
+
   # --- Liquipedia events without STRATZ league_id (add to STRATZ_ID_MAP) ---
-  # PENDING: 2025 T2 Asian Champions League 2025
   # PENDING: 2026 T1 PGL Wallachia Season 9
+  # PENDING: 2026 T1 BLAST SLAM VIII
   # PENDING: 2026 T1 BLAST SLAM IX
 
   # --- Qualifiers (Liquipedia; excluded from ingestion) ---
@@ -543,8 +618,14 @@ leagues:
     in_scope: false
     notes: "Amateur; not on Liquipedia T1/T2."
 
+  - league_id: 16446
+    name: "1win Series Dota 2 Summer (dead STRATZ mapping)"
+    stratz_tier: "PROFESSIONAL"
+    liquipedia_tier: "EXCLUDED"
+    in_scope: false
+    notes: "STRATZ league 16446 has 0 matches; 1win Summer matches live under the 16427 umbrella. Kept for audit only."
 
-  # --- Liquipedia Tier 3 professional events (2024-01-01 through 2026-09-03) ---
+  # --- Liquipedia Tier 3 professional events (preserved) ---
 
   - league_id: 15520
     name: "Asia Pacific Predator League 2024"

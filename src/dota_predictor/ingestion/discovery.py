@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from urllib.parse import quote
 
@@ -111,14 +112,29 @@ def discover_match_ids_from_opendota(
     league_id: int,
     *,
     client: httpx.Client | None = None,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
 ) -> frozenset[int]:
     """Independent Valve-league match list from the OpenDota explorer.
 
     Used only as an ID source / completeness check, never as a payload source.
+    When `window_start`/`window_end` are given, only matches whose
+    `start_time` falls within the window are returned (main-event window
+    filtering for leagues whose STRATZ league also contains qualifiers).
     """
+    start_unix = int(window_start.timestamp()) if window_start is not None else None
+    end_unix = int(window_end.timestamp()) if window_end is not None else None
+    bounds = ""
+    if start_unix is not None or end_unix is not None:
+        clauses = []
+        if start_unix is not None:
+            clauses.append(f"start_time >= {start_unix}")
+        if end_unix is not None:
+            clauses.append(f"start_time <= {end_unix}")
+        bounds = f" AND {' AND '.join(clauses)}"
     sql = (
         "SELECT match_id FROM matches "
-        f"WHERE leagueid = {int(league_id)} ORDER BY match_id"
+        f"WHERE leagueid = {int(league_id)}{bounds} ORDER BY match_id"
     )
     url = f"{OPENDOTA_EXPLORER_URL}?sql={quote(sql)}"
     own_client = client is None
@@ -152,8 +168,17 @@ def discover_league_match_ids(
     skip_opendota: bool = False,
     skip_team_walk: bool = False,
     page_size: int = DEFAULT_PAGE_SIZE,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
 ) -> MatchIdDiscoveryResult:
-    """Discover match IDs via team walk and/or OpenDota; ingest the union."""
+    """Discover match IDs via team walk and/or OpenDota; ingest the union.
+
+    `window_start`/`window_end` restrict the OpenDota enumeration to the
+    given main-event window (for leagues whose STRATZ league also contains
+    qualifiers). Team-walk IDs are not time-filtered here; callers that
+    use team-walk IDs with a window must also enforce the window on the
+    fetched payload (see `pipeline.ingest_matches_by_id`).
+    """
     notes: list[str] = []
     team_ids: frozenset[int] = frozenset()
     teams_visited: frozenset[int] = frozenset()
@@ -178,9 +203,18 @@ def discover_league_match_ids(
 
     if not skip_opendota:
         opendota_ids = discover_match_ids_from_opendota(
-            league_id, client=opendota_client
+            league_id,
+            client=opendota_client,
+            window_start=window_start,
+            window_end=window_end,
         )
-        notes.append(f"OpenDota explorer: {len(opendota_ids)} ids")
+        if window_start is not None and window_end is not None:
+            notes.append(
+                f"OpenDota explorer: {len(opendota_ids)} ids "
+                f"(window {window_start.date()}..{window_end.date()})"
+            )
+        else:
+            notes.append(f"OpenDota explorer: {len(opendota_ids)} ids")
 
     only_team = team_ids - opendota_ids
     only_opendota = opendota_ids - team_ids

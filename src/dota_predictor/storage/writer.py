@@ -76,6 +76,7 @@ def write_canonical_match(engine: Engine, match: CanonicalMatch) -> None:
         "dire_team_name_observed": match.dire_team_name_observed,
         "radiant_win": match.radiant_win,
         "duration_seconds": match.duration_seconds,
+        "draft_complete": match.draft_complete,
         "mapper_version": CANONICAL_MAPPER_VERSION,
         "canonicalized_at": canonicalized_at,
     }

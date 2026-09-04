@@ -90,6 +90,7 @@ __all__ = [
     "LEAGUE_INGESTION_STATUSES",
     "LIQUIPEDIA_TIERS",
     "MATCHES",
+    "MATCH_CLASSIFICATIONS",
     "MATCH_INGESTION_ERRORS",
     "MATCH_INGESTION_ERROR_STAGES",
     "MATCH_PLAYERS",
@@ -180,6 +181,17 @@ LEAGUES = sa.Table(
     sa.Column("source", sa.Text, nullable=True),
     sa.Column("start_date", sa.Date, nullable=True),
     sa.Column("end_date", sa.Date, nullable=True),
+    # When true (with `start_date`/`end_date` set and `fetch_mode` =
+    # `match_ids`), match-ID discovery and ingest are restricted to the
+    # league's date window. Used for catalog-null leagues whose STRATZ
+    # league also contains qualifiers outside the Liquipedia main-event
+    # window (so qualifiers sharing the league id are not ingested).
+    sa.Column(
+        "window_filter",
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.false(),
+    ),
     sa.Column(
         "curated_at",
         sa.DateTime(timezone=True),
@@ -281,6 +293,17 @@ MATCHES = sa.Table(
     sa.Column("dire_team_name_observed", sa.Text, nullable=True),
     sa.Column("radiant_win", sa.Boolean, nullable=False),
     sa.Column("duration_seconds", sa.Integer, nullable=False),
+    # Whether `draft_events` holds a complete source draft. False when the
+    # source provided no usable full draft (STRATZ `pickBans` null/empty or
+    # malformed); the match is still canonical because identity/result
+    # facts exist. Draft-dependent features/queries exclude rows with
+    # `draft_complete = false`.
+    sa.Column(
+        "draft_complete",
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.true(),
+    ),
     # Monotonic version of `stratz_mapping.CANONICAL_MAPPER_VERSION` that
     # produced this row -- an integer so "needs reprocessing" is a plain
     # `mapper_version < N` comparison, not a string/semver parse.
@@ -365,6 +388,35 @@ DRAFT_EVENTS = sa.Table(
     sa.Column("was_successful", sa.Boolean, nullable=True),
     sa.CheckConstraint("sequence >= 0", name="sequence_non_negative"),
     sa.CheckConstraint("hero_id > 0", name="hero_id_positive"),
+)
+
+MATCH_CLASSIFICATIONS = sa.Table(
+    "match_classifications",
+    METADATA,
+    # One row per match that belongs to a different Liquipedia event/tier
+    # than its league's default classification (see
+    # config/event_match_assignments.yaml). A match's effective tier is
+    # `coalesce(match_classifications.liquipedia_tier, leagues.liquipedia_tier)`.
+    sa.Column(
+        "match_id",
+        sa.BigInteger,
+        sa.ForeignKey("matches.match_id", ondelete="CASCADE"),
+        primary_key=True,
+        autoincrement=False,
+    ),
+    sa.Column("liquipedia_event", sa.Text, nullable=False),
+    sa.Column("liquipedia_tier", sa.Text, nullable=False),
+    sa.Column("source", sa.Text, nullable=True),
+    sa.Column(
+        "created_at",
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+    ),
+    sa.CheckConstraint(
+        f"liquipedia_tier IN {LIQUIPEDIA_TIERS!r}",
+        name="liquipedia_tier_valid",
+    ),
 )
 
 # --- 4. Ingestion progress/error bookkeeping -----------------------------

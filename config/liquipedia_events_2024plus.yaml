@@ -62,13 +62,20 @@ events:
   - liquipedia_name: 1win Series Dota 2 Spring
     liquipedia_tier: T2
     year: 2024
-    notes: Liquipedia also lists Summer (16446) and Fall 2024; Fall shares STRATZ league_id 16427.
+    league_id: 16427
+    start_date: 2024-03-16
+    end_date: 2024-03-19
+    notes: "Shares STRATZ league 16427 with 1win Summer, Fall, and the T3 1win Punch; resolved by league + event window."
   - liquipedia_name: FISSURE Universe Episode 2
     liquipedia_tier: T2
     year: 2024
   - liquipedia_name: 1win Series Dota 2 Summer
     liquipedia_tier: T2
     year: 2024
+    covered_by: 1win Series Dota 2 Spring
+    start_date: 2024-06-27
+    end_date: 2024-06-30
+    notes: "Shares STRATZ league 16427 with 1win Spring/Fall/Punch. The STRATZ '1win Summer' league (16446) is a dead mapping (0 matches); Summer matches live under 16427."
   - liquipedia_name: Elite League Season 2
     liquipedia_tier: T2
     year: 2024
@@ -84,6 +91,10 @@ events:
   - liquipedia_name: 1win Series Dota 2 Fall
     liquipedia_tier: T2
     year: 2024
+    covered_by: 1win Series Dota 2 Spring
+    start_date: 2024-11-19
+    end_date: 2024-11-22
+    notes: "Shares STRATZ league 16427 with 1win Spring/Summer/Punch."
 
   # --- 2025 Tier 1 ---
   - liquipedia_name: FISSURE PLAYGROUND 1
@@ -154,7 +165,10 @@ events:
   - liquipedia_name: Asian Champions League 2025
     liquipedia_tier: T2
     year: 2025
-    notes: No dedicated STRATZ league_id found; ACL×ESL Challenger China (17875) is a related but distinct event.
+    league_id: 17875
+    start_date: 2025-05-16
+    end_date: 2025-05-16
+    notes: "Shares STRATZ league_id 17875 with the T3 'ACL x ESL Challenger China' event. The ACL 2025 finals (2025-05-16, 9 matches) are the T2 main event; the rest of 17875 stays T3. Resolved via event-level assignment (config/event_match_assignments.yaml), never by reclassifying the whole league."
   - liquipedia_name: FISSURE Universe Episode 7
     liquipedia_tier: T2
     year: 2025
@@ -173,36 +187,114 @@ events:
   - liquipedia_name: BLAST SLAM VI
     liquipedia_tier: T1
     year: 2026
+    start_date: 2026-02-03
+    end_date: 2026-02-15
   - liquipedia_name: DreamLeague Season 28
     liquipedia_tier: T1
     year: 2026
+    start_date: 2026-02-16
+    end_date: 2026-03-01
   - liquipedia_name: PGL Wallachia Season 7
     liquipedia_tier: T1
     year: 2026
+    start_date: 2026-03-07
+    end_date: 2026-03-15
   - liquipedia_name: ESL One Birmingham 2026
     liquipedia_tier: T1
     year: 2026
+    start_date: 2026-03-22
+    end_date: 2026-03-29
   - liquipedia_name: PGL Wallachia Season 8
     liquipedia_tier: T1
     year: 2026
+    start_date: 2026-04-18
+    end_date: 2026-04-26
   - liquipedia_name: DreamLeague Season 29
     liquipedia_tier: T1
     year: 2026
+    start_date: 2026-05-13
+    end_date: 2026-05-24
   - liquipedia_name: BLAST SLAM VII
     liquipedia_tier: T1
     year: 2026
+    start_date: 2026-05-26
+    end_date: 2026-06-07
   - liquipedia_name: Esports World Cup 2026
     liquipedia_tier: T1
     year: 2026
-  - liquipedia_name: PGL Wallachia Season 9
-    liquipedia_tier: T1
-    year: 2026
-  - liquipedia_name: BLAST SLAM IX
-    liquipedia_tier: T1
-    year: 2026
+    start_date: 2026-07-07
+    end_date: 2026-07-19
   - liquipedia_name: The International 2026
     liquipedia_tier: T1
     year: 2026
+    start_date: 2026-08-13
+    end_date: 2026-08-23
+  - liquipedia_name: PGL Wallachia Season 9
+    liquipedia_tier: T1
+    year: 2026
+    start_date: 2026-09-17
+    end_date: 2026-09-27
+  - liquipedia_name: BLAST SLAM VIII
+    liquipedia_tier: T1
+    year: 2026
+    start_date: 2026-09-29
+    end_date: 2026-10-11
+  - liquipedia_name: BLAST SLAM IX
+    liquipedia_tier: T1
+    year: 2026
+    start_date: 2026-11-20
+    end_date: 2026-11-29
+  - liquipedia_name: 1win Essence II
+    liquipedia_tier: T1
+    year: 2026
+    league_id: 20009
+    start_date: 2026-07-30
+    end_date: 2026-08-05
+    notes: "Liquipedia Tier 1 2026. Catalog-null STRATZ league; ingested via match_ids."
+
+  # --- 2026 Tier 2 (Liquipedia Tier_2_Tournaments) ---
+  - liquipedia_name: ESL Challenger China Season 2
+    liquipedia_tier: T2
+    year: 2026
+    league_id: 19130
+    start_date: 2026-01-30
+    end_date: 2026-02-01
+    notes: "Catalog-null STRATZ league 19130 also contains 18 qualifier matches (2026-01-02..01-11); ingest only the main-event window via window_filter."
+  - liquipedia_name: DreamLeague Division 2 Season 3
+    liquipedia_tier: T2
+    year: 2026
+    league_id: 19290
+    start_date: 2026-02-04
+    end_date: 2026-02-12
+    notes: "Liquipedia lists Season 3 as T2; DL Div2 Seasons 1/2/4 remain T3 in the registry."
+  - liquipedia_name: PREMIER SERIES
+    liquipedia_tier: T2
+    year: 2026
+    league_id: 19255
+    start_date: 2026-04-01
+    end_date: 2026-04-11
+    notes: "NarodCast PREMIER SERIES. Catalog-null league 19255 also contains 77 earlier-stage matches (2026-03-16..03-30); ingest only the main-event window via window_filter."
+  - liquipedia_name: ESL Challenger China Season 3 x ACL 2026
+    liquipedia_tier: T2
+    year: 2026
+    league_id: 19575
+    start_date: 2026-05-01
+    end_date: 2026-05-03
+    notes: "Catalog-null league 19575 also contains 17 earlier-stage matches (2026-04-17..04-26); ingest only the main-event window via window_filter."
+  - liquipedia_name: 1win Essence I
+    liquipedia_tier: T2
+    year: 2026
+    league_id: 19656
+    start_date: 2026-05-02
+    end_date: 2026-05-11
+    notes: "Catalog-null STRATZ league; all 87 matches are main event."
+  - liquipedia_name: Games of the Future 2026
+    liquipedia_tier: T2
+    year: 2026
+    league_id: 19917
+    start_date: 2026-07-31
+    end_date: 2026-08-05
+    notes: "Catalog-null STRATZ league; all 72 matches are main event."
 
   # --- Liquipedia Tier 3
 

@@ -31,7 +31,7 @@ from dota_predictor.datasets.reference_export import (
 
 
 def test_analytical_schema_version_is_unchanged() -> None:
-    assert ANALYTICAL_SCHEMA_VERSION == 4
+    assert ANALYTICAL_SCHEMA_VERSION == 5
     assert REFERENCE_SCHEMA_VERSION == 1
 
 

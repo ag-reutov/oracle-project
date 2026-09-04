@@ -93,6 +93,7 @@ def make_match(*, num_bans: int = 14, **overrides: object) -> CanonicalMatch:
 
 def test_constructs_valid_canonical_match() -> None:
     match = make_match()
+    assert match.draft_complete is True
     assert match.match_id == 8461956309
     assert match.radiant_win is False
     assert match.duration_seconds == 2400
@@ -443,3 +444,45 @@ def test_zero_box_score_is_preserved() -> None:
 def test_rejects_wrong_box_score_tuple_length() -> None:
     with pytest.raises(CanonicalMatchError, match="exactly 5 entries"):
         make_match(radiant_box_scores=(MatchPlayerBoxScore(),))
+
+
+def test_draft_complete_false_allows_absent_draft() -> None:
+    heroes = (101, 102, 103, 104, 105)
+    match = make_match(
+        draft_events=(), draft_complete=False,
+        radiant_hero_ids=heroes, dire_hero_ids=heroes,
+    )
+    assert match.draft_complete is False
+    assert match.draft_events == ()
+    assert len(match.radiant_hero_ids) == 5
+    assert len(match.dire_hero_ids) == 5
+
+
+def test_draft_complete_true_requires_nonempty_draft() -> None:
+    with pytest.raises(CanonicalMatchError, match="non-empty draft_events"):
+        make_match(draft_events=(), draft_complete=True)
+
+
+def test_draft_complete_false_rejects_partial_draft_events() -> None:
+    with pytest.raises(CanonicalMatchError, match="draft_events to be empty"):
+        make_match(draft_events=make_draft_events(4), draft_complete=False)
+
+
+def test_draft_complete_false_skips_pick_set_crosscheck() -> None:
+    # With no draft, the player hero_id set is not required to match a
+    # successful PICK set (there is none). It must still be 5 distinct
+    # positive ints.
+    heroes = (101, 102, 103, 104, 105)
+    match = make_match(
+        draft_events=(), draft_complete=False,
+        radiant_hero_ids=heroes, dire_hero_ids=heroes,
+    )
+    assert list(match.radiant_hero_ids) == list(heroes)
+
+
+def test_draft_complete_false_still_requires_distinct_side_heroes() -> None:
+    with pytest.raises(CanonicalMatchError, match="duplicate hero ids"):
+        make_match(
+            draft_events=(), draft_complete=False,
+            radiant_hero_ids=(101, 101, 103, 104, 105),
+        )

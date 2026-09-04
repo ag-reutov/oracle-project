@@ -38,14 +38,22 @@ HEADER = dedent(
     # Qualifiers listed but excluded (in_scope: false).
     # T1/T2 labels are never overwritten by T3 discovery.
     #
-    # fetch_mode (optional, default league): league = league(id) pagination;
-    # match_ids = STRATZ match(id) after ID discovery. Independent of in_scope.
+    # fetch_mode (optional, default league):
+    #   league     — STRATZ league(id) { matches } pagination (historical default)
+    #   match_ids  — discover match IDs, then STRATZ match(id)
+    # Independent of in_scope. Catalog-null post-TI leagues use match_ids so
+    # `ingest_stratz_leagues --all` never calls the broken league(id) endpoint.
+    # window_filter (optional): restrict match_ids discovery/ingest to the
+    # league's start_date..end_date main-event window (for leagues whose
+    # STRATZ league also contains qualifiers).
     #
     # Sync: scripts/load_league_registry.py → leagues / ingestion_leagues tables.
     #
     # Canonical Parquet carries league_id / league_name, not liquipedia_tier.
     # Later T1/T2 vs T1/T2+T3 experiments must join matches.league_id to this
-    # file or to leagues.liquipedia_tier.
+    # file or to leagues.liquipedia_tier. Do not rerun Slices 9–29 on the
+    # expanded corpus without that filter; Slice 9 asserts
+    # FROZEN_DEVELOPMENT_MATCH_COUNT == 5967.
     """
 ).strip()
 
@@ -89,33 +97,42 @@ STRATZ_ID_MAP: dict[str, tuple[int, str, str, bool, str | None]] = {
     "Esports World Cup 2025": (18375, "Esports World Cup 2025", "PROFESSIONAL", True, None),
     "The International 2025": (18324, "The International 2025", "INTERNATIONAL", True, None),
     "FISSURE Universe Episode 6": (18433, "FISSURE Universe Episode 6", "PROFESSIONAL", True, None),
-    "BLAST Slam IV": (17419, "SLAM IV", "PROFESSIONAL", False, "STRATZ league(id) null but match leagueId 17419 confirmed; ingest blocked until API exposes league."),
-    "FISSURE PLAYGROUND 2": (18863, "FISSURE PLAYGROUND 2", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
-    "PGL Wallachia Season 6": (18920, "PGL Wallachia 2025 Season 6", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
-    "BLAST Slam V": (17420, "SLAM V", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
-    "DreamLeague Season 27": (18988, "DreamLeague Season 27", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
+    "BLAST Slam IV": (17419, "SLAM IV", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "FISSURE PLAYGROUND 2": (18863, "FISSURE PLAYGROUND 2", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "PGL Wallachia Season 6": (18920, "PGL Wallachia 2025 Season 6", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "BLAST Slam V": (17420, "SLAM V", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "DreamLeague Season 27": (18988, "DreamLeague Season 27", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
     # 2025 T2
     "FISSURE Special": (18046, "FISSURE Special", "PROFESSIONAL", True, None),
     "FISSURE Universe Episode 5": (18107, "FISSURE Universe Episode 5", "PROFESSIONAL", True, None),
-    "FISSURE Universe Episode 7": (18633, "FISSURE Universe Episode 7", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
+    "FISSURE Universe Episode 7": (18633, "FISSURE Universe Episode 7", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
     "AsiaPro League Season 2": (17622, "AsiaPro League S2", "PROFESSIONAL", True, None),
-    "Games of the Future 2025 Abu Dhabi": (18937, "Games of the Future 2025 Abu Dhabi", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
+    "Games of the Future 2025 Abu Dhabi": (18937, "Games of the Future 2025 Abu Dhabi", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
     # 2026
-    "FISSURE Universe Episode 8": (19239, "FISSURE Universe Episode 8", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
-    "BLAST SLAM VI": (19099, "BLAST SLAM VI", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
-    "DreamLeague Season 28": (19269, "DreamLeague Season 28", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
-    "PGL Wallachia Season 7": (19435, "PGL Wallachia 2026 Season 7", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
-    "ESL One Birmingham 2026": (19422, "ESL One Birmingham 2026", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
-    "PGL Wallachia Season 8": (19543, "PGL Wallachia 2026 Season 8", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
-    "DreamLeague Season 29": (19696, "DreamLeague Season 29", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
-    "BLAST SLAM VII": (19101, "BLAST SLAM VII", "PROFESSIONAL", False, "STRATZ league(id) null but match leagueId likely 19101; ingest blocked until API exposes league."),
-    "Esports World Cup 2026": (19785, "Esports World Cup 2026", "PROFESSIONAL", False, "STRATZ league(id) null at verification; pending ingest."),
+    "FISSURE Universe Episode 8": (19239, "FISSURE Universe Episode 8", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "BLAST SLAM VI": (19099, "BLAST SLAM VI", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "DreamLeague Season 28": (19269, "DreamLeague Season 28", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "PGL Wallachia Season 7": (19435, "PGL Wallachia 2026 Season 7", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "ESL One Birmingham 2026": (19422, "ESL One Birmingham 2026", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "PGL Wallachia Season 8": (19543, "PGL Wallachia 2026 Season 8", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "DreamLeague Season 29": (19696, "DreamLeague Season 29", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "BLAST SLAM VII": (19101, "BLAST SLAM VII", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
+    "Esports World Cup 2026": (19785, "Esports World Cup 2026", "PROFESSIONAL", True, "STRATZ league(id) null; ingested via match(id)."),
     "The International 2026": (19719, "The International 2026", "INTERNATIONAL", True, "STRATZ league(id) null; ingest via match(id) after ID discovery."),
+    # 2026 events added 2026-09-04 census (all catalog-null; match_ids mode)
+    "ESL Challenger China Season 2": (19130, "ESL Challenger China Season 2", "PROFESSIONAL", True, "STRATZ league(id) null; window_filter main-event window 2026-01-30..2026-02-01 excludes 18 qualifier matches."),
+    "DreamLeague Division 2 Season 3": (19290, "DreamLeague Division 2 Season 3", "PROFESSIONAL", True, "STRATZ league(id) null; all 89 matches are main event (2026-02-04..02-12)."),
+    "PREMIER SERIES": (19255, "PREMIER SERIES", "PROFESSIONAL", True, "STRATZ league(id) null; window_filter main-event window 2026-04-01..04-11 excludes 77 earlier-stage matches."),
+    "ESL Challenger China Season 3 x ACL 2026": (19575, "ESL Challenger China Season 3 x ACL 2026", "PROFESSIONAL", True, "STRATZ league(id) null; window_filter main-event window 2026-05-01..05-03 excludes 17 earlier-stage matches."),
+    "1win Essence I": (19656, "1win Essence I", "PROFESSIONAL", True, "STRATZ league(id) null; all 87 matches are main event (2026-05-02..05-11)."),
+    "Games of the Future 2026": (19917, "Games of the Future 2026", "PROFESSIONAL", True, "STRATZ league(id) null; all 72 matches are main event (2026-07-31..08-05)."),
+    "1win Essence II": (20009, "1win Essence II", "PROFESSIONAL", True, "STRATZ league(id) null; all 60 matches are main event (2026-07-30..08-05)."),
 }
 
 COVERED_BY: dict[str, str] = {
     # Same STRATZ league_id as Spring; do not emit a duplicate yaml row.
     "1win Series Dota 2 Fall": "1win Series Dota 2 Spring",
+    "1win Series Dota 2 Summer": "1win Series Dota 2 Spring",
 }
 
 EXCLUDED_QUALIFIERS = [
@@ -137,6 +154,7 @@ AUDIT_ONLY = [
     (15693, "Road to TI 2023 - WEU Regional Qualifiers", "QUALIFIER", "Pre-2024 DPC qualifier.", "DPC_LEAGUE_QUALIFIER"),
     (10979, "StarLadder ImbaTV Dota2 Minor #2", "MINOR", "Pre-2024; out of scope.", "MINOR"),
     (17807, "RD2L Season 38", "EXCLUDED", "Amateur; not on Liquipedia T1/T2.", "AMATEUR"),
+    (16446, "1win Series Dota 2 Summer (dead STRATZ mapping)", "EXCLUDED", "STRATZ league 16446 has 0 matches; 1win Summer matches live under the 16427 umbrella. Kept for audit only.", "PROFESSIONAL"),
 ]
 
 # Catalog-null STRATZ leagues: `ingest_stratz_leagues --all` uses match(id).
@@ -150,14 +168,34 @@ MATCH_ID_FETCH_LEAGUE_IDS = {
     18988,
     19099,
     19101,
+    19130,
     19239,
+    19255,
     19269,
+    19290,
     19422,
     19435,
     19543,
+    19575,
+    19656,
     19696,
     19719,
     19785,
+    19917,
+    20009,
+}
+
+# Leagues whose STRATZ league also contains qualifiers/earlier stages that
+# share the league id. `window_filter` restricts match-ID ingest to the
+# Liquipedia main-event date window. Dates are the Liquipedia main event.
+WINDOW_FILTER_LEAGUE_DATES: dict[int, tuple[str, str]] = {
+    19130: ("2026-01-30", "2026-02-01"),
+    19255: ("2026-04-01", "2026-04-11"),
+    19290: ("2026-02-04", "2026-02-12"),
+    19575: ("2026-05-01", "2026-05-03"),
+    19656: ("2026-05-02", "2026-05-11"),
+    19917: ("2026-07-31", "2026-08-05"),
+    20009: ("2026-07-30", "2026-08-05"),
 }
 
 
@@ -178,6 +216,11 @@ def fmt_entry(
     ]
     if league_id in MATCH_ID_FETCH_LEAGUE_IDS:
         lines.append("    fetch_mode: match_ids")
+    if league_id in WINDOW_FILTER_LEAGUE_DATES:
+        start, end = WINDOW_FILTER_LEAGUE_DATES[league_id]
+        lines.append("    window_filter: true")
+        lines.append(f"    start_date: {start}")
+        lines.append(f"    end_date: {end}")
     if notes:
         lines.append(f"    notes: \"{notes}\"")
     return "\n".join(lines)
@@ -196,6 +239,8 @@ def fmt_preserved_entry(entry: dict) -> str:
     fetch_mode = entry.get("fetch_mode")
     if fetch_mode and fetch_mode != "league":
         lines.append(f"    fetch_mode: {fetch_mode}")
+    if entry.get("window_filter"):
+        lines.append("    window_filter: true")
     if entry.get("source"):
         lines.append(f"    source: \"{entry['source']}\"")
     start = entry.get("start_date")
@@ -230,6 +275,7 @@ def main() -> None:
     print("\n  # --- Liquipedia Tier 1 / Tier 2 main events (2024+) ---")
 
     pending: list[str] = []
+    shared: list[str] = []
     seen_ids: set[int] = set()
 
     for ev in events:
@@ -245,7 +291,16 @@ def main() -> None:
 
         mapped = STRATZ_ID_MAP.get(lp_name)
         if mapped is None:
-            pending.append(f"{year} {lp_tier} {lp_name}")
+            # Events that declare their own STRATZ league_id in the
+            # manifest (e.g. ACL 2025 sharing 17875 with a T3 league) are
+            # resolved by event-level assignment, not a league row --
+            # emitting a second leagues.yaml row for the same league_id
+            # would duplicate the id. Everything else without a mapping
+            # stays PENDING until a STRATZ id is resolved.
+            if ev.get("league_id"):
+                shared.append(f"{year} {lp_tier} {lp_name} (league_id={ev['league_id']})")
+            else:
+                pending.append(f"{year} {lp_tier} {lp_name}")
             continue
 
         league_id, stratz_name, stratz_tier, in_scope, map_notes = mapped
@@ -258,6 +313,11 @@ def main() -> None:
 
         print()
         print(fmt_entry(league_id, stratz_name, lp_tier, in_scope, notes, stratz_tier))
+
+    if shared:
+        print("\n  # --- Shared-league events (event-level assignment, no league row) ---")
+        for line in shared:
+            print(f"  # {line}")
 
     if pending:
         print("\n  # --- Liquipedia events without STRATZ league_id (add to STRATZ_ID_MAP) ---")
