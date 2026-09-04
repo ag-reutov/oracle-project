@@ -23,8 +23,13 @@ def _write_reference(tmp_path: Path) -> ReferenceStoreConfig:
     build_reference_dataset(
         tmp_path,
         heroes=[
-            {"id": 1, "displayName": "Anti-Mage"},
-            {"id": 2, "displayName": "Axe"},
+            {
+                "id": 1,
+                "displayName": "Anti-Mage",
+                "shortName": "antimage",
+                "aliases": ["am"],
+            },
+            {"id": 2, "displayName": "Axe", "shortName": "axe", "aliases": []},
         ],
         game_versions=[
             {"id": 173, "name": "7.36", "asOfDateTime": 1716422400},
@@ -56,15 +61,26 @@ def test_register_reference_views_exposes_explicit_projections(
         register_reference_views(store, reference_config)
         heroes = store.relation(HEROES_VIEW)
         versions = store.relation(GAME_VERSIONS_VIEW)
-        assert list(heroes.columns) == ["hero_id", "name"]
+        assert list(heroes.columns) == [
+            "hero_id",
+            "name",
+            "short_name",
+            "aliases",
+            "source",
+            "retrieved_at",
+        ]
         assert list(versions.columns) == [
             "game_version_id",
             "name",
             "as_of_datetime",
+            "source",
+            "retrieved_at",
         ]
         assert heroes.count("*").fetchone()[0] == 2
         assert versions.count("*").fetchone()[0] == 2
-        assert heroes.order("hero_id").fetchall() == [(1, "Anti-Mage"), (2, "Axe")]
+        rows = heroes.order("hero_id").fetchall()
+        assert rows[0][:4] == (1, "Anti-Mage", "antimage", ["am"])
+        assert rows[1][:4] == (2, "Axe", "axe", [])
 
 
 def test_register_reference_views_does_not_join_facts(

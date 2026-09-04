@@ -204,7 +204,11 @@ def _heroes_view_sql(heroes_path: Path) -> str:
     return f"""
         SELECT
             hero_id,
-            name
+            name,
+            short_name,
+            aliases,
+            source,
+            retrieved_at
         FROM read_parquet({quoted})
     """
 
@@ -215,7 +219,9 @@ def _game_versions_view_sql(game_versions_path: Path) -> str:
         SELECT
             game_version_id,
             name,
-            as_of_datetime
+            as_of_datetime,
+            source,
+            retrieved_at
         FROM read_parquet({quoted})
     """
 

@@ -142,7 +142,7 @@ def test_historical_metrics_are_not_training_or_snapshot_features() -> None:
 
 def test_schema_versions_unchanged() -> None:
     assert ANALYTICAL_SCHEMA_VERSION == 5
-    assert REFERENCE_SCHEMA_VERSION == 1
+    assert REFERENCE_SCHEMA_VERSION == 2
 
 
 def test_first_career_match_has_no_position_history(tmp_path: Path) -> None:

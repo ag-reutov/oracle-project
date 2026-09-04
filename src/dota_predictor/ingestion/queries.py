@@ -155,12 +155,20 @@ query TeamLeagueMatchIds($teamId: Int!, $request: TeamMatchesRequestType!) {
 # Identity-only hero catalog. `displayName` is the human-readable name;
 # STRATZ `name` (npc_dota_hero_*), aliases, roles, stats, facets, talents,
 # abilities, localization, and `gameVersionId` are intentionally omitted.
+# Source-native hero identity catalog. `displayName` is the canonical
+# human-readable hero name; `shortName` is the canonical short/slug name
+# (e.g. "antimage"); `aliases` is the STRATZ-supplied alias list (may be
+# empty). All three are genuinely supplied by STRATZ `constants.heroes`.
+# Gameplay metadata (roles/stats/etc.) is deliberately NOT fetched -- the
+# reference catalog is identity only.
 HEROES_QUERY = """
 query HeroesReference {
   constants {
     heroes {
       id
       displayName
+      shortName
+      aliases
     }
   }
 }

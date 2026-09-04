@@ -137,6 +137,55 @@ Hard cases the derivation relies on being materialized as
   `effective_event`, `effective_tier`, `league_id`, `game_version_id`,
   `draft_complete`, `sequence`, `action`, `side`, `hero_id`, `was_successful`.
 
+### `research.leagues`
+
+* Grain: one row per curated league (`leagues.league_id` unique) — the
+  Slice 3 canonical league/event identity view.
+* Purpose: named-competition identity with explicit provenance, so league
+  research never needs to reverse-engineer `config/leagues.yaml`.
+* Identity: `league_id` (stable STRATZ league id), `league_name` (curated
+  canonical name), `stratz_tier` (raw STRATZ `LeagueTier` — source
+  identity, cross-check signal only) vs `liquipedia_tier` (our curated
+  Liquipedia classification). The two are deliberately never conflated:
+  our T1/T2/T3 label is a curated property, not an intrinsic STRATZ one.
+* Provenance: `curation_source` (where the curation decision came from),
+  `curated_at` (when it was made), plus `in_scope`, `fetch_mode`,
+  `start_date`, `end_date`, `window_filter`.
+
+## Reference entities (Slice 3)
+
+The canonical reference-entity layer maps the three stable ids used by the
+canonical facts to named, provenance-bearing entities, with exactly one
+canonical path per relationship:
+
+* `match_players.hero_id` / `draft_events.hero_id` → **hero**
+  (`heroes.parquet`, the DuckDB `heroes` view). Since reference schema v2
+  each row exposes `name` (canonical display name), `short_name`, `aliases`
+  (STRATZ-supplied), `source` and `retrieved_at`. See
+  `dota_predictor.data.reference_identity.HeroIdentity`.
+* `matches.league_id` → **league/event** (`research.leagues`, the curated
+  `leagues` registry). See `LeagueIdentity`.
+* `matches.game_version_id` → **patch/version** (`game_versions.parquet`,
+  the DuckDB `game_versions` view). Each row exposes the human-readable
+  patch label `name` (e.g. "7.38"), STRATZ's authoritative release
+  timestamp `as_of_datetime`, `source` and `retrieved_at`. This makes
+  "which matches were played on 7.39e" answerable by label instead of an
+  opaque numeric id.
+
+Storage decision: heroes and game versions stay Parquet reference catalogs
+(consumed via `register_reference_views`), leagues stay in the curated
+PostgreSQL registry — the existing architecture. No parallel tables were
+created. First-seen-in-corpus for a game version is a corpus-derived
+observation reported by the audit, explicitly labelled as such, and is
+never used as a release date. Regions were investigated but intentionally
+deferred (STRATZ exposes server regions only; no canonical entity
+references a region id).
+
+The reproducible census is `scripts/audit_reference_entities.py`
+(`dota_predictor.data.reference_identity.audit_reference_entities`):
+hero/league/game-version counts, referenced vs resolved vs unresolved ids,
+duplicate/conflict counts, and regions status.
+
 ## Population views
 
 * `research.t12_matches` — `research.matches WHERE is_t12_main_event`:

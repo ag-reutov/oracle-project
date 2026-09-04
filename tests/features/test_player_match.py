@@ -189,7 +189,7 @@ def test_player_state_is_not_part_of_training_or_pre_draft_snapshot() -> None:
 
 def test_schema_versions_unchanged_by_this_layer() -> None:
     assert ANALYTICAL_SCHEMA_VERSION == 5
-    assert REFERENCE_SCHEMA_VERSION == 1
+    assert REFERENCE_SCHEMA_VERSION == 2
 
 
 # --- fact grain -----------------------------------------------------------

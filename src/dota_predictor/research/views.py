@@ -12,6 +12,12 @@ The single classification derivation lives in `research.matches`:
     effective_event = coalesce(match_classifications.liquipedia_event,
                                leagues.name)
 
+`research.leagues` (Slice 3 reference entities) exposes the curated
+league registry with the source-vs-curated tier distinction preserved:
+`stratz_tier` is the raw STRATZ LeagueTier, `liquipedia_tier` is our
+curated Liquipedia classification, and provenance (`source`, `curated_at`)
+records where the curation came from.
+
 Population membership is centralized in the `is_*_main_event` booleans on
 `research.matches` and the population views (`research.t12_matches`,
 `research.pro_matches`, `research.t12_draft_matches`).
@@ -44,6 +50,7 @@ RESEARCH_SCHEMA = "research"
 # Order matters: `research.matches` is a dependency of the player/draft views,
 # which are dependencies of the population views.
 RESEARCH_VIEW_NAMES: tuple[str, ...] = (
+    "leagues",
     "matches",
     "player_matches",
     "players",
@@ -52,6 +59,29 @@ RESEARCH_VIEW_NAMES: tuple[str, ...] = (
     "pro_matches",
     "t12_draft_matches",
 )
+
+# Canonical league/event identity (Slice 3 reference entities). Exposes the
+# curated `leagues` registry with the source-vs-curated tier distinction
+# preserved: `stratz_tier` is the raw STRATZ LeagueTier (cross-check signal
+# only), `liquipedia_tier` is our curated Liquipedia classification, and the
+# two are never conflated. Provenance (`source`, `curated_at`) records where
+# the curation decision came from.
+LEAGUES_VIEW_SQL = """
+CREATE OR REPLACE VIEW research.leagues AS
+SELECT
+    league_id,
+    name AS league_name,
+    stratz_tier AS stratz_tier,
+    liquipedia_tier AS liquipedia_tier,
+    in_scope,
+    fetch_mode,
+    source AS curation_source,
+    start_date,
+    end_date,
+    window_filter,
+    curated_at
+FROM public.leagues
+"""
 
 MATCHES_VIEW_SQL = """
 CREATE OR REPLACE VIEW research.matches AS
@@ -176,6 +206,7 @@ SELECT * FROM research.t12_matches WHERE draft_complete;
 """
 
 RESEARCH_VIEW_SQL: dict[str, str] = {
+    "leagues": LEAGUES_VIEW_SQL,
     "matches": MATCHES_VIEW_SQL,
     "player_matches": PLAYER_MATCHES_VIEW_SQL,
     # Player universe (Slice 2 player-identity foundation). Defined in

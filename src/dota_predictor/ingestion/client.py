@@ -326,7 +326,11 @@ class StratzClient:
         return list(team.get("matches") or [])
 
     def fetch_heroes(self) -> list[dict[str, Any]]:
-        """Fetch the STRATZ hero identity catalog (`id`, `displayName`)."""
+        """Fetch the STRATZ hero identity catalog.
+
+        Returns `id`, `displayName`, `shortName`, and `aliases` per hero
+        (see `HEROES_QUERY`).
+        """
         payload = self._fetch_with_retry(HEROES_QUERY, {})
         return parse_heroes_query_payload(payload)
 

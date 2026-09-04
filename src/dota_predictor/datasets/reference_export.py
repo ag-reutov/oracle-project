@@ -10,8 +10,16 @@ separate logical contract:
 `REFERENCE_SCHEMA_VERSION` versions this module's Parquet contract -- the
 column set/types/semantics of `heroes.parquet` and `game_versions.parquet`.
 
+Since v2 both catalogs carry provenance: `source` names the authoritative
+STRATZ constant the rows came from and `retrieved_at` records when that
+catalog was fetched. `heroes.parquet` additionally exposes the
+STRATZ-supplied `short_name` and `aliases` identity fields; nothing here
+is ever fabricated or inferred (in particular, `game_versions.as_of_datetime`
+is STRATZ's authoritative patch timestamp, not a value derived from the
+match corpus).
+
 Source-of-truth boundary
--------------------------
+------------------------
 This module never reads PostgreSQL, never reads the canonical match-fact
 Parquet files, and never calls STRATZ itself. Callers (see
 `scripts/build_reference_dataset.py`) fetch constants via `StratzClient`
@@ -28,7 +36,7 @@ from __future__ import annotations
 import os
 import tempfile
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -39,8 +47,10 @@ import pyarrow.parquet as pq
 __all__ = [
     "GAME_VERSIONS_FILENAME",
     "GAME_VERSIONS_SCHEMA",
+    "GAME_VERSIONS_SOURCE",
     "HEROES_FILENAME",
     "HEROES_SCHEMA",
+    "HEROES_SOURCE",
     "REFERENCE_SCHEMA_VERSION",
     "ReferenceBuildResult",
     "ReferenceExportError",
@@ -56,24 +66,47 @@ __all__ = [
 
 # Reference Parquet contract version -- independent of
 # `canonical_export.ANALYTICAL_SCHEMA_VERSION`.
-# v1: heroes.parquet + game_versions.parquet.
-REFERENCE_SCHEMA_VERSION = 1
+# v1: heroes.parquet (hero_id, name) + game_versions.parquet
+#     (game_version_id, name, as_of_datetime).
+# v2: adds provenance (`source`, `retrieved_at`) to both files and, for
+#     heroes, the STRATZ-supplied `short_name` + `aliases` identity fields.
+REFERENCE_SCHEMA_VERSION = 2
 
 HEROES_FILENAME = "heroes.parquet"
 GAME_VERSIONS_FILENAME = "game_versions.parquet"
 
+# Provenance constants. `source` is the authoritative STRATZ constant the
+# catalog row was retrieved from; `retrieved_at` is when that catalog was
+# fetched (both are the same for every row of a single build).
+HEROES_SOURCE = "STRATZ constants.heroes"
+GAME_VERSIONS_SOURCE = "STRATZ constants.gameVersions"
+
 HEROES_SCHEMA = pa.schema(
     [
         pa.field("hero_id", pa.int32(), nullable=False),
+        # Canonical human-readable hero name (STRATZ `displayName`).
         pa.field("name", pa.string(), nullable=False),
+        # Canonical short/slug name (STRATZ `shortName`), e.g. "antimage".
+        # Genuinely supplied by STRATZ; null only if the source omits it.
+        pa.field("short_name", pa.string(), nullable=True),
+        # STRATZ-supplied alias list (may be empty). Genuinely supplied;
+        # null only if the source omits it. Never fabricated.
+        pa.field("aliases", pa.list_(pa.string()), nullable=True),
+        pa.field("source", pa.string(), nullable=False),
+        pa.field("retrieved_at", pa.timestamp("us", tz="UTC"), nullable=False),
     ]
 )
 
 GAME_VERSIONS_SCHEMA = pa.schema(
     [
         pa.field("game_version_id", pa.int32(), nullable=False),
+        # Human-readable patch label (STRATZ `name`), e.g. "7.38".
         pa.field("name", pa.string(), nullable=False),
+        # STRATZ asOfDateTime: the authoritative patch release timestamp.
+        # Source-provided; NOT inferred from first-seen-in-corpus.
         pa.field("as_of_datetime", pa.timestamp("us", tz="UTC"), nullable=False),
+        pa.field("source", pa.string(), nullable=False),
+        pa.field("retrieved_at", pa.timestamp("us", tz="UTC"), nullable=False),
     ]
 )
 
@@ -102,6 +135,9 @@ class ReferenceBuildResult:
     game_versions_path: Path
     output_dir: Path
     schema_version: int = REFERENCE_SCHEMA_VERSION
+    # When the STRATZ constants were fetched (provenance for both files).
+    # Defaults to the epoch so a hand-constructed result is unambiguous.
+    retrieved_at: datetime = field(default_factory=lambda: datetime.fromtimestamp(0, tz=UTC))
 
 
 def _require_positive_id(field: str, value: Any) -> int:
@@ -141,13 +177,46 @@ def _unix_seconds_to_utc(value: Any) -> datetime:
     return datetime.fromtimestamp(unix_seconds, tz=UTC)
 
 
-def build_heroes_table(hero_rows: Sequence[Mapping[str, Any]]) -> pa.Table:
+def _optional_short_name(value: Any) -> str | None:
+    """Normalize a STRATZ `shortName` to a stripped non-empty string or None."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ReferenceTransformError(f"shortName is not a string: {value!r}")
+    name = value.strip()
+    return name if name else None
+
+
+def _optional_aliases(value: Any) -> list[str] | None:
+    """Normalize a STRATZ `aliases` list to a list of non-empty strings or None.
+
+    STRATZ genuinely supplies `aliases` (possibly empty) for every hero;
+    `None` is kept only if the source omits the field. Values are never
+    invented: each element is validated as a non-empty string.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, list):
+        raise ReferenceTransformError(f"aliases is not a list: {value!r}")
+    aliases: list[str] = []
+    for alias in value:
+        if not isinstance(alias, str) or not alias.strip():
+            raise ReferenceTransformError(f"aliases contains an invalid entry: {alias!r}")
+        aliases.append(alias.strip())
+    return aliases
+
+
+def build_heroes_table(
+    hero_rows: Sequence[Mapping[str, Any]], *, retrieved_at: datetime
+) -> pa.Table:
     """Build the `heroes.parquet` Arrow table from STRATZ `constants.heroes`.
 
-    Maps `id` -> `hero_id` and `displayName` -> `name`. Extra STRATZ
-    fields (`name`, `shortName`, `aliases`, `gameVersionId`, gameplay
-    metadata) are ignored and never published. Rows are emitted in
-    ascending `hero_id` order.
+    Maps `id` -> `hero_id`, `displayName` -> `name`, `shortName` ->
+    `short_name`, and `aliases` -> `aliases` (all genuinely supplied by
+    STRATZ). Adds provenance (`source` = `HEROES_SOURCE`,
+    `retrieved_at` = the caller-supplied fetch timestamp). Extra STRATZ
+    gameplay metadata (`roles`, `stats`, etc.) is ignored and never
+    published. Rows are emitted in ascending `hero_id` order.
     """
     out_rows: list[dict[str, Any]] = []
     for row in hero_rows:
@@ -155,6 +224,10 @@ def build_heroes_table(hero_rows: Sequence[Mapping[str, Any]]) -> pa.Table:
             {
                 "hero_id": _require_positive_id("hero_id", row.get("id")),
                 "name": _require_non_empty_name("name", row.get("displayName")),
+                "short_name": _optional_short_name(row.get("shortName")),
+                "aliases": _optional_aliases(row.get("aliases")),
+                "source": HEROES_SOURCE,
+                "retrieved_at": retrieved_at,
             }
         )
     out_rows.sort(key=lambda row: row["hero_id"])
@@ -162,15 +235,17 @@ def build_heroes_table(hero_rows: Sequence[Mapping[str, Any]]) -> pa.Table:
 
 
 def build_game_versions_table(
-    version_rows: Sequence[Mapping[str, Any]],
+    version_rows: Sequence[Mapping[str, Any]], *, retrieved_at: datetime
 ) -> pa.Table:
     """Build the `game_versions.parquet` Arrow table from STRATZ
     `constants.gameVersions`.
 
     Maps `id` -> `game_version_id`, `name` -> `name`, and `asOfDateTime`
-    (Unix seconds) -> UTC `as_of_datetime`. Id gaps (e.g. missing 174)
-    and non-monotonic historical timestamps are allowed. Rows are
-    emitted in ascending `game_version_id` order.
+    (Unix seconds) -> UTC `as_of_datetime` (the authoritative patch release
+    timestamp). Adds provenance (`source` = `GAME_VERSIONS_SOURCE`,
+    `retrieved_at` = the caller-supplied fetch timestamp). Id gaps (e.g.
+    missing 174) and non-monotonic historical timestamps are allowed.
+    Rows are emitted in ascending `game_version_id` order.
     """
     out_rows: list[dict[str, Any]] = []
     for row in version_rows:
@@ -181,6 +256,8 @@ def build_game_versions_table(
                 ),
                 "name": _require_non_empty_name("name", row.get("name")),
                 "as_of_datetime": _unix_seconds_to_utc(row.get("asOfDateTime")),
+                "source": GAME_VERSIONS_SOURCE,
+                "retrieved_at": retrieved_at,
             }
         )
     out_rows.sort(key=lambda row: row["game_version_id"])
@@ -193,10 +270,11 @@ def validate_heroes_table(table: pa.Table) -> None:
         raise ReferenceValidationError(
             "heroes table schema does not match HEROES_SCHEMA"
         )
-    if table.column("hero_id").null_count > 0:
-        raise ReferenceValidationError("heroes.hero_id contains null(s)")
-    if table.column("name").null_count > 0:
-        raise ReferenceValidationError("heroes.name contains null(s)")
+    for column_name in ("hero_id", "name", "source", "retrieved_at"):
+        if table.column(column_name).null_count > 0:
+            raise ReferenceValidationError(
+                f"heroes.{column_name} contains null(s)"
+            )
 
     hero_ids = table.column("hero_id").to_pylist()
     names = table.column("name").to_pylist()
@@ -211,6 +289,31 @@ def validate_heroes_table(table: pa.Table) -> None:
         if name is None or not str(name).strip():
             raise ReferenceValidationError("heroes.name contains an empty value")
 
+    short_names = table.column("short_name").to_pylist()
+    for short_name in short_names:
+        if short_name is not None and not str(short_name).strip():
+            raise ReferenceValidationError(
+                "heroes.short_name contains an empty value"
+            )
+
+    aliases = table.column("aliases").to_pylist()
+    for alias_list in aliases:
+        if alias_list is None:
+            continue
+        for alias in alias_list:
+            if not isinstance(alias, str) or not alias.strip():
+                raise ReferenceValidationError(
+                    f"heroes.aliases contains an invalid entry: {alias!r}"
+                )
+
+    for stamp in table.column("retrieved_at").to_pylist():
+        if stamp is None:
+            raise ReferenceValidationError("heroes.retrieved_at contains null(s)")
+        if getattr(stamp, "tzinfo", None) is None:
+            raise ReferenceValidationError(
+                "heroes.retrieved_at must be timezone-aware UTC"
+            )
+
 
 def validate_game_versions_table(table: pa.Table) -> None:
     """Validate `game_versions.parquet` invariants before publication.
@@ -223,7 +326,13 @@ def validate_game_versions_table(table: pa.Table) -> None:
         raise ReferenceValidationError(
             "game_versions table schema does not match GAME_VERSIONS_SCHEMA"
         )
-    for column_name in ("game_version_id", "name", "as_of_datetime"):
+    for column_name in (
+        "game_version_id",
+        "name",
+        "as_of_datetime",
+        "source",
+        "retrieved_at",
+    ):
         if table.column(column_name).null_count > 0:
             raise ReferenceValidationError(
                 f"game_versions.{column_name} contains null(s)"
@@ -311,14 +420,24 @@ def build_reference_dataset(
     *,
     heroes: Sequence[Mapping[str, Any]],
     game_versions: Sequence[Mapping[str, Any]],
+    retrieved_at: datetime | None = None,
 ) -> ReferenceBuildResult:
     """Transform, validate, and atomically publish both reference catalogs.
 
     Independent of `build_canonical_dataset`: does not read or write
     match-fact Parquet, and does not open PostgreSQL.
+
+    `retrieved_at` records when the STRATZ constants were fetched
+    (provenance). When omitted it defaults to the current time; callers
+    such as `scripts/build_reference_dataset.py` pass the actual fetch
+    timestamp so the catalog's provenance reflects when it was really
+    retrieved.
     """
-    heroes_table = build_heroes_table(heroes)
-    game_versions_table = build_game_versions_table(game_versions)
+    stamp = retrieved_at if retrieved_at is not None else datetime.now(UTC)
+    heroes_table = build_heroes_table(heroes, retrieved_at=stamp)
+    game_versions_table = build_game_versions_table(
+        game_versions, retrieved_at=stamp
+    )
 
     validate_heroes_table(heroes_table)
     validate_game_versions_table(game_versions_table)
@@ -335,4 +454,5 @@ def build_reference_dataset(
         heroes_path=output_dir / HEROES_FILENAME,
         game_versions_path=output_dir / GAME_VERSIONS_FILENAME,
         output_dir=output_dir,
+        retrieved_at=stamp,
     )

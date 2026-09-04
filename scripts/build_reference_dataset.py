@@ -13,6 +13,7 @@ rewrites match-fact Parquet.
 from __future__ import annotations
 
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 from dota_predictor.datasets.config import load_dataset_export_config
@@ -48,12 +49,14 @@ def main() -> int:
 
     try:
         with StratzClient(ingestion_config) as client:
+            fetched_at = datetime.now(UTC)
             heroes = client.fetch_heroes()
             game_versions = client.fetch_game_versions()
         result = build_reference_dataset(
             export_config.output_dir,
             heroes=heroes,
             game_versions=game_versions,
+            retrieved_at=fetched_at,
         )
     except (ReferenceExportError, StratzClientError) as exc:
         print(f"Reference dataset build failed: {exc}", file=sys.stderr)
@@ -61,6 +64,7 @@ def main() -> int:
 
     print("Reference dataset build complete")
     print(f"schema version: {REFERENCE_SCHEMA_VERSION}")
+    print(f"retrieved_at: {result.retrieved_at.isoformat()}")
     print(f"heroes: {result.heroes_row_count}")
     print(f"game versions: {result.game_versions_row_count}")
     print(f"heroes path: {result.heroes_path}")

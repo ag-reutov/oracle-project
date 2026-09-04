@@ -47,19 +47,19 @@ GAME_VERSIONS_PAYLOAD = {
 }
 
 
-def test_heroes_query_requests_only_identity_fields() -> None:
+def test_heroes_query_requests_identity_fields() -> None:
     assert "displayName" in HEROES_QUERY
     assert "id" in HEROES_QUERY
+    assert "shortName" in HEROES_QUERY
+    assert "aliases" in HEROES_QUERY
     for forbidden in (
         "gameVersionId",
-        "aliases",
         "roles",
         "stats",
         "facets",
         "talents",
         "abilities",
         "lore",
-        "shortName",
         "language",
     ):
         assert forbidden not in HEROES_QUERY

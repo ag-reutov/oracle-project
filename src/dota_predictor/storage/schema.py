@@ -118,6 +118,30 @@ Design choices (see the architecture plan for full rationale):
  *   lives in `data.player_identity` for when names become available.
  *   Orphan registry ids are reported (not hidden) by
  *   `scripts/audit_player_identity.py`.
+ *
+ * The canonical reference-entity layer (Slice 3) follows the same rule
+ * but deliberately adds NO new tables here:
+ *
+ * * Heroes and game versions are STRATZ constants catalogs that stay
+ *   Parquet reference files (`heroes.parquet`, `game_versions.parquet`),
+ *   built by `scripts/build_reference_dataset.py` and consumed via the
+ *   DuckDB `register_reference_views` layer -- not Postgres state. Since
+ *   `REFERENCE_SCHEMA_VERSION` v2 they carry provenance (`source`,
+ *   `retrieved_at`) and, for heroes, the STRATZ-supplied `short_name`
+ *   and `aliases`. See `datasets.reference_export` and
+ *   `data.reference_identity`.
+ * * Leagues are the curated `leagues` registry (already documented
+ *   above); `research.leagues` (a plain view, no new storage) exposes
+ *   the canonical league identity with the source-vs-curated tier
+ *   distinction and provenance. `matches.league_id` / `match_players.hero_id`
+ *   / `matches.game_version_id` resolve through exactly one canonical
+ *   reference path each; `data.reference_identity` provides the typed
+ *   Python accessors and the census audit
+ *   (`scripts/audit_reference_entities.py`).
+ * * Regions were investigated for Slice 3: STRATZ exposes server regions
+ *   (`constants.regions`) but no canonical entity references a region id
+ *   and there is no clean team/event-region source, so a region entity is
+ *   intentionally deferred (reported by the reference-entity audit).
  """
 
 from __future__ import annotations

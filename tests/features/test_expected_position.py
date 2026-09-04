@@ -123,7 +123,7 @@ def test_expected_position_not_in_win_model_features() -> None:
 
 def test_schema_versions_unchanged() -> None:
     assert ANALYTICAL_SCHEMA_VERSION == 5
-    assert REFERENCE_SCHEMA_VERSION == 1
+    assert REFERENCE_SCHEMA_VERSION == 2
 
 
 def test_scoring_ignores_current_observed_position() -> None:
