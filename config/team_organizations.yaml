@@ -1,0 +1,31 @@
+# Curated organization-level identity mappings.
+#
+# This is the ONLY source of organization mappings in the warehouse: a raw
+# STRATZ `team_id` -> optional real-world organization. Name equality alone
+# NEVER merges teams; every mapping here is explicit, auditable curation
+# carried out by a human (or a documented review), not an inference.
+#
+# Consumers:
+#   - scripts/load_team_organizations.py -> organizations +
+#     team_organization_memberships tables (idempotent upsert)
+#   - scripts/audit_team_identity.py      -> mapping coverage / collisions
+#
+# A `team_id` that is absent from every entry here is simply "unmapped" --
+# that is the normal, valid state. Unmapped teams are never auto-merged.
+#
+# Currently NO real organization mappings are persisted here. The Virtus.pro
+# case (STRATZ team ids 8724984, 9729720, 9895392) was identified as a
+# strong candidate during Slice 1 -- each id is observed exclusively under
+# the name 'Virtus.pro' in disjoint periods and the earliest id carries the
+# 'VP' tag -- but that repository evidence establishes a strong *candidate*
+# grouping, not independent proof of real-world organizational identity.
+# Because correctness is more important than populating data, the mapping is
+# deliberately left unpushed pending explicit external curation. The tables,
+# loader, audit reporting, and tests for explicit mappings all remain in
+# place; add a real mapping here only with independent corroborating
+# evidence (the mechanism is exercised by synthetic mappings in the test
+# suite).
+#
+# Do NOT add a mapping here on the strength of a name match alone.
+
+organizations: []

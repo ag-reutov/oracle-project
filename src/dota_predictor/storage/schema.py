@@ -56,15 +56,42 @@ Design choices (see the architecture plan for full rationale):
   `matches`/`match_players` must exist in `teams`/`players`, but the
   reverse does not need to hold.
 * Derived, analysis-facing team/player attributes (a "latest observed
-  display name", first/last-seen timestamps, etc.) are deliberately NOT
-  stored here. `matches.radiant_team_name_observed` /
-  `matches.dire_team_name_observed` already preserve what STRATZ
-  reported for that specific match (immutable historical observations);
-  any aggregate/derived view over those observations belongs to the
-  future Postgres -> Parquet dataset build, computed fresh from current
-  canonical facts each time, not cached as mutable Postgres state that
-  reprocessing could leave stale.
-"""
+ *   display name", first/last-seen timestamps, etc.) are deliberately NOT
+ *   stored here. `matches.radiant_team_name_observed` /
+ *   `matches.dire_team_name_observed` already preserve what STRATZ
+ *   reported for that specific match (immutable historical observations);
+ *   any aggregate/derived view over those observations belongs to the
+ *   future Postgres -> Parquet dataset build, computed fresh from current
+ *   canonical facts each time, not cached as mutable Postgres state that
+ *   reprocessing could leave stale.
+ *
+ * The explicit team-identity layer (Slice 1) extends the same principle:
+ *
+ * * `teams` stays a minimal identity registry (primary key only). The
+ *   "source/display name", team `tag`, and first/last-seen timestamps
+ *   are derived observations, not mutable canonical state -- they live in
+ *   the derived `team_aliases` / `team_tags` tables, which are fully
+ *   rebuilt by an idempotent deterministic backfill
+ *   (`scripts/backfill_team_identity.py`) from canonical match
+ *   observations / raw STRATZ payloads, so they can never go stale.
+ * * `team_aliases` records every name observed for a source `team_id`
+ *   and the period it was observed (`first_seen_at` / `last_seen_at`) --
+ *   derived/indexed identity information, not a rewrite of historical
+ *   `*_team_name_observed` match facts (which remain the source of
+ *   truth). One (team_id, name) pair per row, so a future rename adds a
+ *   row instead of rewriting history.
+ * * `team_tags` does the same for the STRATZ team `tag`, backfilled from
+ *   existing raw payloads (no re-fetching). Tags are treated as
+ *   historical observations like names, never as one eternal value.
+ * * `organizations` + `team_organization_memberships` are the explicit,
+ *   curated organization-identity layer: raw STRATZ `team_id` -> optional
+ *   organization. Mappings come only from `config/team_organizations.yaml`
+ *   via `scripts/load_team_organizations.py`. Name equality alone never
+ *   merges teams; absence of a membership row means "unmapped", which is
+ *   normal and valid. `team_organization_memberships.team_id` is the PK,
+ *   so one raw team id maps to at most one organization, and provenance
+ *   (`reason`, `source`) records why a mapping was curated.
+ """
 
 from __future__ import annotations
 
@@ -95,9 +122,13 @@ __all__ = [
     "MATCH_INGESTION_ERROR_STAGES",
     "MATCH_PLAYERS",
     "METADATA",
+    "ORGANIZATIONS",
     "PLAYERS",
     "STRATZ_RAW_MATCHES",
     "TEAMS",
+    "TEAM_ALIASES",
+    "TEAM_ORGANIZATION_MEMBERSHIPS",
+    "TEAM_TAGS",
 ]
 
 # Naming convention so Alembic autogenerate produces stable, predictable
@@ -248,6 +279,110 @@ TEAMS = sa.Table(
     "teams",
     METADATA,
     sa.Column("team_id", sa.BigInteger, primary_key=True, autoincrement=False),
+)
+
+# --- Team identity layer (Slice 1) ---------------------------------------
+# Derived/indexed identity information over the raw `teams` registry.
+# Historical match facts (`matches.*_team_name_observed`) and the raw
+# STRATZ payloads (`stratz_raw_matches.payload`) remain the source of
+# truth; these tables are fully rebuilt by idempotent deterministic
+# backfill scripts and never feed back into `matches`. See module
+# docstring for the identity-layer design decisions.
+
+TEAM_ALIASES = sa.Table(
+    "team_aliases",
+    METADATA,
+    sa.Column(
+        "team_id",
+        sa.BigInteger,
+        sa.ForeignKey("teams.team_id"),
+        primary_key=True,
+        autoincrement=False,
+    ),
+    # A name observed for this source team in one or more canonical
+    # matches. One row per (team_id, name): a future rename adds a new
+    # row instead of rewriting historical `*_team_name_observed` facts.
+    sa.Column("name", sa.Text, primary_key=True),
+    sa.Column("first_seen_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("observation_count", sa.Integer, nullable=False),
+    sa.CheckConstraint(
+        "observation_count > 0", name="observation_count_positive"
+    ),
+)
+
+TEAM_TAGS = sa.Table(
+    "team_tags",
+    METADATA,
+    sa.Column(
+        "team_id",
+        sa.BigInteger,
+        sa.ForeignKey("teams.team_id"),
+        primary_key=True,
+        autoincrement=False,
+    ),
+    # A STRATZ `tag` observed for this source team in a raw payload.
+    # Treated as a historical observation like names, never as one
+    # eternal value. `tag` is nullable on raw payloads, so coverage is
+    # expected to be partial.
+    sa.Column("tag", sa.Text, primary_key=True),
+    sa.Column("first_seen_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("observation_count", sa.Integer, nullable=False),
+    sa.CheckConstraint(
+        "observation_count > 0", name="observation_count_positive"
+    ),
+)
+
+ORGANIZATIONS = sa.Table(
+    "organizations",
+    METADATA,
+    # Curated organization-level identity. `organization_id` is assigned
+    # explicitly in config (never derived from any team id).
+    sa.Column(
+        "organization_id", sa.BigInteger, primary_key=True, autoincrement=False
+    ),
+    sa.Column("name", sa.Text, nullable=False),
+    sa.Column("notes", sa.Text, nullable=True),
+    sa.Column(
+        "created_at",
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+    ),
+    sa.UniqueConstraint("name", name="uq_organizations_name"),
+)
+
+TEAM_ORGANIZATION_MEMBERSHIPS = sa.Table(
+    "team_organization_memberships",
+    METADATA,
+    # One raw STRATZ `team_id` maps to at most one organization (the PK
+    # enforces this). Absence of a row means "unmapped", which is normal
+    # and valid -- there is no auto-merging by name or roster overlap.
+    sa.Column(
+        "team_id",
+        sa.BigInteger,
+        sa.ForeignKey("teams.team_id"),
+        primary_key=True,
+        autoincrement=False,
+    ),
+    sa.Column(
+        "organization_id",
+        sa.BigInteger,
+        sa.ForeignKey("organizations.organization_id"),
+        nullable=False,
+    ),
+    # Provenance for the curated mapping: why the team ids were grouped
+    # and where the curation decision came from. Explicit, auditable,
+    # never inferred from name equality alone.
+    sa.Column("reason", sa.Text, nullable=True),
+    sa.Column("source", sa.Text, nullable=True),
+    sa.Column(
+        "added_at",
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+    ),
 )
 
 PLAYERS = sa.Table(
