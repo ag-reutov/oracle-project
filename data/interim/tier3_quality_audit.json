@@ -1,0 +1,1624 @@
+{
+  "frozen_development_end": "2026-07-19T17:49:01+00:00",
+  "analytical_schema_version": 4,
+  "generated_at": "2026-09-04T08:40:02.729976+00:00",
+  "join_path": "matches.league_id -> leagues.liquipedia_tier (or config/leagues.yaml). Parquet has no tier column.",
+  "existing_t1_t2": {
+    "registered_in_scope_leagues": 54,
+    "leagues_with_canonical_matches": 53,
+    "matches": 6114,
+    "raw_matches": 6119,
+    "min_start_time": "2024-02-04T09:21:26+00:00",
+    "max_start_time": "2026-08-23T12:08:38+00:00",
+    "explicit_position_rate": 0.9995093228655545,
+    "box_score_row_rate": 0.9759568204121688,
+    "complete_draft_rate": 1.0,
+    "ten_player_rate": 1.0,
+    "game_version_rate": 1.0,
+    "named_team_rate": 1.0,
+    "malformed_draft_rate": 0.0,
+    "ingestion_error_rate": 0.004249060303971237,
+    "ingestion_errors": 26,
+    "matches_before_frozen_end": 5967,
+    "matches_after_frozen_end": 147,
+    "matches_per_league": [
+      {
+        "league_id": 16881,
+        "name": "Riyadh Masters 2024 at Esports World Cup",
+        "matches": 222
+      },
+      {
+        "league_id": 16483,
+        "name": "Elite League by FISSURE and ESB",
+        "matches": 219
+      },
+      {
+        "league_id": 18988,
+        "name": "DreamLeague Season 27",
+        "matches": 206
+      },
+      {
+        "league_id": 18111,
+        "name": "DreamLeague Season 26",
+        "matches": 202
+      },
+      {
+        "league_id": 16201,
+        "name": "DreamLeague Season 22 powered by Intel",
+        "matches": 198
+      },
+      {
+        "league_id": 17765,
+        "name": "DreamLeague Season 25 powered by Intel",
+        "matches": 198
+      },
+      {
+        "league_id": 17272,
+        "name": "DreamLeague Season 24 powered by Intel",
+        "matches": 196
+      },
+      {
+        "league_id": 19269,
+        "name": "DreamLeague Season 28",
+        "matches": 195
+      },
+      {
+        "league_id": 19696,
+        "name": "DreamLeague Season 29",
+        "matches": 186
+      },
+      {
+        "league_id": 16905,
+        "name": "Elite League Season 2 Main Event \u2013 presented by ESB",
+        "matches": 170
+      },
+      {
+        "league_id": 19785,
+        "name": "Esports World Cup 2026",
+        "matches": 157
+      },
+      {
+        "league_id": 19719,
+        "name": "The International 2026",
+        "matches": 147
+      },
+      {
+        "league_id": 18324,
+        "name": "The International 2025",
+        "matches": 144
+      },
+      {
+        "league_id": 19422,
+        "name": "ESL One Birmingham 2026",
+        "matches": 142
+      },
+      {
+        "league_id": 19435,
+        "name": "PGL Wallachia 2026 Season 7",
+        "matches": 124
+      },
+      {
+        "league_id": 18863,
+        "name": "FISSURE PLAYGROUND 2",
+        "matches": 124
+      },
+      {
+        "league_id": 16935,
+        "name": "The International 2024",
+        "matches": 121
+      },
+      {
+        "league_id": 17119,
+        "name": "PGL Wallachia 2024 Season 2",
+        "matches": 121
+      },
+      {
+        "league_id": 19543,
+        "name": "PGL Wallachia 2026 Season 8",
+        "matches": 119
+      },
+      {
+        "league_id": 18920,
+        "name": "PGL Wallachia 2025 Season 6",
+        "matches": 118
+      },
+      {
+        "league_id": 18358,
+        "name": "PGL Wallachia 2025 Season 5",
+        "matches": 117
+      },
+      {
+        "league_id": 18107,
+        "name": "FISSURE Universe Episode 5",
+        "matches": 116
+      },
+      {
+        "league_id": 18433,
+        "name": "FISSURE Universe Episode 6",
+        "matches": 116
+      },
+      {
+        "league_id": 18058,
+        "name": "PGL Wallachia 2025 Season 4",
+        "matches": 115
+      },
+      {
+        "league_id": 16669,
+        "name": "PGL Wallachia 2024 Season 1",
+        "matches": 114
+      },
+      {
+        "league_id": 17891,
+        "name": "PGL Wallachia 2025 Season 3",
+        "matches": 112
+      },
+      {
+        "league_id": 17907,
+        "name": "FISSURE Universe Episode 4",
+        "matches": 110
+      },
+      {
+        "league_id": 19101,
+        "name": "BLAST SLAM VII",
+        "matches": 102
+      },
+      {
+        "league_id": 19099,
+        "name": "BLAST SLAM VI",
+        "matches": 101
+      },
+      {
+        "league_id": 17419,
+        "name": "SLAM IV",
+        "matches": 96
+      },
+      {
+        "league_id": 19239,
+        "name": "FISSURE Universe Episode 8",
+        "matches": 96
+      },
+      {
+        "league_id": 17126,
+        "name": "BetBoom Dacha Belgrade 2024",
+        "matches": 95
+      },
+      {
+        "league_id": 16518,
+        "name": "ESL One Birmingham 2024 Powered by Intel",
+        "matches": 94
+      },
+      {
+        "league_id": 17420,
+        "name": "SLAM V",
+        "matches": 94
+      },
+      {
+        "league_id": 16169,
+        "name": "BetBoom Dacha Dubai 2024",
+        "matches": 94
+      },
+      {
+        "league_id": 17795,
+        "name": "ESL One Raleigh 2025",
+        "matches": 90
+      },
+      {
+        "league_id": 18375,
+        "name": "Esports World Cup 2025",
+        "matches": 89
+      },
+      {
+        "league_id": 17509,
+        "name": "ESL One Bangkok 2024 powered by Intel",
+        "matches": 88
+      },
+      {
+        "league_id": 17588,
+        "name": "FISSURE PLAYGROUND 1 - Dota",
+        "matches": 87
+      },
+      {
+        "league_id": 16632,
+        "name": "DreamLeague Season 23 powered by Intel",
+        "matches": 87
+      },
+      {
+        "league_id": 16427,
+        "name": "1WIN SERIES DOTA 2",
+        "matches": 85
+      },
+      {
+        "league_id": 18359,
+        "name": "Clavision DOTA2 Masters 2025: Snow-Ruyi",
+        "matches": 85
+      },
+      {
+        "league_id": 16901,
+        "name": "Clavision DOTA League S1 : Snow-Ruyi",
+        "matches": 83
+      },
+      {
+        "league_id": 18633,
+        "name": "FISSURE Universe Episode 7",
+        "matches": 75
+      },
+      {
+        "league_id": 16846,
+        "name": "FISSURE Universe: Episode 3",
+        "matches": 70
+      },
+      {
+        "league_id": 15981,
+        "name": "Games of Future 2024",
+        "matches": 66
+      },
+      {
+        "league_id": 18046,
+        "name": "FISSURE Special",
+        "matches": 59
+      },
+      {
+        "league_id": 17622,
+        "name": "AsiaPro League S2",
+        "matches": 54
+      },
+      {
+        "league_id": 18937,
+        "name": "Games of the Future 2025 Abu Dhabi",
+        "matches": 46
+      },
+      {
+        "league_id": 17418,
+        "name": "SLAM III",
+        "matches": 43
+      },
+      {
+        "league_id": 17414,
+        "name": "BLAST SLAM I",
+        "matches": 43
+      },
+      {
+        "league_id": 17417,
+        "name": "SLAM II",
+        "matches": 43
+      },
+      {
+        "league_id": 16730,
+        "name": "FISSURE Tournament",
+        "matches": 40
+      }
+    ]
+  },
+  "added_t3": {
+    "registered_in_scope_leagues": 104,
+    "leagues_with_canonical_matches": 99,
+    "matches": 9940,
+    "raw_matches": 10298,
+    "min_start_time": "2024-01-10T03:48:00+00:00",
+    "max_start_time": "2026-09-03T15:56:52+00:00",
+    "explicit_position_rate": 0.9998993963782696,
+    "box_score_row_rate": 1.0,
+    "complete_draft_rate": 1.0,
+    "ten_player_rate": 1.0,
+    "game_version_rate": 1.0,
+    "named_team_rate": 1.0,
+    "malformed_draft_rate": 0.0,
+    "ingestion_error_rate": 0.0349582443192853,
+    "ingestion_errors": 360,
+    "matches_before_frozen_end": 9671,
+    "matches_after_frozen_end": 269,
+    "matches_per_league": [
+      {
+        "league_id": 17381,
+        "name": "European Pro League Season 21 (+10 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 1107
+      },
+      {
+        "league_id": 15898,
+        "name": "European Pro League Season 16 (+5 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 761
+      },
+      {
+        "league_id": 17659,
+        "name": "EPL World Series: Southeast Asia Season 2 (+8 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 682
+      },
+      {
+        "league_id": 18866,
+        "name": "European Pro League Season 32 (+7 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 670
+      },
+      {
+        "league_id": 15899,
+        "name": "EPL World Series: America Season 9 (+4 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 490
+      },
+      {
+        "league_id": 18865,
+        "name": "EPL World Series: Southeast Asia Season 10 (+6 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 400
+      },
+      {
+        "league_id": 17367,
+        "name": "EPL World Series: America Season 14 (+3 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 245
+      },
+      {
+        "league_id": 19944,
+        "name": "EPL Masters I (+1 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 206
+      },
+      {
+        "league_id": 18769,
+        "name": "DreamLeague Division 2 Season 1",
+        "matches": 170
+      },
+      {
+        "league_id": 19532,
+        "name": "DreamLeague Division 2 Season 4",
+        "matches": 170
+      },
+      {
+        "league_id": 19054,
+        "name": "Lunar Snake Trophy 5 (+1 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 153
+      },
+      {
+        "league_id": 18941,
+        "name": "EPL Championship Season 1 (+1 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 135
+      },
+      {
+        "league_id": 16586,
+        "name": "Kobolds Rave 2",
+        "matches": 120
+      },
+      {
+        "league_id": 16743,
+        "name": "Leon Masters #1",
+        "matches": 118
+      },
+      {
+        "league_id": 18660,
+        "name": "CIS Battle 3",
+        "matches": 112
+      },
+      {
+        "league_id": 16108,
+        "name": "New Year Cup 2024",
+        "matches": 111
+      },
+      {
+        "league_id": 17059,
+        "name": "Phoenix League",
+        "matches": 110
+      },
+      {
+        "league_id": 16710,
+        "name": "RES Regional Series: EU #4 (+1 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 103
+      },
+      {
+        "league_id": 18897,
+        "name": "DreamLeague Division 2 Season 2",
+        "matches": 97
+      },
+      {
+        "league_id": 18491,
+        "name": "CIS Battle",
+        "matches": 87
+      },
+      {
+        "league_id": 16290,
+        "name": "Winline Insight Season 5",
+        "matches": 85
+      },
+      {
+        "league_id": 17782,
+        "name": "CCT Series 7",
+        "matches": 85
+      },
+      {
+        "league_id": 18592,
+        "name": "CIS Battle 2",
+        "matches": 85
+      },
+      {
+        "league_id": 16953,
+        "name": "CCT Series 2",
+        "matches": 84
+      },
+      {
+        "league_id": 18105,
+        "name": "Lunar Snake Trophy",
+        "matches": 84
+      },
+      {
+        "league_id": 18618,
+        "name": "Lunar Snake Trophy 3",
+        "matches": 83
+      },
+      {
+        "league_id": 17637,
+        "name": "CCT Series 6",
+        "matches": 81
+      },
+      {
+        "league_id": 17111,
+        "name": "CCT Series 4",
+        "matches": 80
+      },
+      {
+        "league_id": 16443,
+        "name": "Minotaur League",
+        "matches": 80
+      },
+      {
+        "league_id": 18502,
+        "name": "Americas Convergence Series 2",
+        "matches": 78
+      },
+      {
+        "league_id": 17425,
+        "name": "CCT Series 5",
+        "matches": 78
+      },
+      {
+        "league_id": 19545,
+        "name": "Lunar Horse Trophy 7",
+        "matches": 78
+      },
+      {
+        "league_id": 19093,
+        "name": "CIS Battle 4",
+        "matches": 78
+      },
+      {
+        "league_id": 16869,
+        "name": "CCT Series 1",
+        "matches": 77
+      },
+      {
+        "league_id": 18893,
+        "name": "Lunar Snake Trophy 4",
+        "matches": 76
+      },
+      {
+        "league_id": 17056,
+        "name": "CCT Series 3",
+        "matches": 75
+      },
+      {
+        "league_id": 16344,
+        "name": "RES Regional Series: SEA #2",
+        "matches": 73
+      },
+      {
+        "league_id": 16708,
+        "name": "RES Regional Series: SEA #4",
+        "matches": 73
+      },
+      {
+        "league_id": 16707,
+        "name": "RES Regional Series: EU #3",
+        "matches": 72
+      },
+      {
+        "league_id": 17984,
+        "name": "CCT Series 8",
+        "matches": 72
+      },
+      {
+        "league_id": 16705,
+        "name": "RES Regional Series: SEA #3",
+        "matches": 71
+      },
+      {
+        "league_id": 16233,
+        "name": "RES Regional Series: LATAM #1",
+        "matches": 71
+      },
+      {
+        "league_id": 16345,
+        "name": "RES Regional Series: LATAM #2",
+        "matches": 70
+      },
+      {
+        "league_id": 16346,
+        "name": "RES Regional Series: EU #2",
+        "matches": 70
+      },
+      {
+        "league_id": 16709,
+        "name": "RES Regional Series: LATAM #4",
+        "matches": 69
+      },
+      {
+        "league_id": 16343,
+        "name": "RES Regional Series: EU #1",
+        "matches": 68
+      },
+      {
+        "league_id": 16207,
+        "name": "RES Regional Series: SEA #1",
+        "matches": 67
+      },
+      {
+        "league_id": 18153,
+        "name": "Immortal Cup Season 1",
+        "matches": 67
+      },
+      {
+        "league_id": 16933,
+        "name": "Samsung Odyssey Cup",
+        "matches": 64
+      },
+      {
+        "league_id": 17875,
+        "name": "ACL X ESL Challenger China",
+        "matches": 64
+      },
+      {
+        "league_id": 16706,
+        "name": "RES Regional Series: LATAM #3",
+        "matches": 62
+      },
+      {
+        "league_id": 11845,
+        "name": "Sber Tournament 2025",
+        "matches": 61
+      },
+      {
+        "league_id": 18955,
+        "name": "CCT Season 2 Series 6",
+        "matches": 61
+      },
+      {
+        "league_id": 19322,
+        "name": "CCT Season 2 Series 7",
+        "matches": 57
+      },
+      {
+        "league_id": 18396,
+        "name": "CCT Season 2 Series 3",
+        "matches": 57
+      },
+      {
+        "league_id": 19361,
+        "name": "CCT Season 2: South America Series 3",
+        "matches": 57
+      },
+      {
+        "league_id": 19421,
+        "name": "CCT Season 2 Series 8",
+        "matches": 56
+      },
+      {
+        "league_id": 18524,
+        "name": "CCT Season 2 Series 4",
+        "matches": 56
+      },
+      {
+        "league_id": 18374,
+        "name": "CCT Season 2 Series 2",
+        "matches": 55
+      },
+      {
+        "league_id": 17229,
+        "name": "Asian Dragon Series: Regional Collision",
+        "matches": 55
+      },
+      {
+        "league_id": 19147,
+        "name": "CCT Season 2: South America Series 2",
+        "matches": 53
+      },
+      {
+        "league_id": 19503,
+        "name": "CCT Season 2: South America Series 4",
+        "matches": 50
+      },
+      {
+        "league_id": 18799,
+        "name": "CCT Season 2: South America Series 1",
+        "matches": 50
+      },
+      {
+        "league_id": 16925,
+        "name": "Asian Dragon Series: Continental Collision",
+        "matches": 49
+      },
+      {
+        "league_id": 18666,
+        "name": "CCT Season 2 Series 5",
+        "matches": 48
+      },
+      {
+        "league_id": 15520,
+        "name": "Asia Pacific Predator League 2024",
+        "matches": 47
+      },
+      {
+        "league_id": 17458,
+        "name": "AsiaPro League Season 1",
+        "matches": 41
+      },
+      {
+        "league_id": 17199,
+        "name": "Phoenix League 2",
+        "matches": 40
+      },
+      {
+        "league_id": 17554,
+        "name": "True Fighters 2024 Christmas",
+        "matches": 38
+      },
+      {
+        "league_id": 17326,
+        "name": "MESA Invitational 2024",
+        "matches": 38
+      },
+      {
+        "league_id": 18242,
+        "name": "CCT Season 2 Series 1",
+        "matches": 38
+      },
+      {
+        "league_id": 17074,
+        "name": "True Fighters 2024",
+        "matches": 34
+      },
+      {
+        "league_id": 16349,
+        "name": "Maincard Unmatched - March",
+        "matches": 34
+      },
+      {
+        "league_id": 18120,
+        "name": "Cyber Clash",
+        "matches": 33
+      },
+      {
+        "league_id": 17120,
+        "name": "MSI Gaming Arena 2024",
+        "matches": 33
+      },
+      {
+        "league_id": 20026,
+        "name": "Asgard Championship Season 1",
+        "matches": 32
+      },
+      {
+        "league_id": 18498,
+        "name": "Americas Convergence Series 1",
+        "matches": 32
+      },
+      {
+        "league_id": 20134,
+        "name": "ExitLag ChampZ",
+        "matches": 31
+      },
+      {
+        "league_id": 16527,
+        "name": "Dota2 World Invitationals",
+        "matches": 29
+      },
+      {
+        "league_id": 19378,
+        "name": "Tennisi Stampede Champions: Season 2",
+        "matches": 28
+      },
+      {
+        "league_id": 18940,
+        "name": "Tennisi Stampede Champions: Season 1",
+        "matches": 27
+      },
+      {
+        "league_id": 18999,
+        "name": "Asia Pacific Predator League 2026",
+        "matches": 26
+      },
+      {
+        "league_id": 16239,
+        "name": "Ace Americas 2024 - Season 1",
+        "matches": 26
+      },
+      {
+        "league_id": 17719,
+        "name": "UPEA National League 2025",
+        "matches": 21
+      },
+      {
+        "league_id": 18490,
+        "name": "Lunar Snake Trophy 2",
+        "matches": 21
+      },
+      {
+        "league_id": 16315,
+        "name": "United Series 1",
+        "matches": 20
+      },
+      {
+        "league_id": 19371,
+        "name": "Esports League Super Cup Pro Division",
+        "matches": 19
+      },
+      {
+        "league_id": 17512,
+        "name": "Asia Pacific Predator League 2025",
+        "matches": 19
+      },
+      {
+        "league_id": 16973,
+        "name": "Douyu Super Dream League Season 2",
+        "matches": 17
+      },
+      {
+        "league_id": 18995,
+        "name": "Redragon Latam Series",
+        "matches": 13
+      },
+      {
+        "league_id": 17513,
+        "name": "RESF Open Cup 2024",
+        "matches": 11
+      },
+      {
+        "league_id": 19040,
+        "name": "RESF Open Cup 2025",
+        "matches": 10
+      },
+      {
+        "league_id": 18325,
+        "name": "Russian Esports Championship 2025",
+        "matches": 10
+      },
+      {
+        "league_id": 18434,
+        "name": "Russian Esports Cup 2025",
+        "matches": 9
+      },
+      {
+        "league_id": 16993,
+        "name": "Russian Esports Cup 2024",
+        "matches": 9
+      },
+      {
+        "league_id": 16948,
+        "name": "Sber Tournament 2024",
+        "matches": 8
+      },
+      {
+        "league_id": 16649,
+        "name": "Douyu Super Dream League",
+        "matches": 7
+      },
+      {
+        "league_id": 16523,
+        "name": "No Coffee Cup",
+        "matches": 4
+      },
+      {
+        "league_id": 16858,
+        "name": "Russian Esports Championship 2024",
+        "matches": 3
+      }
+    ]
+  },
+  "combined_canonical": {
+    "registered_in_scope_leagues": 158,
+    "leagues_with_canonical_matches": 152,
+    "matches": 16054,
+    "raw_matches": 16417,
+    "min_start_time": "2024-01-10T03:48:00+00:00",
+    "max_start_time": "2026-09-03T15:56:52+00:00",
+    "explicit_position_rate": 0.9997508409119222,
+    "box_score_row_rate": 0.9908434035131432,
+    "complete_draft_rate": 1.0,
+    "ten_player_rate": 1.0,
+    "game_version_rate": 1.0,
+    "named_team_rate": 1.0,
+    "malformed_draft_rate": 0.0,
+    "ingestion_error_rate": 0.023512212949990865,
+    "ingestion_errors": 386,
+    "matches_before_frozen_end": 15638,
+    "matches_after_frozen_end": 416,
+    "matches_per_league": [
+      {
+        "league_id": 17381,
+        "name": "European Pro League Season 21 (+10 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 1107
+      },
+      {
+        "league_id": 15898,
+        "name": "European Pro League Season 16 (+5 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 761
+      },
+      {
+        "league_id": 17659,
+        "name": "EPL World Series: Southeast Asia Season 2 (+8 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 682
+      },
+      {
+        "league_id": 18866,
+        "name": "European Pro League Season 32 (+7 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 670
+      },
+      {
+        "league_id": 15899,
+        "name": "EPL World Series: America Season 9 (+4 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 490
+      },
+      {
+        "league_id": 18865,
+        "name": "EPL World Series: Southeast Asia Season 10 (+6 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 400
+      },
+      {
+        "league_id": 17367,
+        "name": "EPL World Series: America Season 14 (+3 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 245
+      },
+      {
+        "league_id": 16881,
+        "name": "Riyadh Masters 2024 at Esports World Cup",
+        "matches": 222
+      },
+      {
+        "league_id": 16483,
+        "name": "Elite League by FISSURE and ESB",
+        "matches": 219
+      },
+      {
+        "league_id": 18988,
+        "name": "DreamLeague Season 27",
+        "matches": 206
+      },
+      {
+        "league_id": 19944,
+        "name": "EPL Masters I (+1 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 206
+      },
+      {
+        "league_id": 18111,
+        "name": "DreamLeague Season 26",
+        "matches": 202
+      },
+      {
+        "league_id": 16201,
+        "name": "DreamLeague Season 22 powered by Intel",
+        "matches": 198
+      },
+      {
+        "league_id": 17765,
+        "name": "DreamLeague Season 25 powered by Intel",
+        "matches": 198
+      },
+      {
+        "league_id": 17272,
+        "name": "DreamLeague Season 24 powered by Intel",
+        "matches": 196
+      },
+      {
+        "league_id": 19269,
+        "name": "DreamLeague Season 28",
+        "matches": 195
+      },
+      {
+        "league_id": 19696,
+        "name": "DreamLeague Season 29",
+        "matches": 186
+      },
+      {
+        "league_id": 16905,
+        "name": "Elite League Season 2 Main Event \u2013 presented by ESB",
+        "matches": 170
+      },
+      {
+        "league_id": 18769,
+        "name": "DreamLeague Division 2 Season 1",
+        "matches": 170
+      },
+      {
+        "league_id": 19532,
+        "name": "DreamLeague Division 2 Season 4",
+        "matches": 170
+      },
+      {
+        "league_id": 19785,
+        "name": "Esports World Cup 2026",
+        "matches": 157
+      },
+      {
+        "league_id": 19054,
+        "name": "Lunar Snake Trophy 5 (+1 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 153
+      },
+      {
+        "league_id": 19719,
+        "name": "The International 2026",
+        "matches": 147
+      },
+      {
+        "league_id": 18324,
+        "name": "The International 2025",
+        "matches": 144
+      },
+      {
+        "league_id": 19422,
+        "name": "ESL One Birmingham 2026",
+        "matches": 142
+      },
+      {
+        "league_id": 18941,
+        "name": "EPL Championship Season 1 (+1 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 135
+      },
+      {
+        "league_id": 19435,
+        "name": "PGL Wallachia 2026 Season 7",
+        "matches": 124
+      },
+      {
+        "league_id": 18863,
+        "name": "FISSURE PLAYGROUND 2",
+        "matches": 124
+      },
+      {
+        "league_id": 16935,
+        "name": "The International 2024",
+        "matches": 121
+      },
+      {
+        "league_id": 17119,
+        "name": "PGL Wallachia 2024 Season 2",
+        "matches": 121
+      },
+      {
+        "league_id": 16586,
+        "name": "Kobolds Rave 2",
+        "matches": 120
+      },
+      {
+        "league_id": 19543,
+        "name": "PGL Wallachia 2026 Season 8",
+        "matches": 119
+      },
+      {
+        "league_id": 18920,
+        "name": "PGL Wallachia 2025 Season 6",
+        "matches": 118
+      },
+      {
+        "league_id": 16743,
+        "name": "Leon Masters #1",
+        "matches": 118
+      },
+      {
+        "league_id": 18358,
+        "name": "PGL Wallachia 2025 Season 5",
+        "matches": 117
+      },
+      {
+        "league_id": 18107,
+        "name": "FISSURE Universe Episode 5",
+        "matches": 116
+      },
+      {
+        "league_id": 18433,
+        "name": "FISSURE Universe Episode 6",
+        "matches": 116
+      },
+      {
+        "league_id": 18058,
+        "name": "PGL Wallachia 2025 Season 4",
+        "matches": 115
+      },
+      {
+        "league_id": 16669,
+        "name": "PGL Wallachia 2024 Season 1",
+        "matches": 114
+      },
+      {
+        "league_id": 17891,
+        "name": "PGL Wallachia 2025 Season 3",
+        "matches": 112
+      },
+      {
+        "league_id": 18660,
+        "name": "CIS Battle 3",
+        "matches": 112
+      },
+      {
+        "league_id": 16108,
+        "name": "New Year Cup 2024",
+        "matches": 111
+      },
+      {
+        "league_id": 17907,
+        "name": "FISSURE Universe Episode 4",
+        "matches": 110
+      },
+      {
+        "league_id": 17059,
+        "name": "Phoenix League",
+        "matches": 110
+      },
+      {
+        "league_id": 16710,
+        "name": "RES Regional Series: EU #4 (+1 Liquipedia T3 events, shared Valve league_id)",
+        "matches": 103
+      },
+      {
+        "league_id": 19101,
+        "name": "BLAST SLAM VII",
+        "matches": 102
+      },
+      {
+        "league_id": 19099,
+        "name": "BLAST SLAM VI",
+        "matches": 101
+      },
+      {
+        "league_id": 18897,
+        "name": "DreamLeague Division 2 Season 2",
+        "matches": 97
+      },
+      {
+        "league_id": 19239,
+        "name": "FISSURE Universe Episode 8",
+        "matches": 96
+      },
+      {
+        "league_id": 17419,
+        "name": "SLAM IV",
+        "matches": 96
+      },
+      {
+        "league_id": 17126,
+        "name": "BetBoom Dacha Belgrade 2024",
+        "matches": 95
+      },
+      {
+        "league_id": 16169,
+        "name": "BetBoom Dacha Dubai 2024",
+        "matches": 94
+      },
+      {
+        "league_id": 16518,
+        "name": "ESL One Birmingham 2024 Powered by Intel",
+        "matches": 94
+      },
+      {
+        "league_id": 17420,
+        "name": "SLAM V",
+        "matches": 94
+      },
+      {
+        "league_id": 17795,
+        "name": "ESL One Raleigh 2025",
+        "matches": 90
+      },
+      {
+        "league_id": 18375,
+        "name": "Esports World Cup 2025",
+        "matches": 89
+      },
+      {
+        "league_id": 17509,
+        "name": "ESL One Bangkok 2024 powered by Intel",
+        "matches": 88
+      },
+      {
+        "league_id": 17588,
+        "name": "FISSURE PLAYGROUND 1 - Dota",
+        "matches": 87
+      },
+      {
+        "league_id": 16632,
+        "name": "DreamLeague Season 23 powered by Intel",
+        "matches": 87
+      },
+      {
+        "league_id": 18491,
+        "name": "CIS Battle",
+        "matches": 87
+      },
+      {
+        "league_id": 18359,
+        "name": "Clavision DOTA2 Masters 2025: Snow-Ruyi",
+        "matches": 85
+      },
+      {
+        "league_id": 17782,
+        "name": "CCT Series 7",
+        "matches": 85
+      },
+      {
+        "league_id": 16427,
+        "name": "1WIN SERIES DOTA 2",
+        "matches": 85
+      },
+      {
+        "league_id": 18592,
+        "name": "CIS Battle 2",
+        "matches": 85
+      },
+      {
+        "league_id": 16290,
+        "name": "Winline Insight Season 5",
+        "matches": 85
+      },
+      {
+        "league_id": 18105,
+        "name": "Lunar Snake Trophy",
+        "matches": 84
+      },
+      {
+        "league_id": 16953,
+        "name": "CCT Series 2",
+        "matches": 84
+      },
+      {
+        "league_id": 16901,
+        "name": "Clavision DOTA League S1 : Snow-Ruyi",
+        "matches": 83
+      },
+      {
+        "league_id": 18618,
+        "name": "Lunar Snake Trophy 3",
+        "matches": 83
+      },
+      {
+        "league_id": 17637,
+        "name": "CCT Series 6",
+        "matches": 81
+      },
+      {
+        "league_id": 17111,
+        "name": "CCT Series 4",
+        "matches": 80
+      },
+      {
+        "league_id": 16443,
+        "name": "Minotaur League",
+        "matches": 80
+      },
+      {
+        "league_id": 19093,
+        "name": "CIS Battle 4",
+        "matches": 78
+      },
+      {
+        "league_id": 19545,
+        "name": "Lunar Horse Trophy 7",
+        "matches": 78
+      },
+      {
+        "league_id": 17425,
+        "name": "CCT Series 5",
+        "matches": 78
+      },
+      {
+        "league_id": 18502,
+        "name": "Americas Convergence Series 2",
+        "matches": 78
+      },
+      {
+        "league_id": 16869,
+        "name": "CCT Series 1",
+        "matches": 77
+      },
+      {
+        "league_id": 18893,
+        "name": "Lunar Snake Trophy 4",
+        "matches": 76
+      },
+      {
+        "league_id": 17056,
+        "name": "CCT Series 3",
+        "matches": 75
+      },
+      {
+        "league_id": 18633,
+        "name": "FISSURE Universe Episode 7",
+        "matches": 75
+      },
+      {
+        "league_id": 16708,
+        "name": "RES Regional Series: SEA #4",
+        "matches": 73
+      },
+      {
+        "league_id": 16344,
+        "name": "RES Regional Series: SEA #2",
+        "matches": 73
+      },
+      {
+        "league_id": 16707,
+        "name": "RES Regional Series: EU #3",
+        "matches": 72
+      },
+      {
+        "league_id": 17984,
+        "name": "CCT Series 8",
+        "matches": 72
+      },
+      {
+        "league_id": 16233,
+        "name": "RES Regional Series: LATAM #1",
+        "matches": 71
+      },
+      {
+        "league_id": 16705,
+        "name": "RES Regional Series: SEA #3",
+        "matches": 71
+      },
+      {
+        "league_id": 16346,
+        "name": "RES Regional Series: EU #2",
+        "matches": 70
+      },
+      {
+        "league_id": 16345,
+        "name": "RES Regional Series: LATAM #2",
+        "matches": 70
+      },
+      {
+        "league_id": 16846,
+        "name": "FISSURE Universe: Episode 3",
+        "matches": 70
+      },
+      {
+        "league_id": 16709,
+        "name": "RES Regional Series: LATAM #4",
+        "matches": 69
+      },
+      {
+        "league_id": 16343,
+        "name": "RES Regional Series: EU #1",
+        "matches": 68
+      },
+      {
+        "league_id": 18153,
+        "name": "Immortal Cup Season 1",
+        "matches": 67
+      },
+      {
+        "league_id": 16207,
+        "name": "RES Regional Series: SEA #1",
+        "matches": 67
+      },
+      {
+        "league_id": 15981,
+        "name": "Games of Future 2024",
+        "matches": 66
+      },
+      {
+        "league_id": 17875,
+        "name": "ACL X ESL Challenger China",
+        "matches": 64
+      },
+      {
+        "league_id": 16933,
+        "name": "Samsung Odyssey Cup",
+        "matches": 64
+      },
+      {
+        "league_id": 16706,
+        "name": "RES Regional Series: LATAM #3",
+        "matches": 62
+      },
+      {
+        "league_id": 11845,
+        "name": "Sber Tournament 2025",
+        "matches": 61
+      },
+      {
+        "league_id": 18955,
+        "name": "CCT Season 2 Series 6",
+        "matches": 61
+      },
+      {
+        "league_id": 18046,
+        "name": "FISSURE Special",
+        "matches": 59
+      },
+      {
+        "league_id": 18396,
+        "name": "CCT Season 2 Series 3",
+        "matches": 57
+      },
+      {
+        "league_id": 19322,
+        "name": "CCT Season 2 Series 7",
+        "matches": 57
+      },
+      {
+        "league_id": 19361,
+        "name": "CCT Season 2: South America Series 3",
+        "matches": 57
+      },
+      {
+        "league_id": 19421,
+        "name": "CCT Season 2 Series 8",
+        "matches": 56
+      },
+      {
+        "league_id": 18524,
+        "name": "CCT Season 2 Series 4",
+        "matches": 56
+      },
+      {
+        "league_id": 17229,
+        "name": "Asian Dragon Series: Regional Collision",
+        "matches": 55
+      },
+      {
+        "league_id": 18374,
+        "name": "CCT Season 2 Series 2",
+        "matches": 55
+      },
+      {
+        "league_id": 17622,
+        "name": "AsiaPro League S2",
+        "matches": 54
+      },
+      {
+        "league_id": 19147,
+        "name": "CCT Season 2: South America Series 2",
+        "matches": 53
+      },
+      {
+        "league_id": 19503,
+        "name": "CCT Season 2: South America Series 4",
+        "matches": 50
+      },
+      {
+        "league_id": 18799,
+        "name": "CCT Season 2: South America Series 1",
+        "matches": 50
+      },
+      {
+        "league_id": 16925,
+        "name": "Asian Dragon Series: Continental Collision",
+        "matches": 49
+      },
+      {
+        "league_id": 18666,
+        "name": "CCT Season 2 Series 5",
+        "matches": 48
+      },
+      {
+        "league_id": 15520,
+        "name": "Asia Pacific Predator League 2024",
+        "matches": 47
+      },
+      {
+        "league_id": 18937,
+        "name": "Games of the Future 2025 Abu Dhabi",
+        "matches": 46
+      },
+      {
+        "league_id": 17417,
+        "name": "SLAM II",
+        "matches": 43
+      },
+      {
+        "league_id": 17418,
+        "name": "SLAM III",
+        "matches": 43
+      },
+      {
+        "league_id": 17414,
+        "name": "BLAST SLAM I",
+        "matches": 43
+      },
+      {
+        "league_id": 17458,
+        "name": "AsiaPro League Season 1",
+        "matches": 41
+      },
+      {
+        "league_id": 17199,
+        "name": "Phoenix League 2",
+        "matches": 40
+      },
+      {
+        "league_id": 16730,
+        "name": "FISSURE Tournament",
+        "matches": 40
+      },
+      {
+        "league_id": 17554,
+        "name": "True Fighters 2024 Christmas",
+        "matches": 38
+      },
+      {
+        "league_id": 17326,
+        "name": "MESA Invitational 2024",
+        "matches": 38
+      },
+      {
+        "league_id": 18242,
+        "name": "CCT Season 2 Series 1",
+        "matches": 38
+      },
+      {
+        "league_id": 17074,
+        "name": "True Fighters 2024",
+        "matches": 34
+      },
+      {
+        "league_id": 16349,
+        "name": "Maincard Unmatched - March",
+        "matches": 34
+      },
+      {
+        "league_id": 18120,
+        "name": "Cyber Clash",
+        "matches": 33
+      },
+      {
+        "league_id": 17120,
+        "name": "MSI Gaming Arena 2024",
+        "matches": 33
+      },
+      {
+        "league_id": 20026,
+        "name": "Asgard Championship Season 1",
+        "matches": 32
+      },
+      {
+        "league_id": 18498,
+        "name": "Americas Convergence Series 1",
+        "matches": 32
+      },
+      {
+        "league_id": 20134,
+        "name": "ExitLag ChampZ",
+        "matches": 31
+      },
+      {
+        "league_id": 16527,
+        "name": "Dota2 World Invitationals",
+        "matches": 29
+      },
+      {
+        "league_id": 19378,
+        "name": "Tennisi Stampede Champions: Season 2",
+        "matches": 28
+      },
+      {
+        "league_id": 18940,
+        "name": "Tennisi Stampede Champions: Season 1",
+        "matches": 27
+      },
+      {
+        "league_id": 18999,
+        "name": "Asia Pacific Predator League 2026",
+        "matches": 26
+      },
+      {
+        "league_id": 16239,
+        "name": "Ace Americas 2024 - Season 1",
+        "matches": 26
+      },
+      {
+        "league_id": 18490,
+        "name": "Lunar Snake Trophy 2",
+        "matches": 21
+      },
+      {
+        "league_id": 17719,
+        "name": "UPEA National League 2025",
+        "matches": 21
+      },
+      {
+        "league_id": 16315,
+        "name": "United Series 1",
+        "matches": 20
+      },
+      {
+        "league_id": 19371,
+        "name": "Esports League Super Cup Pro Division",
+        "matches": 19
+      },
+      {
+        "league_id": 17512,
+        "name": "Asia Pacific Predator League 2025",
+        "matches": 19
+      },
+      {
+        "league_id": 16973,
+        "name": "Douyu Super Dream League Season 2",
+        "matches": 17
+      },
+      {
+        "league_id": 18995,
+        "name": "Redragon Latam Series",
+        "matches": 13
+      },
+      {
+        "league_id": 17513,
+        "name": "RESF Open Cup 2024",
+        "matches": 11
+      },
+      {
+        "league_id": 19040,
+        "name": "RESF Open Cup 2025",
+        "matches": 10
+      },
+      {
+        "league_id": 18325,
+        "name": "Russian Esports Championship 2025",
+        "matches": 10
+      },
+      {
+        "league_id": 16993,
+        "name": "Russian Esports Cup 2024",
+        "matches": 9
+      },
+      {
+        "league_id": 18434,
+        "name": "Russian Esports Cup 2025",
+        "matches": 9
+      },
+      {
+        "league_id": 16948,
+        "name": "Sber Tournament 2024",
+        "matches": 8
+      },
+      {
+        "league_id": 16649,
+        "name": "Douyu Super Dream League",
+        "matches": 7
+      },
+      {
+        "league_id": 16523,
+        "name": "No Coffee Cup",
+        "matches": 4
+      },
+      {
+        "league_id": 16858,
+        "name": "Russian Esports Championship 2024",
+        "matches": 3
+      }
+    ]
+  },
+  "combined_before_frozen_end": {
+    "matches": 15638,
+    "by_tier": [
+      {
+        "tier": "T3",
+        "matches": 9671
+      },
+      {
+        "tier": "T1",
+        "matches": 4969
+      },
+      {
+        "tier": "T2",
+        "matches": 998
+      }
+    ]
+  },
+  "matches_after_frozen_end": {
+    "matches": 416,
+    "by_tier": [
+      {
+        "tier": "T3",
+        "matches": 269
+      },
+      {
+        "tier": "T1",
+        "matches": 147
+      }
+    ]
+  },
+  "parquet": {
+    "matches": 16054,
+    "match_players": 160540,
+    "draft_events": 384502
+  }
+}
