@@ -28,6 +28,8 @@ from __future__ import annotations
 import sqlalchemy as sa
 from sqlalchemy import Engine
 
+from dota_predictor.data.player_identity import PLAYER_UNIVERSE_VIEW_SQL
+
 __all__ = [
     "GRANTS_SQL",
     "RESEARCH_SCHEMA",
@@ -44,6 +46,7 @@ RESEARCH_SCHEMA = "research"
 RESEARCH_VIEW_NAMES: tuple[str, ...] = (
     "matches",
     "player_matches",
+    "players",
     "draft_events",
     "t12_matches",
     "pro_matches",
@@ -175,6 +178,12 @@ SELECT * FROM research.t12_matches WHERE draft_complete;
 RESEARCH_VIEW_SQL: dict[str, str] = {
     "matches": MATCHES_VIEW_SQL,
     "player_matches": PLAYER_MATCHES_VIEW_SQL,
+    # Player universe (Slice 2 player-identity foundation). Defined in
+    # `dota_predictor.data.player_identity` so the Python helper
+    # (`fetch_player_universe`) and the SQL view share one canonical
+    # definition. The Alembic migration that applied this view is a frozen
+    # copy (see its docstring).
+    "players": PLAYER_UNIVERSE_VIEW_SQL,
     "draft_events": DRAFT_EVENTS_VIEW_SQL,
     "t12_matches": T12_MATCHES_VIEW_SQL,
     "pro_matches": PRO_MATCHES_VIEW_SQL,

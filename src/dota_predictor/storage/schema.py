@@ -91,6 +91,33 @@ Design choices (see the architecture plan for full rationale):
  *   normal and valid. `team_organization_memberships.team_id` is the PK,
  *   so one raw team id maps to at most one organization, and provenance
  *   (`reason`, `source`) records why a mapping was curated.
+ *
+ * The explicit player-identity layer (Slice 2) extends the same principle:
+ *
+ * * `players` stays a minimal identity registry (primary key only --
+ *   the canonical STRATZ `steamAccountId`). The derived player universe
+ *   (`display_name`, `first_seen_at`, `last_seen_at`, `match_count`) is
+ *   NOT stored here: it is a pure aggregate over the immutable canonical
+ *   facts (`match_players` joined to `matches.start_time`), computed
+ *   fresh via the `research.players` view / `fetch_player_universe`
+ *   (see `data.player_identity`). Caching it as mutable Postgres state
+ *   would go stale on reprocessing, exactly the failure mode this
+ *   registry avoids by design.
+ * * No `current_team_id` / `position` (or any other time-varying or
+ *   analytical attribute) column is ever added to `players`: a canonical
+ *   player entity represents identity only, so historical research can
+ *   never leak future team/position/rating state.
+ * * The `players` registry is populated on ingest by the writer
+ *   (`INSERT ... ON CONFLICT DO NOTHING`) and re-asserted by
+ *   `scripts/backfill_player_identity.py` (idempotent; never deletes
+ *   orphan registry rows). `match_players.player_id` is a foreign key to
+ *   `players`, so every referenced id resolves to exactly one canonical
+ *   player. The local corpus contains no player-name observations (raw
+ *   STRATZ payloads carry only `steamAccountId`), so `display_name` is
+ *   NULL for every player today; the deterministic name-resolution rule
+ *   lives in `data.player_identity` for when names become available.
+ *   Orphan registry ids are reported (not hidden) by
+ *   `scripts/audit_player_identity.py`.
  """
 
 from __future__ import annotations

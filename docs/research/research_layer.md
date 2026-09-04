@@ -111,6 +111,24 @@ Hard cases the derivation relies on being materialized as
   observed STRATZ scalars, exposed verbatim; no composite/normalized scores
   are added.
 
+### `research.players`
+
+* Grain: one row per canonical player (`players.player_id` unique) — the
+  Slice 2 canonical player universe.
+* Purpose: player identity foundation for player rankings, roster history,
+  player research pages, hero-pool research, and historical player
+  comparisons.
+* Identity: `player_id` (the canonical STRATZ `steamAccountId`; identity is
+  stable across team/role/nickname changes), `display_name` (deterministic
+  best-known name; NULL while the corpus has no player-name observations).
+* Observation summary (derived fresh from canonical facts, never cached):
+  `first_seen_at`, `last_seen_at`, `match_count`.
+* Deliberately absent: current team, position, rating, form, hero pool, and
+  any other time-varying / analytical attribute — canonical identity must
+  not leak future state into historical research.
+* Orphan registry ids (in `players` but referenced by no match) are excluded
+  and reported by `scripts/audit_player_identity.py`.
+
 ### `research.draft_events`
 
 * Grain: one canonical draft event (`match_id`, `sequence`).
