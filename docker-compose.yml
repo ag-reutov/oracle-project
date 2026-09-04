@@ -7,11 +7,15 @@ services:
       POSTGRES_USER: dota_predictor
       POSTGRES_PASSWORD: dota_predictor
       POSTGRES_DB: dota_predictor
+      # Used by docker/postgres/init/02-create-metabase-reader.sh on first boot.
+      METABASE_READER_USER: ${METABASE_READER_USER:-metabase_reader}
+      METABASE_READER_PASSWORD: ${METABASE_READER_PASSWORD:-change-me-locally}
     ports:
       - "5432:5432"
     volumes:
       - dota_predictor_pgdata:/var/lib/postgresql/data
-      # Creates the separate dota_predictor_test database on first init.
+      # Creates the separate dota_predictor_test database on first init,
+      # and the read-only metabase_reader role.
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dota_predictor"]
@@ -19,5 +23,24 @@ services:
       timeout: 5s
       retries: 10
 
+  # External analytics/QA only — not part of the prediction runtime.
+  # Metabase keeps its own H2 application state in metabase-data; do NOT
+  # point MB_DB_* at the Dota analytical database.
+  metabase:
+    image: metabase/metabase:v0.63.15.x
+    container_name: dota_predictor_metabase
+    restart: unless-stopped
+    ports:
+      # Host 3030: Next.js already uses 3000.
+      - "3030:3000"
+    environment:
+      MB_DB_FILE: /metabase.db/metabase.db
+    volumes:
+      - metabase-data:/metabase.db
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   dota_predictor_pgdata:
+  metabase-data:
