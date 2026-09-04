@@ -186,6 +186,48 @@ The reproducible census is `scripts/audit_reference_entities.py`
 hero/league/game-version counts, referenced vs resolved vs unresolved ids,
 duplicate/conflict counts, and regions status.
 
+## Roster history (Slice 4)
+
+Observed roster history is a thin descriptive layer over the canonical match
+facts — no new storage. It answers "who actually represented each team in
+each historical match, and what sequence of teams has each player been
+observed representing?" without pretending match appearances provide exact
+contractual transfer dates.
+
+* `research.player_matches` already **is** the canonical roster-appearance
+  relation (`match_id`, `start_time`, `player_id`, `team_id`, `side`), so no
+  separate `roster_appearances` view is created.
+* `research.team_match_lineups` — one row per `(match_id, team_id)`: the
+  players observed for that team in that match as `lineup_player_ids`
+  (sorted canonical player ids) with a deterministic `lineup_key` (same ids,
+  comma-joined), plus an explicit cardinality audit: `n_players`,
+  `n_resolved_players`, `n_null_player_ids`, `n_distinct_players`,
+  `has_duplicate_players`, `has_fewer_than_five`, `has_more_than_five`,
+  `has_exactly_five`, `is_complete_five`, and `team_is_match_team`. Malformed
+  lineups are reported, never forced into a five-player shape. (`team_id` is
+  derived from the parent match's radiant/dire teams by side, so
+  `team_is_match_team` is structurally always TRUE.)
+* `research.player_team_spells` — one row per `(player_id, spell_index)`: a
+  player's maximal run of matches observed for one team, in chronological
+  order. A new spell begins only when the observed `team_id` changes; a later
+  return to a previous team is a new spell (`A -> B -> A` is three spells); a
+  time gap with no intervening team observation does not split a spell.
+  `first_seen_at` / `last_seen_at` are observed match times only — never
+  invented `joined_at` / `left_at` dates, and never a claim of continuous
+  contractual membership between observations. Exposes `team_id`,
+  `spell_index`, `first_seen_at`, `first_match_id`, `last_seen_at`,
+  `last_match_id`, `observed_match_count`.
+
+The reproducible census is `scripts/audit_roster_history.py`
+(`dota_predictor.data.roster_history.audit_roster_history`): observation,
+lineup-cardinality, spell, and integrity counts, with unresolved/duplicate/
+contradictory anomalies reported explicitly. One-match spells and
+short/returning spells are exposed descriptively (`observed_match_count = 1`,
+previous/next spell via `spell_index`); no semantic `standin` label is ever
+assigned. The audit states that official contractual roster history is a
+separate future data-source problem — no authoritative roster/transfer
+source exists in the repository today.
+
 ## Population views
 
 * `research.t12_matches` — `research.matches WHERE is_t12_main_event`:

@@ -48,7 +48,9 @@ __all__ = [
 RESEARCH_SCHEMA = "research"
 
 # Order matters: `research.matches` is a dependency of the player/draft views,
-# which are dependencies of the population views.
+# which are dependencies of the population views. The Slice 4 roster views
+# (`team_match_lineups`, `player_team_spells`) depend only on the public
+# canonical tables, so they are appended after the population views.
 RESEARCH_VIEW_NAMES: tuple[str, ...] = (
     "leagues",
     "matches",
@@ -58,6 +60,8 @@ RESEARCH_VIEW_NAMES: tuple[str, ...] = (
     "t12_matches",
     "pro_matches",
     "t12_draft_matches",
+    "team_match_lineups",
+    "player_team_spells",
 )
 
 # Canonical league/event identity (Slice 3 reference entities). Exposes the
@@ -205,6 +209,137 @@ CREATE OR REPLACE VIEW research.t12_draft_matches AS
 SELECT * FROM research.t12_matches WHERE draft_complete;
 """
 
+# --- Slice 4: observed roster history -----------------------------------------
+# `research.player_matches` already is the canonical roster-appearance
+# relation (match_id, start_time, player_id, team_id, side), so no
+# duplicate `roster_appearances` view is created. These two thin views
+# answer the remaining Slice 4 questions without storing anything.
+
+# One row per (match_id, team_id): the players observed for that team in
+# that match, with an explicit cardinality audit. `team_id` is derived from
+# the parent match's radiant/dire teams by side, so `team_is_match_team` is
+# structurally always TRUE (the invariant is exposed so it stays checkable).
+# `lineup_player_ids` (sorted canonical player ids) and `lineup_key` (the
+# same ids as a deterministic comma-joined string) are the deterministic
+# lineup identity derived from the sorted canonical ids. Malformed lineups
+# are flagged (has_fewer_than_five / has_more_than_five /
+# has_duplicate_players / null ids), never forced into a five-player shape.
+TEAM_MATCH_LINEUPS_VIEW_SQL = """
+CREATE OR REPLACE VIEW research.team_match_lineups AS
+WITH observations AS (
+    SELECT mp.match_id,
+           m.start_time,
+           CASE WHEN mp.side = 'RADIANT' THEN m.radiant_team_id ELSE m.dire_team_id END
+               AS team_id,
+           mp.player_id
+    FROM public.match_players mp
+    JOIN public.matches m USING (match_id)
+)
+SELECT match_id,
+       start_time,
+       team_id,
+       count(*) AS n_players,
+       count(player_id) AS n_resolved_players,
+       count(*) FILTER (WHERE player_id IS NULL) AS n_null_player_ids,
+       count(DISTINCT player_id) AS n_distinct_players,
+       count(DISTINCT player_id) < count(player_id) AS has_duplicate_players,
+       count(player_id) < 5 AS has_fewer_than_five,
+       count(player_id) > 5 AS has_more_than_five,
+       count(player_id) = 5 AS has_exactly_five,
+       (count(player_id) = 5 AND count(DISTINCT player_id) = 5
+            AND count(*) FILTER (WHERE player_id IS NULL) = 0)
+           AS is_complete_five,
+       array_agg(player_id ORDER BY player_id)
+           FILTER (WHERE player_id IS NOT NULL) AS lineup_player_ids,
+       string_agg(player_id::text, ',' ORDER BY player_id)
+           FILTER (WHERE player_id IS NOT NULL) AS lineup_key,
+       TRUE AS team_is_match_team
+FROM observations
+GROUP BY match_id, start_time, team_id
+ORDER BY match_id, team_id
+"""
+
+# One row per (player_id, spell_index): a player's maximal run of matches
+# observed for one team, in chronological order. Spell semantics:
+#   * order observations by (start_time, match_id, team_id);
+#   * a new spell begins only when the observed team_id changes;
+#   * a later return to a previous team is a NEW spell (A -> B -> A is
+#     three spells);
+#   * a gap in time with no intervening team observation does NOT split a
+#     spell;
+#   * first/last seen are observed match times -- never invented
+#     joined/left dates.
+# This mirrors `dota_predictor.data.roster_history.derive_observed_spells`.
+PLAYER_TEAM_SPELLS_VIEW_SQL = """
+CREATE OR REPLACE VIEW research.player_team_spells AS
+WITH observations AS (
+    SELECT mp.player_id,
+           CASE WHEN mp.side = 'RADIANT' THEN m.radiant_team_id ELSE m.dire_team_id END
+               AS team_id,
+           m.match_id,
+           m.start_time
+    FROM public.match_players mp
+    JOIN public.matches m USING (match_id)
+    WHERE mp.player_id IS NOT NULL
+      AND m.radiant_team_id IS NOT NULL
+      AND m.dire_team_id IS NOT NULL
+),
+ranked AS (
+    SELECT player_id, team_id, match_id, start_time,
+           row_number() OVER (
+               PARTITION BY player_id
+               ORDER BY start_time, match_id, team_id
+           ) AS rn
+    FROM observations
+),
+spell_marks AS (
+    SELECT player_id, team_id, match_id, start_time, rn,
+           CASE WHEN LAG(team_id) OVER (PARTITION BY player_id ORDER BY rn)
+                IS DISTINCT FROM team_id
+                THEN 1 ELSE 0 END AS new_spell
+    FROM ranked
+),
+spell_ids AS (
+    SELECT player_id, team_id, match_id, start_time,
+           sum(new_spell) OVER (PARTITION BY player_id ORDER BY rn) AS spell_index
+    FROM spell_marks
+),
+spell_rows AS (
+    SELECT player_id, team_id, spell_index, match_id, start_time,
+           count(*) OVER (PARTITION BY player_id, spell_index) AS observed_match_count,
+           first_value(match_id) OVER (
+               PARTITION BY player_id, spell_index
+               ORDER BY start_time, match_id, team_id
+           ) AS first_match_id,
+           last_value(match_id) OVER (
+               PARTITION BY player_id, spell_index
+               ORDER BY start_time, match_id, team_id
+               ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+           ) AS last_match_id,
+           first_value(start_time) OVER (
+               PARTITION BY player_id, spell_index
+               ORDER BY start_time, match_id, team_id
+           ) AS first_seen_at,
+           last_value(start_time) OVER (
+               PARTITION BY player_id, spell_index
+               ORDER BY start_time, match_id, team_id
+               ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+           ) AS last_seen_at
+    FROM spell_ids
+)
+SELECT player_id,
+       team_id,
+       spell_index,
+       min(observed_match_count) AS observed_match_count,
+       min(first_seen_at) AS first_seen_at,
+       min(last_seen_at) AS last_seen_at,
+       min(first_match_id) AS first_match_id,
+       min(last_match_id) AS last_match_id
+FROM spell_rows
+GROUP BY player_id, team_id, spell_index
+ORDER BY player_id, spell_index
+"""
+
 RESEARCH_VIEW_SQL: dict[str, str] = {
     "leagues": LEAGUES_VIEW_SQL,
     "matches": MATCHES_VIEW_SQL,
@@ -219,6 +354,8 @@ RESEARCH_VIEW_SQL: dict[str, str] = {
     "t12_matches": T12_MATCHES_VIEW_SQL,
     "pro_matches": PRO_MATCHES_VIEW_SQL,
     "t12_draft_matches": T12_DRAFT_MATCHES_VIEW_SQL,
+    "team_match_lineups": TEAM_MATCH_LINEUPS_VIEW_SQL,
+    "player_team_spells": PLAYER_TEAM_SPELLS_VIEW_SQL,
 }
 
 # Read-only grants for the Metabase reader role, applied only when the role
