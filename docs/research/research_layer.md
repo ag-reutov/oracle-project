@@ -228,6 +228,82 @@ assigned. The audit states that official contractual roster history is a
 separate future data-source problem — no authoritative roster/transfer
 source exists in the repository today.
 
+## Historical roster state (Slice 5)
+
+Slice 5 turns the Slice 4 observations into a **strictly causal pre-match
+roster state** at grain `(team_id, match_id, start_time)` — one team in one
+match, evaluated immediately before that match. It answers *"what was known
+about each team's current five-player lineup from competitive observations
+strictly before that match?"* without any future roster observation, future
+spell boundary, result, or post-match statistic. It is descriptive
+historical-state construction, never team-strength modeling.
+
+* `research.player_team_state` — one row per `(player_id, team_id,
+  match_id)`: the player's observed relationship to a team immediately
+  before that match. `prior_team_match_count` and the first/last prior
+  same-team times use only observations with `start_time` strictly before
+  the current match; `previous_observed_team_id` / `previous_observed_match_id`
+  / `previous_observed_match_at` describe the player's most recent strictly
+  earlier match **for any team** (tie-broken by `match_id DESC` only among
+  already-strictly-prior rows). The flags
+  (`is_first_observed_match_for_team`, `is_returning_to_team`,
+  `is_continuing_with_team`) are mutually exclusive observational
+  classifications (`A -> B -> A` is "returning"; a long gap with no
+  intervening team is still "continuing"); no transfer / signing /
+  stand-in label is ever assigned. `consecutive_prior_team_appearances`
+  is spell-so-far (the causal run length before this match) — never the
+  eventual spell length, which would leak the future. Timing
+  (`days_since_player_previous_match`, `days_since_player_previous_team_match`)
+  is descriptive; a long gap is never interpreted as retirement,
+  benching, or a transfer.
+* `research.team_roster_state` — one row per `(match_id, team_id)`: the
+  team's historical roster state immediately before that match. The
+  current lineup is reused verbatim from `research.team_match_lineups`
+  (Slice 4) — no second lineup definition is reconstructed.
+  `previous_match_id` / `previous_match_at` /
+  `previous_lineup_player_ids` describe the team's most recent strictly
+  earlier observed match (no arbitrary time cutoff). For complete-five
+  current and previous lineups,
+  `players_retained_from_previous_match` / `players_changed_from_previous_match`
+  / `same_lineup_as_previous_match` are defined; for malformed lineups
+  they are NULL and the malformation stays explicit via the cardinality
+  flags. `prior_exact_lineup_match_count` /
+  `last_exact_lineup_match_id` / `last_exact_lineup_at` answer "has this
+  exact five-player lineup played together before?" using strictly
+  earlier complete-five matches of the same team with the identical
+  `lineup_key`. Team composition (`continuing_player_count`,
+  `first_observed_for_team_count`, `returning_player_count`) reconciles
+  to the resolved lineup players (5 for a complete lineup); unresolved
+  players are never fabricated a classification. `days_since_team_previous_match`
+  is descriptive timing.
+
+Equal timestamps are strictly non-causal: a match sharing the current
+`start_time` is never prior evidence, even when its `match_id` sorts
+first. The future-deletion invariant (deleting all observations after any
+time `T` leaves every state at `T` bit-identical) is enforced by
+construction and verified by
+`dota_predictor.data.roster_state.check_future_deletion_invariant` and the
+test suite.
+
+The reproducible census is `scripts/audit_roster_state.py`
+(`dota_predictor.data.roster_state.audit_roster_state`): team-match /
+player-team state counts, retained/changed/exact-lineup distributions,
+first-observed / returning / continuing observations, and integrity
+anomalies (incomplete lineups, impossible aggregate counts, future-deletion
+invariant violations).
+
+Relationship to the pre-draft roster-continuity feature: the production
+`features.pre_draft_snapshot` `radiant/dire_roster_players_retained`
+columns compute the same retained count in DuckDB with the same strict `<`
+boundary. Slice 5's `players_retained_from_previous_match` is the canonical
+research-state equivalent (see
+`tests/features/test_roster_continuity_cross_check.py`). The only
+definitional difference is the incomplete-lineup edge case: the pre-draft
+`COUNT(*)` can return a partial integer, while Slice 5 returns NULL and
+keeps the malformation explicit. The production feature is intentionally
+not modified; Slice 5 provides the cleaner canonical definition that can
+later validate or replace the duplicated feature implementation.
+
 ## Population views
 
 * `research.t12_matches` — `research.matches WHERE is_t12_main_event`:
