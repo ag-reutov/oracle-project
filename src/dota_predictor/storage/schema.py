@@ -175,10 +175,13 @@ __all__ = [
     "METADATA",
     "ORGANIZATIONS",
     "PLAYERS",
+    "RESEARCH_METADATA",
     "STRATZ_RAW_MATCHES",
     "TEAMS",
     "TEAM_ALIASES",
     "TEAM_ORGANIZATION_MEMBERSHIPS",
+    "TEAM_STRENGTH_BUILD",
+    "TEAM_STRENGTH_STATE",
     "TEAM_TAGS",
 ]
 
@@ -193,6 +196,15 @@ NAMING_CONVENTION = {
 }
 
 METADATA = sa.MetaData(naming_convention=NAMING_CONVENTION)
+
+# Separate metadata for the derived `research`-schema tables. The public
+# `METADATA` drives `METADATA.create_all`/`drop_all` in test fixtures that
+# never touch the `research` schema; keeping the Slice 6 derived tables in
+# their own metadata (with `schema="research"`) means those fixtures are not
+# forced to pre-create the research schema. The tables are actually created
+# by `dota_predictor.research.views.create_research_layer` / the Slice 6
+# migration, which both emit the schema.
+RESEARCH_METADATA = sa.MetaData(naming_convention=NAMING_CONVENTION)
 
 # Allowed values for plain-text enum-like columns. Deliberately CHECK
 # constraints, not native enum types (see module docstring) -- changing
@@ -660,4 +672,64 @@ MATCH_INGESTION_ERRORS = sa.Table(
     sa.CheckConstraint(
         f"stage IN {MATCH_INGESTION_ERROR_STAGES!r}", name="stage_valid"
     ),
+)
+
+
+# --- 5. Team-strength derived research state (Slice 6) --------------------
+# Persisted deterministic derived state over the canonical `matches` facts.
+# `matches` remains the sole source of truth; these tables are idempotently
+# rebuilt by `dota_predictor.data.team_strength.rebuild_team_strength_state`
+# and are never written by the ingestion pipeline. They live in the
+# `research` schema (see the Slice 6 migration / research.views) and are
+# referenced by the `research.raw_team_elo_latest` view. There is
+# deliberately no mutable "current Elo" column on `teams`. They are declared
+# in `RESEARCH_METADATA`, not the public `METADATA`, because the public
+# metadata is also used by fixtures that never create the `research` schema.
+
+TEAM_STRENGTH_STATE = sa.Table(
+    "team_strength_state",
+    RESEARCH_METADATA,
+    # One row per (team_id, match_id): the team's strength entering that
+    # match (`elo_pre`) plus strictly-prior descriptive record.
+    sa.Column("match_id", sa.BigInteger, primary_key=True, autoincrement=False),
+    sa.Column("start_time", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("team_id", sa.BigInteger, primary_key=True, autoincrement=False),
+    sa.Column("side", sa.Text, nullable=False),
+    sa.Column("team_name_observed", sa.Text, nullable=True),
+    sa.Column("elo_pre", sa.Double, nullable=False),
+    sa.Column("elo_post", sa.Double, nullable=False),
+    sa.Column("won", sa.Boolean, nullable=False),
+    sa.Column("prior_match_count", sa.Integer, nullable=False),
+    sa.Column("prior_win_count", sa.Integer, nullable=False),
+    sa.Column("prior_loss_count", sa.Integer, nullable=False),
+    sa.Column("prior_win_rate", sa.Double, nullable=True),
+    sa.Column("previous_match_id", sa.BigInteger, nullable=True),
+    sa.Column("previous_match_at", sa.DateTime(timezone=True), nullable=True),
+    sa.Column("days_since_previous_match", sa.Double, nullable=True),
+    sa.Column("is_first_observed_match", sa.Boolean, nullable=False),
+    sa.CheckConstraint("elo_pre >= 0", name="elo_pre_non_negative"),
+    sa.CheckConstraint("elo_post >= 0", name="elo_post_non_negative"),
+    sa.CheckConstraint(
+        "prior_match_count >= 0", name="prior_match_count_non_negative"
+    ),
+    sa.CheckConstraint("prior_win_count >= 0", name="prior_win_count_non_negative"),
+    sa.CheckConstraint("prior_loss_count >= 0", name="prior_loss_count_non_negative"),
+    schema="research",
+)
+
+TEAM_STRENGTH_BUILD = sa.Table(
+    "team_strength_build",
+    RESEARCH_METADATA,
+    # Single-row provenance / staleness metadata for the derived table.
+    sa.Column("id", sa.Integer, sa.Identity(always=True), primary_key=True),
+    sa.Column("built_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("source_match_count", sa.BigInteger, nullable=False),
+    sa.Column("source_skipped_matches", sa.BigInteger, nullable=False),
+    sa.Column("source_min_start_time", sa.DateTime(timezone=True), nullable=True),
+    sa.Column("source_max_start_time", sa.DateTime(timezone=True), nullable=True),
+    sa.Column("source_fingerprint", sa.Text, nullable=False),
+    sa.Column("rows_written", sa.BigInteger, nullable=False),
+    sa.Column("elo_initial_rating", sa.Double, nullable=False),
+    sa.Column("elo_k_factor", sa.Double, nullable=False),
+    schema="research",
 )

@@ -292,6 +292,115 @@ first-observed / returning / continuing observations, and integrity
 anomalies (incomplete lineups, impossible aggregate counts, future-deletion
 invariant violations).
 
+## Team strength & ranking (Slice 6)
+
+Slice 6 establishes a canonical, inspectable **historical Elo state** of each
+canonical/source `team_id` under the existing production Elo definition. It
+consolidates, validates and exposes the existing Team Elo infrastructure -- it
+does **not** invent a second rating system, and it does **not** expose a
+leaderboard.
+
+### What Slice 6 provides
+
+1. **`research.team_strength_state`** — causal historical raw team-ID Elo, a
+   persisted deterministic derived table at grain `(team_id, match_id)`:
+   `elo_pre` (entering the match), `elo_post` (bookkeeping, only after the
+   result), a strictly-prior descriptive record (`prior_match_count` /
+   `prior_win_count` / `prior_loss_count` / `prior_win_rate`,
+   `previous_match_id` / `previous_match_at`, `days_since_previous_match`,
+   `is_first_observed_match`). It is idempotently rebuilt in one transaction
+   from the canonical `matches` facts by
+   `scripts/rebuild_team_strength.py`, reusing the exact production
+   `features.team_elo` definition (initial rating 1500.0, K-factor 32.0,
+   expected-score formula, chronological replay with equal-`start_time`
+   mutual blindness). Canonical match facts remain the sole source of truth;
+   there is deliberately no mutable "current Elo" column on `teams`.
+2. **`research.team_strength_build`** — deterministic rebuild provenance /
+   staleness marker: source corpus snapshot, count/extrema diagnostics, and a
+   deterministic SHA-256 `source_fingerprint` over the canonical match fields
+   that determine the derived state. `dota_predictor.data.team_strength.check_freshness`
+   is the reusable freshness check (detects an old result/team/time
+   correction even when count and corpus extrema are unchanged).
+3. **`research.raw_team_elo_latest`** — latest raw Elo **state** per source
+   `team_id` (one row per team_id, exposing the terminal post-match rating
+   derived as `elo_pre + SUM(elo_post - elo_pre)` over the latest group,
+   plus `last_match_at`, `observed_match_count`, wins/losses, organization
+   metadata, latest known lineup, `as_of_at`, and
+   `days_since_last_match_as_of_corpus_end`). It exposes **no ordinal `rank`
+   and no global ordering**; a plain `SELECT *` must not imply a ranking.
+
+### What Slice 6 deliberately does NOT provide
+
+- a global team ranking
+- a current team ranking
+- an active-team ranking
+- competitive-team identity
+- team lineage
+- disbandment status
+- a T1-only / T1+T2 power rating
+- activity eligibility
+
+> Comparative global ranking is intentionally absent from Slice 6 because
+> competitive-team lineage, eligibility, and rating population have not yet
+> been defined.
+
+Raw `team_id` Elo is useful historical state but raw team IDs are not yet
+suitable objects for a global ordinal ranking because competitive identity is
+fragmented across multiple `team_id`s (e.g. PARIVISION/PVISION, duplicate
+Nigma identities, 1win/1w), inactive/disbanded identities remain present, the
+population is ~60% Tier 3, and no active-team eligibility or competitive-lineage
+definition exists. These are limitations of entity definition, population
+definition, and ranking eligibility -- not bugs in the Elo recurrence.
+
+Strict temporal semantics (identical to the production Elo layer): for a
+match at time `T`, strength entering that match uses only matches with
+`historical.start_time < T`. Equal timestamps never create causal precedence
+through `match_id`: matches sharing a `start_time` are one temporal group
+whose members read the same pre-group rating and never influence one another.
+`match_id` is never used for ordering. `elo_pre` is available before the
+match; `elo_post` is historical bookkeeping only and must never be treated as
+a PRE_DRAFT feature for the same match. The future-deletion invariant holds
+by construction (`dota_predictor.data.team_strength.check_future_deletion_invariant`
+verifies it), and team strength depends only on match history/results, never
+on future roster information.
+
+Cross-check: for the current canonical corpus,
+`research.team_strength_state.elo_pre` equals the production pre-draft Elo
+(`features.team_elo.compute_team_elo_features`, the Step 3C
+`radiant_team_elo`/`dire_team_elo` columns) for every team-match row. Slice 6
+is the research-layer counterpart of the existing production Elo definition;
+no production feature code was rewritten.
+
+### Slice 6 diagnostics (evidence for Slice 7, no leaderboard)
+
+The reproducible census is `scripts/audit_team_strength.py`. Its default
+output contains NO leaderboard and NO Top-20; it reports:
+
+* **Historical Elo state** (`audit_team_strength`): canonical matches
+  processed, team-match states, teams observed, `elo_pre` min/median/max, and
+  latest Elo min/median/max -- never an ordinal ranking.
+* **Integrity**: production-Elo cross-check mismatches, future-deletion
+  violations, equal-timestamp violations, missing canonical team references.
+* **Freshness**: stored vs current source fingerprint and fresh/stale.
+* **Activity** (`audit_activity_distribution`): days since last observed
+  match at corpus end bucketed (<=30, 31-60, 61-90, 91-180, >180 days).
+  Nobody is filtered out.
+* **Population** (`audit_elo_population`): T1/T2/T3 count and share of Elo
+  updates (plus other categories as present) and the count of predominantly
+  Tier-3 teams.
+* **Identity fragmentation** (`audit_identity_fragmentation`): a conservative
+  diagnostic of candidate `team_id` pairs/groups that may share a competitive
+  lineage (same curated organization, shared normalized observed name,
+  identical/overlapping observed five-player roster, sequential
+  non-overlapping activity). Nothing is merged; the output is evidence for
+  human/research review and for Slice 7 lineage resolution.
+
+An **opt-in** debugging flag `--show-raw-elo` prints the raw latest team-ID
+Elo values sorted by Elo for inspection only (`audit_raw_elo_latest`), with no
+ordinal `rank` and a prominent "DEBUGGING/DIAGNOSTIC OUTPUT — raw canonical
+team IDs, not globally comparable current competitive teams" notice. It is
+never part of the default audit.
+
 Relationship to the pre-draft roster-continuity feature: the production
 `features.pre_draft_snapshot` `radiant/dire_roster_players_retained`
 columns compute the same retained count in DuckDB with the same strict `<`

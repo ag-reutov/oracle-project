@@ -38,9 +38,12 @@ from dota_predictor.data.player_identity import PLAYER_UNIVERSE_VIEW_SQL
 
 __all__ = [
     "GRANTS_SQL",
+    "RAW_TEAM_ELO_LATEST_VIEW_SQL",
     "RESEARCH_SCHEMA",
     "RESEARCH_VIEW_NAMES",
     "RESEARCH_VIEW_SQL",
+    "TEAM_STRENGTH_BUILD_TABLE_SQL",
+    "TEAM_STRENGTH_STATE_TABLE_SQL",
     "create_research_layer",
     "drop_research_layer",
 ]
@@ -53,7 +56,10 @@ RESEARCH_SCHEMA = "research"
 # canonical tables, so they are appended after the population views. The Slice 5
 # roster-state views depend on the Slice 4 views: `team_roster_state` references
 # `team_match_lineups` (the current lineup identity) and `player_team_state`
-# (the player classifications), so they come last.
+# (the player classifications), so they come last. The Slice 6
+# `raw_team_elo_latest` view depends on the derived `team_strength_state`
+# table (created before the views by `create_research_layer` / the Slice 6
+# migration), so it comes after.
 RESEARCH_VIEW_NAMES: tuple[str, ...] = (
     "leagues",
     "matches",
@@ -67,6 +73,7 @@ RESEARCH_VIEW_NAMES: tuple[str, ...] = (
     "player_team_spells",
     "player_team_state",
     "team_roster_state",
+    "raw_team_elo_latest",
 )
 
 # Canonical league/event identity (Slice 3 reference entities). Exposes the
@@ -602,6 +609,135 @@ LEFT JOIN composition c USING (match_id, team_id)
 ORDER BY lu.match_id, lu.team_id
 """
 
+# --- Slice 6: team strength & ranking ---------------------------------------
+# `research.team_strength_state` is a *persisted deterministic derived table*,
+# not a view: Elo is a sequential recurrence that a plain PostgreSQL view
+# cannot express (see `dota_predictor.data.team_strength` for the exact
+# derivation, which reuses the production `features.team_elo` definition).
+# The canonical `matches` facts remain the sole source of truth; the table is
+# idempotently rebuilt in one transaction by
+# `scripts/rebuild_team_strength.py`, and `research.team_strength_build` is a
+# single-row provenance/staleness marker (source corpus snapshot +
+# deterministic SHA-256 source fingerprint). `research.raw_team_elo_latest` is
+# an ordinary view over the derived table (latest post-match Elo per raw
+# team id), so the latest-Elo state is never separately persisted.
+
+TEAM_STRENGTH_STATE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS research.team_strength_state (
+    match_id BIGINT NOT NULL,
+    start_time TIMESTAMPTZ NOT NULL,
+    team_id BIGINT NOT NULL,
+    side TEXT NOT NULL,
+    team_name_observed TEXT,
+    elo_pre DOUBLE PRECISION NOT NULL,
+    elo_post DOUBLE PRECISION NOT NULL,
+    won BOOLEAN NOT NULL,
+    prior_match_count INTEGER NOT NULL,
+    prior_win_count INTEGER NOT NULL,
+    prior_loss_count INTEGER NOT NULL,
+    prior_win_rate DOUBLE PRECISION,
+    previous_match_id BIGINT,
+    previous_match_at TIMESTAMPTZ,
+    days_since_previous_match DOUBLE PRECISION,
+    is_first_observed_match BOOLEAN NOT NULL,
+    PRIMARY KEY (team_id, match_id),
+    CONSTRAINT ck_elo_pre_non_negative CHECK (elo_pre >= 0),
+    CONSTRAINT ck_elo_post_non_negative CHECK (elo_post >= 0),
+    CONSTRAINT ck_prior_match_count_non_negative CHECK (prior_match_count >= 0),
+    CONSTRAINT ck_prior_win_count_non_negative CHECK (prior_win_count >= 0),
+    CONSTRAINT ck_prior_loss_count_non_negative CHECK (prior_loss_count >= 0)
+)
+"""
+
+TEAM_STRENGTH_BUILD_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS research.team_strength_build (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    built_at TIMESTAMPTZ NOT NULL,
+    source_match_count BIGINT NOT NULL,
+    source_skipped_matches BIGINT NOT NULL,
+    source_min_start_time TIMESTAMPTZ,
+    source_max_start_time TIMESTAMPTZ,
+    source_fingerprint TEXT NOT NULL,
+    rows_written BIGINT NOT NULL,
+    elo_initial_rating DOUBLE PRECISION NOT NULL,
+    elo_k_factor DOUBLE PRECISION NOT NULL
+)
+"""
+
+# One row per canonical/source team id: its terminal post-match Elo (the
+# rating after its final observed temporal group) with display/identity
+# metadata. The terminal rating is derived from the persisted per-match
+# `elo_pre`/`elo_post` as `elo_pre + SUM(elo_post - elo_pre)` over the team's
+# latest `start_time` group -- the Elo recurrence itself is never
+# reimplemented in SQL. This is a latest raw Elo STATE per source `team_id`,
+# NOT a ranking: it deliberately exposes no ordinal `rank` and no global
+# ordering. The view is keyed by raw canonical/source `team_id` (a
+# competitive team may appear under multiple `team_id`s), historical or
+# disbanded teams remain rated, there is no active-team eligibility rule, and
+# the Elo universe is the full canonical match corpus (including large
+# amounts of Tier 3 data). Separate `team_id`s are never merged, even when
+# mapped to the same organization. Ordering is a query concern, not part of
+# the entity; a plain `SELECT * FROM research.raw_team_elo_latest` must not
+# imply a rank. Activity is exposed (last_match_at,
+# days_since_last_match_as_of_corpus_end) rather than hidden behind a cutoff.
+# `as_of_at` is the corpus maximum `start_time` -- never wall-clock "now".
+RAW_TEAM_ELO_LATEST_VIEW_SQL = """
+CREATE OR REPLACE VIEW research.raw_team_elo_latest AS
+WITH team_summary AS (
+    SELECT
+        team_id,
+        start_time AS last_match_at,
+        match_id AS last_match_id,
+        elo_pre
+            + SUM(elo_post - elo_pre) OVER (PARTITION BY team_id, start_time)
+            AS rating,
+        ROW_NUMBER() OVER (
+            PARTITION BY team_id ORDER BY start_time DESC, match_id DESC
+        ) AS rn,
+        COUNT(*) OVER (PARTITION BY team_id) AS observed_match_count,
+        SUM(CASE WHEN won THEN 1 ELSE 0 END) OVER (PARTITION BY team_id) AS wins,
+        SUM(CASE WHEN won THEN 0 ELSE 1 END) OVER (PARTITION BY team_id) AS losses,
+        FIRST_VALUE(team_name_observed) OVER (
+            PARTITION BY team_id ORDER BY start_time DESC, match_id DESC
+        ) AS team_name
+    FROM research.team_strength_state
+)
+SELECT
+    s.team_id,
+    s.team_name,
+    s.rating,
+    s.last_match_id,
+    s.last_match_at,
+    s.observed_match_count,
+    s.wins,
+    s.losses,
+    o.organization_id,
+    o.name AS organization_name,
+    rro.lineup_player_ids AS latest_lineup_player_ids,
+    rro.lineup_key AS latest_lineup_key,
+    (SELECT max(start_time) FROM research.team_strength_state) AS as_of_at,
+    CASE WHEN (SELECT max(start_time) FROM research.team_strength_state) IS NOT NULL
+         THEN EXTRACT(EPOCH FROM (
+                (SELECT max(start_time) FROM research.team_strength_state)
+                - s.last_match_at
+              )) / 86400.0
+         ELSE NULL END AS days_since_last_match_as_of_corpus_end
+FROM team_summary s
+LEFT JOIN public.team_organization_memberships tom
+    ON tom.team_id = s.team_id
+LEFT JOIN public.organizations o
+    ON o.organization_id = tom.organization_id
+LEFT JOIN LATERAL (
+    SELECT lineage.lineup_player_ids, lineage.lineup_key
+    FROM research.team_match_lineups lineage
+    WHERE lineage.team_id = s.team_id
+      AND lineage.start_time = s.last_match_at
+    ORDER BY lineage.match_id DESC
+    LIMIT 1
+) rro ON TRUE
+WHERE s.rn = 1
+"""
+
 RESEARCH_VIEW_SQL: dict[str, str] = {
     "leagues": LEAGUES_VIEW_SQL,
     "matches": MATCHES_VIEW_SQL,
@@ -620,6 +756,7 @@ RESEARCH_VIEW_SQL: dict[str, str] = {
     "player_team_spells": PLAYER_TEAM_SPELLS_VIEW_SQL,
     "player_team_state": PLAYER_TEAM_STATE_VIEW_SQL,
     "team_roster_state": TEAM_ROSTER_STATE_VIEW_SQL,
+    "raw_team_elo_latest": RAW_TEAM_ELO_LATEST_VIEW_SQL,
 }
 
 # Read-only grants for the Metabase reader role, applied only when the role
@@ -644,11 +781,17 @@ def create_research_layer(bind: Engine) -> None:
     """Create the `research` schema, all views, and read-only grants.
 
     Idempotent: safe to call against a database where the research layer
-    already exists (each view uses `CREATE OR REPLACE`). Used by the Alembic
-    migration and by the test suite.
+    already exists (each view uses `CREATE OR REPLACE`; the Slice 6
+    derived tables use `CREATE TABLE IF NOT EXISTS`). Used by the Alembic
+    migration and by the test suite. The Slice 6 `team_strength_state` /
+    `team_strength_build` tables are created here as empty shells so the
+    `raw_team_elo_latest` view can reference them; their rows are populated
+    only by `dota_predictor.data.team_strength.rebuild_team_strength_state`.
     """
     with bind.begin() as conn:
         conn.execute(sa.text(f"CREATE SCHEMA IF NOT EXISTS {RESEARCH_SCHEMA}"))
+        conn.execute(sa.text(TEAM_STRENGTH_STATE_TABLE_SQL))
+        conn.execute(sa.text(TEAM_STRENGTH_BUILD_TABLE_SQL))
         for name in RESEARCH_VIEW_NAMES:
             conn.execute(sa.text(RESEARCH_VIEW_SQL[name]))
         conn.execute(sa.text(GRANTS_SQL))
